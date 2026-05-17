@@ -143,28 +143,6 @@
   background: #28251f;
 }
 
-:root[data-theme='light'] .cases-docket-panel {
-  border-color: var(--ag-border-strong);
-  background: var(--ag-surface);
-}
-
-:root[data-theme='light'] .cases-docket-heading {
-  border-color: var(--ag-border);
-}
-
-:root[data-theme='light'] .cases-docket-panel .docket-case-card {
-  border-color: var(--ag-border-strong);
-  background: var(--ag-inner-surface);
-}
-
-:root[data-theme='light'] .cases-docket-panel .docket-case-card-meta > div,
-:root[data-theme='light'] .cases-docket-panel .search-field,
-:root[data-theme='light'] .cases-docket-panel .toolbar-row button,
-:root[data-theme='light'] .cases-docket-panel .secondary-button.compact-action {
-  border-color: var(--ag-border);
-  background: var(--ag-inner-surface);
-}
-
 @media (max-width: 1180px) {
   .cases-docket-panel .docket-case-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -184,13 +162,11 @@
 }
 
 /* Keep cases aligned with the restored dark app theme. */
-.cases-docket-panel,
-:root[data-theme='light'] .cases-docket-panel {
+.cases-docket-panel {
   background: var(--ag-surface);
 }
 
-.cases-docket-panel .docket-case-card,
-:root[data-theme='light'] .cases-docket-panel .docket-case-card {
+.cases-docket-panel .docket-case-card {
   border-color: var(--ag-border-strong);
   background: var(--ag-surface);
 }
@@ -198,11 +174,7 @@
 .cases-docket-panel .docket-case-card-meta > div,
 .cases-docket-panel .search-field,
 .cases-docket-panel .toolbar-row button,
-.cases-docket-panel .secondary-button.compact-action,
-:root[data-theme='light'] .cases-docket-panel .docket-case-card-meta > div,
-:root[data-theme='light'] .cases-docket-panel .search-field,
-:root[data-theme='light'] .cases-docket-panel .toolbar-row button,
-:root[data-theme='light'] .cases-docket-panel .secondary-button.compact-action {
+.cases-docket-panel .secondary-button.compact-action {
   color: var(--ag-ink);
   border-color: var(--ag-border);
   background: var(--ag-inner-surface);
