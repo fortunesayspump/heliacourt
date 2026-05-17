@@ -3941,3 +3941,153 @@ select,
 .app-footer nav a {
   color: var(--ag-on-dark-muted) !important;
 }
+
+/* Restore dark-mode source of truth: natural dark court palette, no light/dark patchwork. */
+:root,
+:root[data-theme='light'],
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --ag-page: #0d0c09;
+  --ag-surface: #28251f;
+  --ag-inner-surface: #14130f;
+  --ag-inner-surface-strong: #332d22;
+  --ag-ink: #fffaf2;
+  --ag-muted: rgba(255, 250, 242, 0.78);
+  --ag-border: rgba(241, 211, 170, 0.2);
+  --ag-border-strong: rgba(241, 211, 170, 0.32);
+  --ag-deep: #0d0c09;
+  --ag-deep-soft: #14130f;
+  --ag-green: #476352;
+  --ag-green-dark: #35493d;
+  --ag-gold: #a79a67;
+  --ag-cream: #f1d3aa;
+  --ag-on-dark: #fffaf2;
+  --ag-on-dark-muted: rgba(255, 250, 242, 0.72);
+  --white: var(--ag-surface);
+  --ivory: var(--ag-cream);
+  --black: var(--ag-ink);
+  --brown: var(--ag-gold);
+  --green: var(--ag-green);
+  --ink: var(--ag-ink);
+  --ash: var(--ag-muted);
+  --bronze: var(--ag-gold);
+  --bronze-dark: var(--ag-gold);
+  --olive: var(--ag-green);
+  --line: var(--ag-border);
+}
+
+html,
+body,
+.app-scroll-root,
+.app-shell,
+.workspace {
+  color: var(--ag-ink) !important;
+  background: var(--ag-page) !important;
+}
+
+.panel,
+.case-box,
+.case-card,
+.case-record-tabs,
+.wallet-notice,
+.court-matter,
+.wallet-menu-panel,
+.text-page .doc-grid article,
+.metrics-grid,
+.cases-docket-panel,
+.docket-case-card,
+:root[data-theme='light'] .panel,
+:root[data-theme='dark'] .panel {
+  color: var(--ag-ink) !important;
+  border-color: var(--ag-border-strong) !important;
+  background: var(--ag-surface) !important;
+}
+
+.metric,
+.case-row,
+.roster-row,
+.compact-card,
+.rail-card,
+.settlement-table > div,
+.preview-witness-list > div,
+.preview-budget > div,
+.preview-pill-row span,
+.similar-case-card,
+.witness-option,
+.route-choice-grid article,
+.sidebar-facts div,
+.transcript-message,
+.case-card-meta > div,
+.docket-case-card-meta > div,
+.search-field,
+.case-form input,
+.case-box textarea,
+input,
+textarea,
+select,
+.cases-docket-panel .search-field,
+.cases-docket-panel .toolbar-row button,
+.cases-docket-panel .secondary-button.compact-action {
+  color: var(--ag-ink) !important;
+  border-color: var(--ag-border) !important;
+  background: var(--ag-inner-surface) !important;
+}
+
+.court-matter,
+.transcript-stage,
+.top-record-tabs a:hover,
+.top-record-tabs a.active,
+.top-record-tabs a[aria-current='page'],
+.case-record-tabs a:hover,
+.case-record-tabs a.active,
+.case-record-tabs a[aria-current='page'] {
+  background: var(--ag-inner-surface-strong) !important;
+}
+
+.metrics-grid span,
+.metrics-grid p,
+.case-card p,
+.case-card-meta span,
+.docket-case-card p,
+.docket-case-card span,
+.wallet-notice p,
+.wallet-notice span,
+.sidebar-facts span,
+.transcript-meta span,
+.transcript-meta time {
+  color: var(--ag-muted) !important;
+}
+
+.metrics-grid strong,
+.metrics-grid h2,
+.metrics-grid h3,
+.case-card h3,
+.case-card strong,
+.case-card-meta strong,
+.docket-case-card strong,
+.wallet-notice h2,
+.wallet-notice h3,
+.wallet-notice strong {
+  color: var(--ag-ink) !important;
+}
+
+.state-dot,
+.state-dot.active,
+.state-dot.voting,
+.state-dot.recording {
+  color: var(--ag-cream) !important;
+  border-color: rgba(241, 211, 170, 0.24) !important;
+  background: rgba(241, 211, 170, 0.07) !important;
+}
+
+.primary-button,
+.wallet-connect-button,
+.wallet-notice button,
+.wallet-primary,
+.case-card-link,
+.case-row a,
+.docket-case-card-link {
+  color: var(--ag-on-dark) !important;
+  border-color: var(--ag-green-dark) !important;
+  background: var(--ag-green) !important;
+}
