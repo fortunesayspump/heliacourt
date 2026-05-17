@@ -4182,3 +4182,24 @@ select {
 .wallet-primary {
   background: var(--ag-green) !important;
 }
+
+/* Active tabs should not draw boxy highlights. */
+.app-topnav .app-nav a:hover,
+.app-topnav .app-nav a.active,
+.case-record-tabs a:hover,
+.case-record-tabs a.active,
+.case-record-tabs a[aria-current='page'],
+.top-record-tabs a:hover,
+.top-record-tabs a.active,
+.top-record-tabs a[aria-current='page'] {
+  color: var(--ag-cream) !important;
+  background: transparent !important;
+}
+
+.app-topnav .app-nav a.active,
+.case-record-tabs a.active,
+.case-record-tabs a[aria-current='page'],
+.top-record-tabs a.active,
+.top-record-tabs a[aria-current='page'] {
+  box-shadow: inset 0 -1px 0 rgba(241, 211, 170, 0.52) !important;
+}
