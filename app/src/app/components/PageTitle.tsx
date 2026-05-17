@@ -18,7 +18,7 @@ export function PageTitle({
   actions,
   imageSrc = '/assets/ancient-athenian-juries.jpg',
   imagePosition = 'center',
-  tone = 'light',
+  tone = 'dark',
 }: PageTitleProps) {
   const imageStyle = {
     '--page-title-position': imagePosition,
