@@ -1,0 +1,184 @@
+.cases-docket-panel {
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  overflow: hidden;
+  border-color: rgba(241, 211, 170, 0.36);
+  background: #302b22;
+}
+
+.cases-docket-heading {
+  margin: 0;
+  padding: 0 0 18px;
+  border-bottom: 1px solid rgba(241, 211, 170, 0.22);
+}
+
+.cases-docket-heading h2 {
+  margin: 2px 0 0;
+  font-family: var(--font-title);
+  font-size: clamp(24px, 2vw, 34px);
+  line-height: 1.05;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cases-docket-panel .toolbar-row {
+  margin: 0;
+}
+
+.cases-docket-panel .search-field,
+.cases-docket-panel .toolbar-row button {
+  border-color: rgba(241, 211, 170, 0.24);
+  background: #28251f;
+}
+
+.cases-docket-panel .docket-case-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.cases-docket-panel .docket-case-card {
+  display: grid;
+  grid-template-rows: auto minmax(118px, 1fr) auto auto;
+  height: 100%;
+  min-height: 0;
+  gap: 18px;
+  padding: 22px;
+  border-color: rgba(241, 211, 170, 0.3);
+  border-radius: var(--radius-lg);
+  background: #14130f;
+}
+
+.cases-docket-panel .docket-case-card h3 {
+  max-width: none;
+  font-family: var(--font-body);
+  font-size: clamp(18px, 1.25vw, 23px);
+  line-height: 1.12;
+  font-weight: 650;
+}
+
+.cases-docket-panel .docket-case-card p {
+  max-width: 58ch;
+  font-size: 15.5px;
+  line-height: 1.55;
+}
+
+.cases-docket-panel .docket-case-card-top,
+.cases-docket-panel .docket-case-card-actions,
+.cases-docket-panel .docket-case-card-link {
+  display: flex;
+  align-items: center;
+}
+
+.cases-docket-panel .docket-case-card-top {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cases-docket-panel .docket-case-card-meta {
+  display: grid;
+  width: 100%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.cases-docket-panel .docket-case-card-meta > div {
+  width: 100%;
+  min-width: 0;
+  min-height: 76px;
+  display: block;
+  padding: 14px 12px;
+  border: 1px solid rgba(241, 211, 170, 0.24);
+  border-color: rgba(241, 211, 170, 0.24);
+  border-radius: calc(var(--radius-lg) - 4px);
+  background: #28251f;
+}
+
+.cases-docket-panel .docket-case-card-meta span,
+.cases-docket-panel .docket-case-card-meta strong {
+  display: block;
+}
+
+.cases-docket-panel .docket-case-card-meta span {
+  color: var(--ag-muted);
+  font-size: 14px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.cases-docket-panel .docket-case-card-meta strong {
+  margin-top: 6px;
+  color: var(--ag-ink);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.cases-docket-panel .docket-case-card-actions {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cases-docket-panel .docket-case-card-link {
+  width: max-content;
+  min-height: 38px;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(241, 211, 170, 0.22);
+  border-radius: var(--radius-md);
+  color: var(--ag-cream);
+  background: var(--ag-green);
+  font-size: 14px;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.cases-docket-panel .secondary-button.compact-action {
+  color: var(--ag-ink);
+  border-color: rgba(241, 211, 170, 0.24);
+  background: #28251f;
+}
+
+:root[data-theme='light'] .cases-docket-panel {
+  border-color: var(--ag-border-strong);
+  background: var(--ag-surface);
+}
+
+:root[data-theme='light'] .cases-docket-heading {
+  border-color: var(--ag-border);
+}
+
+:root[data-theme='light'] .cases-docket-panel .docket-case-card {
+  border-color: var(--ag-border-strong);
+  background: var(--ag-inner-surface);
+}
+
+:root[data-theme='light'] .cases-docket-panel .docket-case-card-meta > div,
+:root[data-theme='light'] .cases-docket-panel .search-field,
+:root[data-theme='light'] .cases-docket-panel .toolbar-row button,
+:root[data-theme='light'] .cases-docket-panel .secondary-button.compact-action {
+  border-color: var(--ag-border);
+  background: var(--ag-inner-surface);
+}
+
+@media (max-width: 1180px) {
+  .cases-docket-panel .docket-case-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cases-docket-panel .docket-case-card-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .cases-docket-panel .docket-case-grid,
+  .cases-docket-panel .docket-case-card-meta,
+  .cases-docket-panel .toolbar-row {
+    grid-template-columns: 1fr;
+  }
+}

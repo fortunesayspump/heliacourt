@@ -1,0 +1,212 @@
+:root {
+  --ag-page: #faf8f3;
+  --ag-surface: #f2ecdf;
+  --ag-inner-surface: #fffdf8;
+  --ag-inner-surface-strong: #ece1cf;
+  --white: #fafafa;
+  --ivory: #f1d3aa;
+  --black: #22211d;
+  --brown: #9a9350;
+  --green: #476352;
+  --parchment: #f1d3aa;
+  --muted: #4f4d45;
+  --hairline: rgba(34, 33, 29, 0.14);
+  --surface: var(--white);
+  --marble: var(--white);
+  --marble-light: var(--white);
+  --stone: var(--white);
+  --panel-fill: var(--white);
+  --panel-fill-strong: var(--white);
+  --panel-inner: var(--white);
+  --page-speckle: rgba(34, 33, 29, 0.018);
+  --page-fiber: rgba(255, 255, 255, 0);
+  --stone-dark: var(--brown);
+  --ink: var(--black);
+  --ash: var(--muted);
+  --bronze: var(--brown);
+  --bronze-dark: var(--brown);
+  --olive: var(--green);
+  --terracotta: var(--brown);
+  --lapis: var(--brown);
+  --wine: var(--green);
+  --aqua: var(--green);
+  --verdict: var(--black);
+  --line: rgba(34, 33, 29, 0.13);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  color: var(--ink);
+  background: var(--white);
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  background: var(--ag-page);
+}
+
+body {
+  --font-body: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-logo: var(--font-cinzel-decorative), "Cinzel Decorative", Georgia, serif;
+  --font-title: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  --font-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  min-width: 320px;
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--ag-page);
+  font-family: var(--font-body);
+}
+
+.app-scroll-root {
+  width: 100%;
+  height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: none;
+  scrollbar-gutter: stable;
+  background: var(--ag-page);
+  -webkit-overflow-scrolling: touch;
+}
+
+body::before {
+  content: none;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --white: #141411;
+    --ivory: #f1d3aa;
+    --black: #fafafa;
+    --brown: #9a9350;
+    --green: #476352;
+    --parchment: #22211d;
+    --muted: rgba(250, 250, 250, 0.76);
+    --hairline: rgba(241, 211, 170, 0.14);
+    --surface: #22211d;
+    --marble: var(--white);
+    --marble-light: var(--white);
+    --stone: var(--surface);
+    --panel-fill: #22211d;
+    --panel-fill-strong: #22211d;
+    --panel-inner: #141411;
+    --page-speckle: rgba(241, 211, 170, 0.028);
+    --page-fiber: rgba(241, 211, 170, 0);
+    --stone-dark: var(--brown);
+    --ink: var(--black);
+    --ash: var(--muted);
+    --bronze: var(--brown);
+    --bronze-dark: var(--brown);
+    --olive: var(--brown);
+    --terracotta: var(--brown);
+    --lapis: var(--brown);
+    --wine: var(--brown);
+    --aqua: var(--brown);
+    --verdict: var(--white);
+    --line: rgba(241, 211, 170, 0.12);
+  }
+}
+
+:root[data-theme='light'] {
+  --ag-page: #faf8f3;
+  --ag-surface: #f2ecdf;
+  --ag-inner-surface: #fffdf8;
+  --ag-inner-surface-strong: #ece1cf;
+}
+
+:root[data-theme='dark'] {
+  --ag-page: #0d0c09;
+  --ag-surface: #28251f;
+  --ag-inner-surface: #14130f;
+  --ag-inner-surface-strong: #332d22;
+}
+
+:root[data-theme='light'],
+:root[data-theme='light'] body,
+:root[data-theme='light'] .app-scroll-root {
+  background: var(--ag-page);
+}
+
+:root[data-theme='dark'],
+:root[data-theme='dark'] body,
+:root[data-theme='dark'] .app-scroll-root {
+  background: var(--ag-page);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --white: #fafafa;
+  --ivory: #f1d3aa;
+  --black: #22211d;
+  --brown: #9a9350;
+  --green: #476352;
+  --parchment: #f1d3aa;
+  --muted: #4f4d45;
+  --hairline: rgba(34, 33, 29, 0.14);
+  --surface: var(--white);
+  --marble: var(--white);
+  --marble-light: var(--white);
+  --stone: var(--white);
+  --panel-fill: var(--white);
+  --panel-fill-strong: var(--white);
+  --panel-inner: var(--white);
+  --page-speckle: rgba(34, 33, 29, 0.018);
+  --page-fiber: rgba(255, 255, 255, 0);
+  --stone-dark: var(--brown);
+  --ink: var(--black);
+  --ash: var(--muted);
+  --bronze: var(--brown);
+  --bronze-dark: var(--brown);
+  --olive: var(--brown);
+  --terracotta: var(--brown);
+  --lapis: var(--brown);
+  --wine: var(--green);
+  --aqua: var(--green);
+  --verdict: var(--black);
+  --line: rgba(34, 33, 29, 0.13);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --white: #141411;
+  --ivory: #f1d3aa;
+  --black: #fafafa;
+  --brown: #9a9350;
+  --green: #476352;
+  --parchment: #22211d;
+  --muted: rgba(250, 250, 250, 0.76);
+  --hairline: rgba(241, 211, 170, 0.14);
+  --surface: #22211d;
+  --marble: var(--white);
+  --marble-light: var(--white);
+  --stone: var(--surface);
+  --panel-fill: #22211d;
+  --panel-fill-strong: #22211d;
+  --panel-inner: #141411;
+  --page-speckle: rgba(241, 211, 170, 0.028);
+  --page-fiber: rgba(241, 211, 170, 0);
+  --stone-dark: var(--brown);
+  --ink: var(--black);
+  --ash: var(--muted);
+  --bronze: var(--brown);
+  --bronze-dark: var(--brown);
+  --olive: var(--brown);
+  --terracotta: var(--brown);
+  --lapis: var(--brown);
+  --wine: var(--brown);
+  --aqua: var(--brown);
+  --verdict: var(--white);
+  --line: rgba(241, 211, 170, 0.12);
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@agora-court/contracts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/require-forge.mjs build",
+    "test": "node scripts/require-forge.mjs test",
+    "format": "node scripts/require-forge.mjs fmt",
+    "clean": "node scripts/require-forge.mjs clean"
+  },
+  "devDependencies": {}
+}

@@ -1,0 +1,17 @@
+{
+  "name": "agora-court-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev:app": "pnpm --dir app dev",
+    "dev:marketing": "pnpm --dir marketing dev",
+    "dev:backend": "pnpm --dir backend dev",
+    "build:app": "pnpm --dir app build",
+    "build:marketing": "pnpm --dir marketing build",
+    "build:backend": "pnpm --dir backend build",
+    "build:contracts": "pnpm --dir contracts build",
+    "test:contracts": "pnpm --dir contracts test",
+    "build": "pnpm build:app && pnpm build:marketing && pnpm build:backend && pnpm build:contracts"
+  }
+}
