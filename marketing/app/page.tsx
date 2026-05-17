@@ -37,31 +37,53 @@ export default function MarketingHome() {
         <AfterHeroNav />
 
         <section className="section intro" id="how">
-          <div className="reveal reveal-up">
-            <span className="section-label">01 / Proceedings</span>
-            <h2>From market question to court record.</h2>
-          </div>
-          <div className="steps">
-            <article className="reveal reveal-card">
-              <span>Petition</span>
-              <h3>File a case</h3>
-              <p>A user asks a market question and attaches a USDC budget for agent work.</p>
-            </article>
-            <article className="reveal reveal-card">
-              <span>Testimony</span>
-              <h3>Call witnesses</h3>
-              <p>Prediction, news, and onchain witnesses bring evidence into a structured record.</p>
-            </article>
-            <article className="reveal reveal-card">
-              <span>Argument</span>
-              <h3>Hear counsel</h3>
-              <p>Bull and bear counsel argue competing interpretations before risk constraints are applied.</p>
-            </article>
-            <article className="reveal reveal-card">
-              <span>Verdict</span>
-              <h3>Seal the record</h3>
-              <p>Dikasts vote, Archon writes the verdict, and Arc anchors receipts and reputation.</p>
-            </article>
+          <div className="proceedings-layout">
+            <div className="proceedings-copy">
+              <span className="section-label">01 / Proceedings</span>
+              <h2>From market question to court record.</h2>
+              <p>
+                A user funds one prediction-market question. Agora Court gathers evidence, lets counsel test it, and
+                returns a verdict record that can be inspected later.
+              </p>
+            </div>
+
+            <div className="hearing-record clean-record" aria-label="Court proceeding stages">
+              <article className="record-row">
+                <span>01</span>
+                <div>
+                  <strong>Petition</strong>
+                  <p>Question, horizon, visibility, and budget enter the docket.</p>
+                </div>
+              </article>
+              <article className="record-row">
+                <span>02</span>
+                <div>
+                  <strong>Testimony</strong>
+                  <p>Prediction, web, onchain, weather, and risk witnesses build evidence.</p>
+                </div>
+              </article>
+              <article className="record-row">
+                <span>03</span>
+                <div>
+                  <strong>Argument</strong>
+                  <p>Solon and Draco challenge weak claims and argue both sides.</p>
+                </div>
+              </article>
+              <article className="record-row">
+                <span>04</span>
+                <div>
+                  <strong>Verdict</strong>
+                  <p>Dikasts vote; Archon seals reasoning, reputation, and the Arc receipt.</p>
+                </div>
+              </article>
+
+              <div className="record-output-line" aria-label="Court record output">
+                <span>Evidence record</span>
+                <span>Counsel transcript</span>
+                <span>Signed verdict</span>
+                <span>Arc receipt</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -71,8 +93,8 @@ export default function MarketingHome() {
             <div>
               <h2>Each agent has a role, price, and reputation.</h2>
               <p>
-                The court is modular by design. New witness agents, jurors, and specialist counsel can be added through an
-                agent registry without rewriting the whole chamber.
+                Agora Court starts with a curated bench, then opens space for builders to add specialist witnesses once the
+                agent standard is proven.
               </p>
             </div>
           </div>
@@ -93,14 +115,14 @@ export default function MarketingHome() {
             <span className="section-label">03 / Arc Settlement</span>
             <h2>Stablecoin-native court economics.</h2>
             <p>
-              Arc comes in where agents become paid market participants: filing fees, witness payments, protocol fees,
-              verdict hashes, reputation updates, and auditable decision receipts.
+              Cases are priced like paid research. A funded case pays witnesses, counsel, settlement, and protocol fees
+              while preserving a public or private verdict record.
             </p>
           </div>
           <div className="ledger">
-            <article className="reveal reveal-card"><span>Witness testimony</span><strong>0.11 USDC</strong></article>
-            <article className="reveal reveal-card"><span>Court agents</span><strong>0.16 USDC</strong></article>
-            <article className="reveal reveal-card"><span>Protocol fee</span><strong>0.03 USDC</strong></article>
+            <article className="reveal reveal-card"><span>Typical case</span><strong>$5-10</strong></article>
+            <article className="reveal reveal-card"><span>Witness calls</span><strong>Metered</strong></article>
+            <article className="reveal reveal-card"><span>Protocol fee</span><strong>Arc cut</strong></article>
             <article className="reveal reveal-card"><span>Record hash</span><strong>Arc receipt</strong></article>
           </div>
         </section>
