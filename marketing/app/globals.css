@@ -2411,7 +2411,6 @@ body,
   --ag-border-strong: rgba(241, 211, 170, 0.25);
   --ag-deep: #0b0a08;
   --ag-green: #476352;
-  --ag-aegean: #6f9fa3;
   --ag-laurel: #9cad73;
   --ag-gold: #a79a67;
   --ag-cream: #f1d3aa;
@@ -2481,11 +2480,6 @@ body,
   color: var(--ag-laurel);
 }
 
-.ledger article:nth-child(3n) strong,
-.agent-grid article:nth-child(4n) strong {
-  color: var(--ag-aegean);
-}
-
 .section-label,
 .arc-panel .section-label,
 .closing .section-label {
@@ -2509,7 +2503,7 @@ body,
 .nav-court-button {
   color: #fffaf2;
   border-color: #35493d;
-  background: color-mix(in srgb, var(--ag-green) 86%, var(--ag-aegean));
+  background: var(--ag-green);
 }
 
 .button.ghost {

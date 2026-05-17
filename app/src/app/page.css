@@ -3640,7 +3640,6 @@ textarea::placeholder {
   --ag-deep-soft: #141411;
   --ag-green: #476352;
   --ag-green-dark: #35493d;
-  --ag-aegean: #6f9fa3;
   --ag-laurel: #9cad73;
   --ag-gold: #a79a67;
   --ag-cream: #f1d3aa;
@@ -3837,7 +3836,7 @@ select,
 .case-row a,
 .case-card-link,
 .docket-case-card-link {
-  background: color-mix(in srgb, var(--ag-green) 82%, var(--ag-aegean)) !important;
+  background: var(--ag-green) !important;
 }
 
 .metrics-grid span,
@@ -4154,4 +4153,32 @@ select {
 .case-record-tabs a.active,
 .case-record-tabs a[aria-current='page'] {
   background: var(--ag-inner-surface-strong) !important;
+}
+
+/* Final no-blue + restored radial page texture override. */
+:root,
+:root[data-theme='light'],
+:root[data-theme='dark'] {
+  --ag-laurel: #9cad73;
+}
+
+.app-shell,
+.workspace {
+  background-color: var(--ag-page) !important;
+  background-image:
+    radial-gradient(ellipse at 18% 12%, rgba(241, 211, 170, 0.07) 0 1px, transparent 1px 38px),
+    radial-gradient(ellipse at 82% 18%, rgba(241, 211, 170, 0.045) 0 1px, transparent 1px 52px),
+    repeating-radial-gradient(circle at 20% 30%, rgba(241, 211, 170, 0.034) 0 1px, transparent 1px 5px) !important;
+  background-position: 0 0, 12px 18px, 0 0 !important;
+  background-size: 180px 180px, 240px 240px, auto !important;
+}
+
+.case-row a,
+.case-card-link,
+.docket-case-card-link,
+.primary-button,
+.wallet-connect-button,
+.wallet-notice button,
+.wallet-primary {
+  background: var(--ag-green) !important;
 }
