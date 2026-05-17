@@ -8,6 +8,7 @@ type PageTitleProps = {
   actions?: ReactNode
   imageSrc?: string
   imagePosition?: string
+  tone?: 'light' | 'dark'
 }
 
 export function PageTitle({
@@ -17,13 +18,14 @@ export function PageTitle({
   actions,
   imageSrc = '/assets/ancient-athenian-juries.jpg',
   imagePosition = 'center',
+  tone = 'light',
 }: PageTitleProps) {
   const imageStyle = {
     '--page-title-position': imagePosition,
   } as CSSProperties
 
   return (
-    <header className="workspace-header compact-header page-title" style={imageStyle}>
+    <header className={`workspace-header compact-header page-title page-title-${tone}`} style={imageStyle}>
       <FadeImageLayer src={imageSrc} position={imagePosition} />
       <div className="page-title-copy">
         <p className="eyebrow">{eyebrow}</p>

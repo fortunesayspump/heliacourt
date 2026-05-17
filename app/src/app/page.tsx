@@ -50,6 +50,7 @@ export default function DashboardPage() {
           title="Market questions, argued by agents"
           description="Track live prediction cases, summon specialist witnesses, compare odds against evidence, and publish public or private verdict records."
           imagePosition="center 29%"
+          tone="dark"
           actions={
             <>
             <Link className="secondary-button" href="/cases">

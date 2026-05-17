@@ -4203,3 +4203,20 @@ select {
 .top-record-tabs a[aria-current='page'] {
   box-shadow: inset 0 -1px 0 rgba(241, 211, 170, 0.52) !important;
 }
+
+/* Dashboard hero can use the darker title treatment while other title pages stay bright. */
+.workspace-header.page-title.page-title-dark h1,
+.workspace-header.page-title.page-title-dark .eyebrow,
+.workspace-header.page-title.page-title-dark .header-copy {
+  color: #14130f !important;
+}
+
+.workspace-header.page-title.page-title-dark .header-copy {
+  font-weight: 600;
+}
+
+.workspace-header.page-title.page-title-dark .secondary-button {
+  color: #14130f !important;
+  border-color: rgba(20, 19, 15, 0.22) !important;
+  background: rgba(255, 250, 242, 0.76) !important;
+}
