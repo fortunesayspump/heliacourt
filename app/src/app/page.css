@@ -4183,6 +4183,18 @@ select {
   background: var(--ag-green) !important;
 }
 
+.wallet-notice > div > svg {
+  color: var(--ag-cream) !important;
+  stroke-width: 2.2;
+}
+
+.wallet-notice button svg,
+.wallet-connect-button svg {
+  color: var(--ag-on-dark) !important;
+  opacity: 1 !important;
+  stroke-width: 2.2;
+}
+
 /* Active tabs should not draw boxy highlights. */
 .app-topnav .app-nav a:hover,
 .app-topnav .app-nav a.active,
