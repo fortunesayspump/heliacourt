@@ -4091,3 +4091,67 @@ select,
   border-color: var(--ag-green-dark) !important;
   background: var(--ag-green) !important;
 }
+
+/* Final app contrast pass: cards use the darker input-box tone, with nested controls lifted slightly. */
+:root,
+:root[data-theme='light'],
+:root[data-theme='dark'] {
+  --ag-page: #0c0b08;
+  --ag-surface: #14130f;
+  --ag-inner-surface: #211e17;
+  --ag-inner-surface-strong: #2c261c;
+  --ag-border: rgba(241, 211, 170, 0.18);
+  --ag-border-strong: rgba(241, 211, 170, 0.3);
+  --ag-muted: rgba(255, 250, 242, 0.74);
+}
+
+.panel,
+.case-box,
+.case-card,
+.case-record-tabs,
+.wallet-notice,
+.court-matter,
+.wallet-menu-panel,
+.text-page .doc-grid article,
+.metrics-grid,
+.cases-docket-panel,
+.docket-case-card,
+.sidebar-card,
+.primary-work-panel {
+  background: var(--ag-surface) !important;
+}
+
+.metric,
+.case-row,
+.roster-row,
+.compact-card,
+.rail-card,
+.settlement-table > div,
+.preview-witness-list > div,
+.preview-budget > div,
+.preview-pill-row span,
+.similar-case-card,
+.witness-option,
+.route-choice-grid article,
+.sidebar-facts div,
+.transcript-message,
+.case-card-meta > div,
+.docket-case-card-meta > div,
+.search-field,
+.case-form input,
+.case-box textarea,
+input,
+textarea,
+select {
+  background: var(--ag-inner-surface) !important;
+}
+
+.transcript-stage,
+.court-matter,
+.top-record-tabs a:hover,
+.top-record-tabs a.active,
+.case-record-tabs a:hover,
+.case-record-tabs a.active,
+.case-record-tabs a[aria-current='page'] {
+  background: var(--ag-inner-surface-strong) !important;
+}

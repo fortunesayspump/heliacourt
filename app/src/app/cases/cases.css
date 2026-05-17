@@ -182,3 +182,28 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Keep cases aligned with the restored dark app theme. */
+.cases-docket-panel,
+:root[data-theme='light'] .cases-docket-panel {
+  background: var(--ag-surface);
+}
+
+.cases-docket-panel .docket-case-card,
+:root[data-theme='light'] .cases-docket-panel .docket-case-card {
+  border-color: var(--ag-border-strong);
+  background: var(--ag-surface);
+}
+
+.cases-docket-panel .docket-case-card-meta > div,
+.cases-docket-panel .search-field,
+.cases-docket-panel .toolbar-row button,
+.cases-docket-panel .secondary-button.compact-action,
+:root[data-theme='light'] .cases-docket-panel .docket-case-card-meta > div,
+:root[data-theme='light'] .cases-docket-panel .search-field,
+:root[data-theme='light'] .cases-docket-panel .toolbar-row button,
+:root[data-theme='light'] .cases-docket-panel .secondary-button.compact-action {
+  color: var(--ag-ink);
+  border-color: var(--ag-border);
+  background: var(--ag-inner-surface);
+}
