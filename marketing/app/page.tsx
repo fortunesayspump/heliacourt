@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AfterHeroNav } from './components/AfterHeroNav'
 import { FadeImageLayer } from './components/FadeImageLayer'
-import { HeaderNav } from './components/Nav'
+import { APP_URL, HeaderNav } from './components/Nav'
 import { ScrollReveal } from './components/ScrollReveal'
 
 export default function MarketingHome() {
@@ -24,7 +24,7 @@ export default function MarketingHome() {
               vote, and every verdict leaves an auditable Arc settlement record.
             </p>
             <div className="actions">
-              <Link className="button primary" href="#how">
+              <Link className="button primary" href={APP_URL}>
                 Enter Court
               </Link>
               <Link className="button ghost" href="#arc">

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://app.heliacourt.xyz'
+
 export function BrandMark({ href = '/' }: { href?: string }) {
   return <Link className="brand-mark" href={href} aria-label="Helia Court home" />
 }
@@ -14,7 +16,7 @@ export function HeaderNav({ className = '', showCourtButton = false }: { classNa
         <Link href="/#arc">Arc</Link>
         <Link href="/docs">Docs</Link>
         {showCourtButton ? (
-          <Link className="nav-court-button" href="http://localhost:3000">
+          <Link className="nav-court-button" href={APP_URL}>
             Enter Court
           </Link>
         ) : null}
