@@ -29,7 +29,6 @@ export default async function DashboardPage() {
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
   const benchAgents = registryAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
-    .slice(0, 8)
 
   return (
     <main className="app-shell">
@@ -191,7 +190,7 @@ export default async function DashboardPage() {
                 </div>
                 <UserCircleCheck size={19} />
               </div>
-              <div className="agent-market-list">
+              <div className="agent-market-list dashboard-bench-list">
                 {benchAgents.length ? (
                   benchAgents.map((agent) => (
                     <article className="roster-row" key={agent.id}>

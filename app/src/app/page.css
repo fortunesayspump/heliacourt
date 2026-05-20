@@ -3608,6 +3608,24 @@ select {
   gap: 8px;
 }
 
+.dashboard-bench-list {
+  max-height: 288px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+  scrollbar-color: rgba(241, 211, 170, 0.32) transparent;
+  scrollbar-width: thin;
+}
+
+.dashboard-bench-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dashboard-bench-list::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(241, 211, 170, 0.32);
+}
+
 /* Header wallet button belongs to the top chrome, not the green in-page action style. */
 .app-topnav .wallet-connect-button {
   color: var(--ag-ink) !important;
