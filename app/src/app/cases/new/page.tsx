@@ -4,22 +4,19 @@ import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { PageTitle } from '../../components/PageTitle'
 import { WalletNotice } from '../../components/WalletNotice'
+import { getBackendAgents } from '../../../lib/backend-data'
 import '../../page.css'
 
-const witnessOptions = [
-  ['Prediction markets', 'Pythia', 'Odds, spreads, liquidity, implied probability'],
-  ['Web and news search', 'Hermes', 'Fresh articles, source quality, event clustering'],
-  ['Source scraping', 'Aletheia', 'Exact page text, dates, authorship, resolution relevance'],
-  ['Onchain flows', 'Argos', 'Wallet movement, exchange flows, stablecoin pressure'],
-  ['Data APIs', 'Notus', 'Sports, weather, macro calendars, external datasets'],
-  ['Source quality', 'Skepsis', 'Authority, freshness, directness, and source conflicts'],
-  ['Timeline', 'Chronos', 'Chronology, deadlines, horizons, event timing'],
-  ['Research synthesis', 'Sophia', 'Direct proof, background, contradictions, missing evidence'],
-  ['Quant checks', 'Numeros', 'Price distance, liquidity, volatility, numerical constraints'],
-  ['Risk limits', 'Phylax', 'Uncertainty, manipulation risk, liquidity, invalidation'],
-]
+export default async function NewCasePage() {
+  const witnessOptions = (await getBackendAgents())
+    .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
+    .map((agent) => ({
+      id: agent.id,
+      category: formatAgentCategory(agent.description),
+      agent: agent.name,
+      detail: formatAgentDetail(agent.description),
+    }))
 
-export default function NewCasePage() {
   return (
     <main className="app-shell">
       <AppHeader active="new-case" />
@@ -112,13 +109,18 @@ https://www.fifa.com/...`}
               Heliaia seats witnesses from the case brief, market type, horizon, and budget. Users do not manually pick agents for the MVP.
             </p>
             <div className="compact-list">
-              {witnessOptions.map(([category, agent, detail]) => (
-                <article className="witness-option" key={category}>
+              {witnessOptions.length ? witnessOptions.map(({ id, category, agent, detail }) => (
+                <article className="witness-option" key={id}>
                   <span>{category}</span>
                   <strong>{agent}</strong>
                   <p>{detail}</p>
                 </article>
-              ))}
+              )) : (
+                <div className="empty-state">
+                  <strong>Backend registry unavailable</strong>
+                  <p>Set BACKEND_URL to preview the live witness bench.</p>
+                </div>
+              )}
             </div>
           </aside>
 
@@ -222,12 +224,17 @@ https://www.fifa.com/...`}
             <article className="case-box">
               <p className="eyebrow">Auto-seated bench</p>
               <div className="preview-witness-list">
-                {witnessOptions.map(([category, agent]) => (
-                  <div key={category}>
+                {witnessOptions.length ? witnessOptions.map(({ id, category, agent }) => (
+                  <div key={id}>
                     <span>{category}</span>
                     <strong>{agent}</strong>
                   </div>
-                ))}
+                )) : (
+                  <div>
+                    <span>Registry</span>
+                    <strong>Pending backend</strong>
+                  </div>
+                )}
               </div>
             </article>
 
@@ -266,4 +273,13 @@ https://www.fifa.com/...`}
       <AppFooter />
     </main>
   )
+}
+
+function formatAgentCategory(description: string) {
+  return description.split('.')[0] || 'Witness'
+}
+
+function formatAgentDetail(description: string) {
+  const [, detail] = description.split('. ')
+  return detail || description
 }

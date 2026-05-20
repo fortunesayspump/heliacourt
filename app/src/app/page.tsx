@@ -16,24 +16,20 @@ import { AppHeader } from './components/AppHeader'
 import { AppFooter } from './components/AppFooter'
 import { PageTitle } from './components/PageTitle'
 import { WalletNotice } from './components/WalletNotice'
-import { formatConfidence, getBackendCases, getBackendLedgerRows } from '../lib/backend-data'
+import { formatConfidence, getBackendAgents, getBackendCases, getBackendLedgerRows } from '../lib/backend-data'
 import './page.css'
 
-const agents = [
-  ['Pythia', 'Prediction markets', '92%', '0.90 USDC'],
-  ['Argos', 'Onchain data', '88%', '1.10 USDC'],
-  ['Hermes', 'Web/news search', '84%', '0.80 USDC'],
-  ['Notus', 'Data APIs', '91%', '0.70 USDC'],
-  ['Skepsis', 'Source quality', '94%', '0.60 USDC'],
-  ['Chronos', 'Timeline', '93%', '0.60 USDC'],
-  ['Numeros', 'Quant checks', '92%', '0.90 USDC'],
-  ['Phylax', 'Risk review', '97%', '0.65 USDC'],
-]
-
 export default async function DashboardPage() {
-  const [backendCases, ledgerRows] = await Promise.all([getBackendCases(), getBackendLedgerRows()])
+  const [backendCases, ledgerRows, registryAgents] = await Promise.all([
+    getBackendCases(),
+    getBackendLedgerRows(),
+    getBackendAgents(),
+  ])
   const activeCases = backendCases.filter((item) => item.status !== 'Verdict')
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
+  const benchAgents = registryAgents
+    .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
+    .slice(0, 8)
 
   return (
     <main className="app-shell">
@@ -190,24 +186,31 @@ export default async function DashboardPage() {
             <section className="panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">Witness bench</p>
-                  <h2>First-party agents</h2>
+                  <p className="eyebrow">Backend registry</p>
+                  <h2>Active witness bench</h2>
                 </div>
                 <UserCircleCheck size={19} />
               </div>
               <div className="agent-market-list">
-                {agents.map(([name, role, reliability, fee]) => (
-                  <article className="roster-row" key={name}>
-                    <div>
-                      <h3>{name}</h3>
-                      <p>{role}</p>
-                    </div>
-                    <div className="roster-meta">
-                      <span className="state-dot ready">{reliability}</span>
-                      <strong>{fee}</strong>
-                    </div>
-                  </article>
-                ))}
+                {benchAgents.length ? (
+                  benchAgents.map((agent) => (
+                    <article className="roster-row" key={agent.id}>
+                      <div>
+                        <h3>{agent.name}</h3>
+                        <p>{formatAgentRole(agent.description)}</p>
+                      </div>
+                      <div className="roster-meta">
+                        <span className="state-dot ready">{agent.runMode}</span>
+                        <strong>{formatAgentFee(agent.priceUsd)}</strong>
+                      </div>
+                    </article>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <strong>Backend registry unavailable</strong>
+                    <p>Start the backend or set BACKEND_URL to show live agent seats.</p>
+                  </div>
+                )}
               </div>
             </section>
         </section>
@@ -215,4 +218,13 @@ export default async function DashboardPage() {
       <AppFooter />
     </main>
   )
+}
+
+function formatAgentRole(description: string) {
+  const [, detail] = description.split('. ')
+  return detail || description
+}
+
+function formatAgentFee(value: number) {
+  return value ? `${value.toFixed(2)} USDC` : '0.00 USDC'
 }
