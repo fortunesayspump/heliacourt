@@ -1,7 +1,7 @@
 import Link from 'next/link'
 
 export function BrandMark({ href = '/' }: { href?: string }) {
-  return <Link className="brand-mark" href={href} aria-label="Agora Court home" />
+  return <Link className="brand-mark" href={href} aria-label="Helia Court home" />
 }
 
 export function HeaderNav({ className = '', showCourtButton = false }: { className?: string; showCourtButton?: boolean }) {

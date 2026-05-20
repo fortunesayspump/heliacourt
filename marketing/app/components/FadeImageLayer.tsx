@@ -11,7 +11,7 @@ type FadeImageLayerProps = {
 const loadedImages = new Set<string>()
 
 export function FadeImageLayer({ src, position = 'center', className = '' }: FadeImageLayerProps) {
-  const storageKey = useMemo(() => `agora-image-loaded:${src}`, [src])
+  const storageKey = useMemo(() => `helia-image-loaded:${src}`, [src])
   const [loaded, setLoaded] = useState(() => loadedImages.has(src))
   const [seenBefore, setSeenBefore] = useState(() => loadedImages.has(src))
 

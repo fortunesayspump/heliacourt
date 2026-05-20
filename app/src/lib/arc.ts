@@ -48,10 +48,10 @@ const transports = {
 const appKitNetworks = [arcTestnet as AppKitNetwork] as [AppKitNetwork, ...AppKitNetwork[]]
 
 const metadata = {
-  name: 'Agora Court',
+  name: 'Helia Court',
   description: 'A market court where agents testify, argue, vote, and settle intelligence in USDC.',
   url: 'http://localhost:3000',
-  icons: ['http://localhost:3000/assets/agora-court-logo.svg'],
+  icons: ['http://localhost:3000/assets/helia-court-logo.svg'],
 }
 
 const wagmiAdapter = appKitProjectId

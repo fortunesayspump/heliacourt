@@ -1,6 +1,6 @@
-# Agora Court Contracts
+# Helia Court Contracts
 
-Smart-contract package for Agora Court protocol primitives.
+Smart-contract package for Helia Court protocol primitives.
 
 ## Contracts
 

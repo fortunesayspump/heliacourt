@@ -2,16 +2,15 @@ import { CurrencyCircleDollar, GitBranch, Bank, Wallet } from '@phosphor-icons/r
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
 import { PageTitle } from '../components/PageTitle'
+import { getBackendLedgerRows } from '../../lib/backend-data'
 import '../page.css'
 
-const ledgerRows = [
-  ['0x7A19', 'Oil volatility hearing', 'Witness payouts', '0.11 USDC', 'Anchored'],
-  ['0x7A19', 'Oil volatility hearing', 'Court agents', '0.16 USDC', 'Anchored'],
-  ['0x7A19', 'Oil volatility hearing', 'Protocol fee', '0.03 USDC', 'Anchored'],
-  ['0x31F0', 'ETH/SOL rotation', 'Budget escrow', '0.42 USDC', 'Pending'],
-]
+export default async function LedgerPage() {
+  const ledgerRows = await getBackendLedgerRows()
+  const anchored = ledgerRows.filter((row) => row.status === 'Anchored')
+  const recorded = ledgerRows.filter((row) => row.status === 'Recorded')
+  const pending = ledgerRows.filter((row) => row.status !== 'Anchored' && row.status !== 'Recorded')
 
-export default function LedgerPage() {
   return (
     <main className="app-shell">
       <AppHeader active="ledger" />
@@ -29,28 +28,28 @@ export default function LedgerPage() {
             <Wallet size={19} />
             <div>
               <span>Escrowed budget</span>
-              <strong>4.80 USDC</strong>
+              <strong>{pending.length} pending</strong>
             </div>
           </div>
           <div className="metric">
             <CurrencyCircleDollar size={19} />
             <div>
               <span>Agent payouts</span>
-              <strong>8.42 USDC</strong>
+              <strong>{ledgerRows.length} rows</strong>
             </div>
           </div>
           <div className="metric">
             <Bank size={19} />
             <div>
               <span>Protocol fees</span>
-              <strong>0.91 USDC</strong>
+              <strong>Pending</strong>
             </div>
           </div>
           <div className="metric">
             <GitBranch size={19} />
             <div>
-              <span>CCTP transfers</span>
-              <strong>3 routes</strong>
+              <span>Decision records</span>
+              <strong>{anchored.length} anchored · {recorded.length} recorded</strong>
             </div>
           </div>
         </section>
@@ -63,9 +62,9 @@ export default function LedgerPage() {
             </div>
           </div>
           <div className="ledger-table">
-            {ledgerRows.map(([caseId, title, item, amount, status]) => (
+            {ledgerRows.length ? ledgerRows.map(({ caseId, title, item, amount, status, hash }) => (
               <article className="case-row" key={`${caseId}-${item}`}>
-                <code>{caseId}</code>
+                <code>{hash ? `${hash.slice(0, 6)}...${hash.slice(-4)}` : caseId}</code>
                 <div>
                   <h3>{title}</h3>
                   <p>{item}</p>
@@ -73,7 +72,17 @@ export default function LedgerPage() {
                 <strong>{amount}</strong>
                 <span className="state-dot ready">{status}</span>
               </article>
-            ))}
+            )) : (
+              <article className="case-row">
+                <code>--</code>
+                <div>
+                  <h3>No settlement records yet</h3>
+                  <p>Run a backend hearing to create the first verdict receipt.</p>
+                </div>
+                <strong>Pending</strong>
+                <span className="state-dot">Empty</span>
+              </article>
+            )}
           </div>
         </section>
       </section>

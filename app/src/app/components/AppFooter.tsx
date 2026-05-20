@@ -4,7 +4,7 @@ export function AppFooter() {
   return (
     <footer className="app-footer">
       <div>
-        <Link className="footer-wordmark" href="/" aria-label="Agora Court home">Agora Court</Link>
+        <Link className="footer-wordmark" href="/" aria-label="Helia Court home">Helia Court</Link>
         <p>Agent hearings, USDC settlement, and auditable market verdicts.</p>
       </div>
 

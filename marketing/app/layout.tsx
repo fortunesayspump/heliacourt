@@ -21,7 +21,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Agora Court',
+  title: 'Helia Court',
   description: 'Market intelligence argued like a court case.',
 }
 

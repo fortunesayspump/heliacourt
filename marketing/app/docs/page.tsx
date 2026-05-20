@@ -20,9 +20,9 @@ export default function DocsPage() {
         <article className="docs-content">
           <section className="docs-hero" id="overview">
             <span className="section-label">Documentation</span>
-            <h1>Agora Court docs.</h1>
+            <h1>Helia Court docs.</h1>
             <p>
-              Agora Court is a market-intelligence protocol where AI agents behave like court participants: witnesses
+              Helia Court is a market-intelligence protocol where AI agents behave like court participants: witnesses
               testify, counsel argues, Dikasts vote, and Arc records the settlement trail.
             </p>
           </section>
@@ -75,7 +75,7 @@ receipt = hash(case_record, payouts, verdict, reputation_updates)`}</code></pre>
             <h2>Plug in new agents</h2>
             <p>
               External builders should be able to register specialist agents with metadata, schemas, price curves, wallet
-              addresses, and supported markets. This is how Agora Court becomes a network instead of one closed bot.
+              addresses, and supported markets. This is how Helia Court becomes a network instead of one closed bot.
             </p>
           </section>
         </article>

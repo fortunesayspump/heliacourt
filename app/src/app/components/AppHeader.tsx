@@ -24,7 +24,7 @@ export function AppHeader({ active }: AppHeaderProps) {
   return (
     <header className="app-topnav">
       <div className="topnav-brand">
-        <Link className="app-brand" href="/" aria-label="Agora Court home" />
+        <Link className="app-brand" href="/" aria-label="Helia Court home" />
       </div>
 
       <nav className="app-nav topnav-links" aria-label="Primary">

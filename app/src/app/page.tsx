@@ -16,30 +16,25 @@ import { AppHeader } from './components/AppHeader'
 import { AppFooter } from './components/AppFooter'
 import { PageTitle } from './components/PageTitle'
 import { WalletNotice } from './components/WalletNotice'
-import { courtCases } from '../data/cases'
+import { formatConfidence, getBackendCases, getBackendLedgerRows } from '../lib/backend-data'
 import './page.css'
-
-const verdicts = [
-  ['BTC funding squeeze', 'Bullish edge', '64%', '0x91b2...a43f'],
-  ['AI chip export odds', 'Watchlist', '57%', '0x2df8...c883'],
-  ['ETH/BTC rotation', 'No clear edge', '54%', '0x774c...90ad'],
-]
 
 const agents = [
   ['Pythia', 'Prediction markets', '92%', '0.90 USDC'],
   ['Argos', 'Onchain data', '88%', '1.10 USDC'],
   ['Hermes', 'Web/news search', '84%', '0.80 USDC'],
-  ['Notus', 'Weather/data API', '91%', '0.70 USDC'],
+  ['Notus', 'Data APIs', '91%', '0.70 USDC'],
+  ['Skepsis', 'Source quality', '94%', '0.60 USDC'],
+  ['Chronos', 'Timeline', '93%', '0.60 USDC'],
+  ['Numeros', 'Quant checks', '92%', '0.90 USDC'],
   ['Phylax', 'Risk review', '97%', '0.65 USDC'],
 ]
 
-const hearingTiers = [
-  ['Quick brief', '1-3 min', '$1-2', 'One pass, fewer witnesses'],
-  ['Standard hearing', '5-15 min', '$5-10', 'Follow-ups, counsel, verdict'],
-  ['Deep hearing', '30-90 min', '$15+', 'Multiple witness rounds'],
-]
+export default async function DashboardPage() {
+  const [backendCases, ledgerRows] = await Promise.all([getBackendCases(), getBackendLedgerRows()])
+  const activeCases = backendCases.filter((item) => item.status !== 'Verdict')
+  const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
 
-export default function DashboardPage() {
   return (
     <main className="app-shell">
       <AppHeader active="dashboard" />
@@ -51,6 +46,7 @@ export default function DashboardPage() {
           description="Track live prediction cases, summon specialist witnesses, compare odds against evidence, and publish public or private verdict records."
           imagePosition="center 29%"
           tone="dark"
+          className="dashboard-hero-title"
           actions={
             <>
             <Link className="secondary-button" href="/cases">
@@ -75,29 +71,29 @@ export default function DashboardPage() {
             <div className="metric">
               <Briefcase size={19} />
               <div>
-                <span>Live markets</span>
-                <strong>12 active</strong>
+                <span>Live cases</span>
+                <strong>{activeCases.length} active</strong>
               </div>
             </div>
             <div className="metric">
               <Timer size={19} />
               <div>
-                <span>Median hearing</span>
-                <strong>8 min</strong>
+                <span>Backend records</span>
+                <strong>{backendCases.length} cases</strong>
               </div>
             </div>
             <div className="metric">
               <CurrencyDollar size={19} />
               <div>
-                <span>Avg case budget</span>
-                <strong>7.40 USDC</strong>
+                <span>Ledger rows</span>
+                <strong>{ledgerRows.length} rows</strong>
               </div>
             </div>
             <div className="metric">
               <Eye size={19} />
               <div>
                 <span>Public verdicts</span>
-                <strong>38 sealed</strong>
+                <strong>{backendCases.filter((item) => item.status === 'Verdict').length} sealed</strong>
               </div>
             </div>
         </section>
@@ -113,20 +109,27 @@ export default function DashboardPage() {
               </div>
 
               <div className="case-table">
-                {courtCases.slice(0, 3).map((item) => (
-                  <article className="case-row" key={item.title}>
-                    <div>
-                      <h3>{item.title}</h3>
-                      <p>{item.market} · {item.horizon} · {item.visibility}</p>
-                    </div>
-                    <span className="state-dot active">{item.status}</span>
-                    <strong>{item.probability}</strong>
-                    <strong>{item.budget}</strong>
-                    <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
-                      <ArrowRight size={17} />
-                    </Link>
-                  </article>
-                ))}
+                {backendCases.length ? (
+                  backendCases.slice(0, 3).map((item) => (
+                    <article className="case-row" key={item.id}>
+                      <div>
+                        <h3>{item.title}</h3>
+                        <p>{item.market ?? 'Prediction market'} · {item.horizon ?? 'Open'} · Backend record</p>
+                      </div>
+                      <span className="state-dot active">{item.status}</span>
+                      <strong>{item.probability ?? formatConfidence(item.confidence)}</strong>
+                      <strong>{item.witnesses?.length ?? 0} seats</strong>
+                      <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
+                        <ArrowRight size={17} />
+                      </Link>
+                    </article>
+                  ))
+                ) : (
+                  <div className="empty-state">
+                    <strong>No live cases yet</strong>
+                    <p>File a case or run a backend hearing to populate the docket.</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -144,7 +147,7 @@ export default function DashboardPage() {
                 <div className="case-controls">
                   <button type="button">Crypto</button>
                   <button type="button">Macro</button>
-                  <button type="button">Weather</button>
+                  <button type="button">Data</button>
                 </div>
                 <div className="duplicate-hint">
                   <span>Similar active case found</span>
@@ -160,19 +163,27 @@ export default function DashboardPage() {
             <section className="panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">Hearing tiers</p>
-                  <h2>Speed and cost</h2>
+                  <p className="eyebrow">Verdict archive</p>
+                  <h2>Recent decision receipts</h2>
                 </div>
-                <Wallet size={19} />
+                <CurrencyCircleDollar size={19} />
               </div>
               <div className="settlement-table">
-                {hearingTiers.map(([tier, duration, price, detail]) => (
-                  <div key={tier}>
-                    <span>{tier}</span>
-                    <strong>{duration} · {price}</strong>
-                    <code>{detail}</code>
+                {verdictRows.length ? (
+                  verdictRows.map((row) => (
+                    <div key={`${row.caseId}-${row.item}`}>
+                      <span>{row.title}</span>
+                      <strong>{row.item} · {row.amount}</strong>
+                      <code>{row.hash}</code>
+                    </div>
+                  ))
+                ) : (
+                  <div>
+                    <span>No receipts yet</span>
+                    <strong>Backend ledger awaiting records</strong>
+                    <code>Pending</code>
                   </div>
-                ))}
+                )}
               </div>
             </section>
 
@@ -196,25 +207,6 @@ export default function DashboardPage() {
                       <strong>{fee}</strong>
                     </div>
                   </article>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Verdict archive</p>
-                  <h2>Recent decision receipts</h2>
-                </div>
-                <CurrencyCircleDollar size={19} />
-              </div>
-              <div className="settlement-table">
-                {verdicts.map(([market, decision, confidence, hash]) => (
-                  <div key={market}>
-                    <span>{market}</span>
-                    <strong>{decision} · {confidence}</strong>
-                    <code>{hash}</code>
-                  </div>
                 ))}
               </div>
             </section>

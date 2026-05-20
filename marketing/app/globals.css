@@ -230,8 +230,8 @@ a {
   flex: 0 0 auto;
   color: currentColor;
   background: currentColor;
-  mask: url("/assets/agora-court-logo.svg") center / contain no-repeat;
-  -webkit-mask: url("/assets/agora-court-logo.svg") center / contain no-repeat;
+  mask: url("/assets/helia-court-logo.svg") center / contain no-repeat;
+  -webkit-mask: url("/assets/helia-court-logo.svg") center / contain no-repeat;
   transition: transform 180ms var(--ease-out), color 180ms ease;
 }
 
@@ -2073,7 +2073,7 @@ body,
   color: var(--ag-on-brown);
 }
 
-/* Shared Agora Court theme contract. Match app tokens so marketing cannot drift. */
+/* Shared Helia Court theme contract. Match app tokens so marketing cannot drift. */
 :root {
   --ag-page: #fafafa;
   --ag-surface: #ffffff;
@@ -2397,7 +2397,7 @@ body,
   text-align: right;
 }
 
-/* Final mixed Agora Court theme: dark-first with intentional light parchment sections. */
+/* Final mixed Helia Court theme: dark-first with intentional light parchment sections. */
 :root {
   --ag-page: #0f0e0b;
   --ag-surface: #191712;

@@ -3,11 +3,13 @@ import Link from 'next/link'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
 import { PageTitle } from '../components/PageTitle'
-import { courtCases } from '../../data/cases'
+import { formatConfidence, formatUpdated, getBackendCases } from '../../lib/backend-data'
 import '../page.css'
 import './cases.css'
 
-export default function CasesPage() {
+export default async function CasesPage() {
+  const backendCases = await getBackendCases()
+
   return (
     <main className="app-shell">
       <AppHeader active="cases" />
@@ -16,7 +18,7 @@ export default function CasesPage() {
         <PageTitle
           eyebrow="Docket"
           title="Cases"
-          description="Browse prediction-market intelligence cases by probability, horizon, witness coverage, visibility, and settlement status."
+          description="Track active prediction-market intelligence cases by odds, horizon, and hearing status."
           imageSrc="/assets/socrates.1400x0.jpg"
           imagePosition="center 38%"
           actions={
@@ -45,55 +47,58 @@ export default function CasesPage() {
             <button type="button">My cases</button>
           </div>
 
+          {backendCases.length ? (
           <div className="docket-case-grid">
-            {courtCases.map((item) => (
+            {backendCases.map((item) => (
               <article className="docket-case-card" key={item.id}>
                 <div className="docket-case-card-top">
                   <span className="state-dot active">{item.status}</span>
-                  <span className="muted-inline">
-                    <Clock size={14} />
-                    {item.updated}
-                  </span>
+                  <span>{item.market ?? 'Prediction market'}</span>
                 </div>
 
-                <div>
+                <div className="docket-case-card-main">
                   <h3>{item.title}</h3>
-                  <p>{item.detail} · {item.resolution}</p>
+                  <p>{item.resolution ?? item.verdict ?? 'Live hearing record pending.'}</p>
                 </div>
 
                 <div className="docket-case-card-meta">
                   <div>
                     <span>Odds</span>
-                    <strong>{item.probability}</strong>
+                    <strong>{item.probability ?? formatConfidence(item.confidence)}</strong>
                   </div>
                   <div>
                     <span>Time</span>
-                    <strong>{item.horizon}</strong>
+                    <strong>{item.horizon ?? 'Open'}</strong>
                   </div>
                   <div>
-                    <span>Cost</span>
-                    <strong>${item.budget.replace(' USDC', '')}</strong>
+                    <span>Witnesses</span>
+                    <strong>{item.witnesses?.length ?? 0}</strong>
                   </div>
                 </div>
 
                 <div className="docket-case-card-actions">
+                  <span className="muted-inline">
+                    <Clock size={14} />
+                    {formatUpdated(item.updated)}
+                  </span>
                   <Link className="docket-case-card-link" href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
                     Open case
                     <ArrowRight size={16} />
                   </Link>
-                  {item.duplicatePolicy === 'joinable' ? (
-                    <Link className="secondary-button compact-action" href="/cases/new">
-                      Join
-                    </Link>
-                  ) : (
-                    <Link className="secondary-button compact-action" href="/cases/new">
-                      Fresh hearing
-                    </Link>
-                  )}
                 </div>
               </article>
             ))}
           </div>
+          ) : (
+            <div className="empty-state">
+              <h3>No backend hearings yet</h3>
+              <p>File a case to create the first live docket record. The docket reads backend records only.</p>
+              <Link className="primary-button" href="/cases/new">
+                File case
+                <ArrowRight size={16} />
+              </Link>
+            </div>
+          )}
         </section>
 
         <section className="metrics-grid">
@@ -101,28 +106,28 @@ export default function CasesPage() {
             <Briefcase size={19} />
             <div>
               <span>Drafts</span>
-              <strong>3 cases</strong>
+              <strong>{backendCases.filter((item) => item.status === 'Queued').length} cases</strong>
             </div>
           </div>
           <div className="metric">
             <Gavel size={19} />
             <div>
               <span>In hearing</span>
-              <strong>5 cases</strong>
+              <strong>{backendCases.filter((item) => item.status === 'Hearing').length} cases</strong>
             </div>
           </div>
           <div className="metric">
             <Clock size={19} />
             <div>
               <span>Awaiting vote</span>
-              <strong>2 cases</strong>
+              <strong>{backendCases.filter((item) => item.status === 'Queued' || item.status === 'Hearing').length} cases</strong>
             </div>
           </div>
           <div className="metric">
             <ArrowRight size={19} />
             <div>
               <span>Settled today</span>
-              <strong>8 receipts</strong>
+              <strong>{backendCases.filter((item) => item.status === 'Verdict').length} receipts</strong>
             </div>
           </div>
         </section>

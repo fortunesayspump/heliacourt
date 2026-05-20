@@ -9,6 +9,7 @@ type PageTitleProps = {
   imageSrc?: string
   imagePosition?: string
   tone?: 'light' | 'dark'
+  className?: string
 }
 
 export function PageTitle({
@@ -19,13 +20,14 @@ export function PageTitle({
   imageSrc = '/assets/ancient-athenian-juries.jpg',
   imagePosition = 'center',
   tone = 'dark',
+  className,
 }: PageTitleProps) {
   const imageStyle = {
     '--page-title-position': imagePosition,
   } as CSSProperties
 
   return (
-    <header className={`workspace-header compact-header page-title page-title-${tone}`} style={imageStyle}>
+    <header className={`workspace-header compact-header page-title page-title-${tone}${className ? ` ${className}` : ''}`} style={imageStyle}>
       <FadeImageLayer src={imageSrc} position={imagePosition} />
       <div className="page-title-copy">
         <p className="eyebrow">{eyebrow}</p>

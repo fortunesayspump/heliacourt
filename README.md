@@ -1,26 +1,28 @@
-# Agora Court
+# Helia Court
 
-Agora Court is a multi-agent market tribunal for the Agora Agent Hackathon.
+Helia Court is a multi-agent forecasting court for prediction-market questions.
 
 The product is powered by **Heliaia**, a court engine where AI counsel argue both sides of a market question, expert witnesses submit evidence, a risk officer constrains exposure, and a head judge issues an auditable verdict before capital moves.
 
 ## Why Arc
 
-Agora Court treats agents as paid intelligence workers. Agents need budgets, paid signals, receipts, and settlement records. Arc and Circle infrastructure give the product a stable USDC layer for agent payments, court records, CCTP movement, and verdict receipts.
+Helia Court treats agents as paid intelligence workers. Agents need budgets, paid signals, receipts, and settlement records. Arc and Circle infrastructure give the product a stable USDC layer for agent payments, court records, CCTP movement, and verdict receipts.
 
 ## Stack
 
-- Vite, React, TypeScript
+- Next.js, React, TypeScript
+- Fastify backend worker for hearings, evidence tools, and agent orchestration
 - pnpm package manager
 - wagmi, viem, TanStack Query
 - Arc Testnet chain config
-- Circle/Arc placeholders for Wallets, CCTP, Nanopayments, USDC settlement, and ERC-8183 job flows
+- Circle/Arc integration points for Wallets, CCTP, Nanopayments, USDC settlement, and receipt records
 
 ## Run
 
 ```bash
 pnpm install
-pnpm dev
+pnpm dev:app
+pnpm dev:backend
 ```
 
 ## Build
@@ -31,7 +33,7 @@ pnpm build
 
 ## Product Pieces
 
-- **Agora Court**: the product users see.
+- **Helia Court**: the product users see.
 - **Heliaia**: the internal multi-agent court engine.
 - **Counsel**: agents arguing bullish and bearish cases.
 - **Witnesses**: agents gathering market data, news, social, and prediction-market evidence.
@@ -39,19 +41,22 @@ pnpm build
 - **Head Judge**: agent that issues the verdict, confidence, and dissent.
 - **Court Record**: onchain/offchain log of evidence, payments, verdicts, and settlement receipts.
 
-## Next Build Steps
+## Current Architecture
 
-- Add a case intake form for market questions.
-- Generate a simulated hearing from the selected question.
-- Add verdict history and agent reputation.
-- Wire Circle Wallets and Nanopayments once API credentials and exact flow are chosen.
+- The frontend is UI and API proxy only.
+- The backend owns the court engine, agents, witnesses, tools, memory, hearing jobs, and logs.
+- Railway Postgres is the production database; set `DATABASE_URL` and run `pnpm --dir backend db:migrate`.
+- Generated hearing logs live under `backend/tmp/` and are ignored by git.
+- Local OSS research clones live under `research/open-source/` and are ignored by git.
 
-See [docs/PRODUCT_PLAN.md](docs/PRODUCT_PLAN.md) for the full product structure, agent model, and build sequence.
+## Docs
 
-See [docs/MVP_FLOW.md](docs/MVP_FLOW.md) for the end-to-end MVP user flow, case lifecycle, agent coordination model, visibility rules, and payment/registry plan.
+Start with [docs/README.md](docs/README.md).
 
-See [docs/USER_FLOW.md](docs/USER_FLOW.md) for the product-level user journey, wallet gates, duplicate-case routing, page map, and MVP UX states.
+Current architecture:
 
-See [docs/PROTOCOL_MODEL.md](docs/PROTOCOL_MODEL.md) for how users, markets, Arc, onchain records, and protocol revenue fit together.
+- [docs/court-engine-architecture.md](docs/court-engine-architecture.md)
+- [docs/production-intelligence-stack.md](docs/production-intelligence-stack.md)
+- [backend/AGENT_TOOLS.md](backend/AGENT_TOOLS.md)
 
-See [docs/AGENT_ARCHITECTURE.md](docs/AGENT_ARCHITECTURE.md) for the agent roster, hosting phases, plugin model, and registry design.
+Older planning docs are archived under [docs/archive](docs/archive).

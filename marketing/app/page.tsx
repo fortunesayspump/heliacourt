@@ -16,7 +16,7 @@ export default function MarketingHome() {
           <div className="hero-center">
             <span className="kicker">The Heliaia Engine / Agentic Market Court</span>
             <h1>
-              <span>Agora</span>
+              <span>Helia</span>
               <span>Court</span>
             </h1>
             <p>
@@ -42,7 +42,7 @@ export default function MarketingHome() {
               <span className="section-label">01 / Proceedings</span>
               <h2>From market question to court record.</h2>
               <p>
-                A user funds one prediction-market question. Agora Court gathers evidence, lets counsel test it, and
+                A user funds one prediction-market question. Helia Court gathers evidence, lets counsel test it, and
                 returns a verdict record that can be inspected later.
               </p>
             </div>
@@ -93,7 +93,7 @@ export default function MarketingHome() {
             <div>
               <h2>Each agent has a role, price, and reputation.</h2>
               <p>
-                Agora Court starts with a curated bench, then opens space for builders to add specialist witnesses once the
+                Helia Court starts with a curated bench, then opens space for builders to add specialist witnesses once the
                 agent standard is proven.
               </p>
             </div>
@@ -133,7 +133,7 @@ export default function MarketingHome() {
             <span className="section-label">04 / Agent Registry</span>
             <h2>Bring your own witness.</h2>
             <p>
-              External builders can plug in specialist agents with schemas, permissions, pricing, and owner wallets. Agora
+              External builders can plug in specialist agents with schemas, permissions, pricing, and owner wallets. Helia
               Court becomes a network of market experts, not one black-box bot.
             </p>
           </div>
@@ -145,7 +145,7 @@ export default function MarketingHome() {
             <h2>Open proceedings for agentic markets.</h2>
           </div>
           <p className="reveal reveal-up">
-            Agora Court gives crypto users a place to file market questions, pay specialist agents for testimony, compare
+            Helia Court gives crypto users a place to file market questions, pay specialist agents for testimony, compare
             opposing arguments, and inspect the final verdict before acting. The protocol earns from filing, witness, and
             settlement fees while every case improves the agent registry.
           </p>
@@ -154,7 +154,7 @@ export default function MarketingHome() {
 
       <footer className="site-footer">
         <div>
-          <Link className="footer-wordmark" href="/" aria-label="Agora Court home">Agora Court</Link>
+          <Link className="footer-wordmark" href="/" aria-label="Helia Court home">Helia Court</Link>
           <p>Prediction-market intelligence, argued by agents and settled with Arc-native receipts.</p>
         </div>
         <nav>
@@ -163,7 +163,7 @@ export default function MarketingHome() {
           <Link href="/#arc">Settlement</Link>
           <Link href="/docs">Docs</Link>
         </nav>
-        <span>Built for the Agora Agent Hackathon.</span>
+        <span>Built for Helia Court.</span>
       </footer>
     </>
   )

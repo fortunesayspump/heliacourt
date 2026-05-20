@@ -4,14 +4,18 @@ import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { PageTitle } from '../../components/PageTitle'
 import { WalletNotice } from '../../components/WalletNotice'
-import { similarCaseCandidates } from '../../../data/cases'
 import '../../page.css'
 
 const witnessOptions = [
   ['Prediction markets', 'Pythia', 'Odds, spreads, liquidity, implied probability'],
   ['Web and news search', 'Hermes', 'Fresh articles, source quality, event clustering'],
+  ['Source scraping', 'Aletheia', 'Exact page text, dates, authorship, resolution relevance'],
   ['Onchain flows', 'Argos', 'Wallet movement, exchange flows, stablecoin pressure'],
-  ['Weather/data APIs', 'Notus', 'Weather, sports, macro calendars, external datasets'],
+  ['Data APIs', 'Notus', 'Sports, weather, macro calendars, external datasets'],
+  ['Source quality', 'Skepsis', 'Authority, freshness, directness, and source conflicts'],
+  ['Timeline', 'Chronos', 'Chronology, deadlines, horizons, event timing'],
+  ['Research synthesis', 'Sophia', 'Direct proof, background, contradictions, missing evidence'],
+  ['Quant checks', 'Numeros', 'Price distance, liquidity, volatility, numerical constraints'],
   ['Risk limits', 'Phylax', 'Uncertainty, manipulation risk, liquidity, invalidation'],
 ]
 
@@ -55,6 +59,17 @@ export default function NewCasePage() {
             <div className="case-box case-form">
               <label htmlFor="question">Question</label>
               <textarea id="question" defaultValue="Will ETH outperform SOL over the next 7 days?" />
+              <label htmlFor="case-context">Case context</label>
+              <textarea
+                id="case-context"
+                defaultValue="Resolution rules, primary sources, exclusions, market URL, and any exact contract text the court must preserve."
+              />
+              <label htmlFor="source-links">Market and source links</label>
+              <textarea
+                id="source-links"
+                defaultValue={`https://polymarket.com/...
+https://www.fifa.com/...`}
+              />
               <label htmlFor="horizon">Time horizon</label>
               <input id="horizon" defaultValue="7 days" />
               <label htmlFor="budget">Maximum court budget</label>
@@ -78,21 +93,10 @@ export default function NewCasePage() {
               Before funding, the court checks whether this question already has an active or recent record.
             </p>
             <div className="similar-case-list">
-              {similarCaseCandidates.map((item) => (
-                <article className="similar-case-card" key={item.id}>
-                  <div>
-                    <span className="state-dot active">{item.match}</span>
-                    <span className="muted-inline">{item.status}</span>
-                  </div>
-                  <h3>{item.title}</h3>
-                  <p>{item.reason}</p>
-                  <strong>{item.recommendation}</strong>
-                  <Link href={`/cases/${item.id}`}>
-                    {item.action}
-                    <ArrowRight size={15} />
-                  </Link>
-                </article>
-              ))}
+              <div className="empty-state">
+                <strong>Similarity check will run on submit</strong>
+                <p>The MVP waits for a real case brief before checking nearby hearings.</p>
+              </div>
             </div>
           </aside>
 
@@ -202,6 +206,9 @@ export default function NewCasePage() {
               <p>
                 The court will seat market, onchain, news, and risk witnesses before counsel argues both sides
                 and the dikasts produce a signed verdict record. Heliaia may question witnesses again when counsel finds contradictions.
+              </p>
+              <p>
+                Case context is preserved separately for resolution criteria, source rules, and market-specific caveats, so witnesses do not confuse contract text with evidence already proven.
               </p>
               <div className="preview-pill-row">
                 <span>7 day horizon</span>

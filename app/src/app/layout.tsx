@@ -22,7 +22,7 @@ const inter = Inter({
 })
 
 export const metadata: Metadata = {
-  title: 'Agora Court',
+  title: 'Helia Court',
   description: 'A market court where agents testify, argue, vote, and settle intelligence in USDC.',
 }
 

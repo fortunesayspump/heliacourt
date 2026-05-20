@@ -1,6 +1,7 @@
 # Logs
 logs
 *.log
+backend/tmp/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
@@ -24,6 +25,9 @@ dist-ssr
 *-visible-content.png
 *-spacing.png
 *-restored.png
+
+# Local OSS reference clones and research scratch space
+research/
 
 # Editor directories and files
 .vscode/*

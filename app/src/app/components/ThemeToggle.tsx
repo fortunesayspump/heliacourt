@@ -17,7 +17,7 @@ export function ThemeToggle() {
   const [theme, setTheme] = useState<ThemeChoice>('light')
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('agora-theme') as ThemeChoice | null
+    const saved = window.localStorage.getItem('helia-theme') as ThemeChoice | null
     const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
     const initial = saved === 'light' || saved === 'dark' ? saved : systemTheme
     setTheme(initial)
@@ -27,7 +27,7 @@ export function ThemeToggle() {
   const nextTheme = () => {
     const next = theme === 'dark' ? 'light' : 'dark'
     setTheme(next)
-    window.localStorage.setItem('agora-theme', next)
+    window.localStorage.setItem('helia-theme', next)
     applyTheme(next)
   }
 
