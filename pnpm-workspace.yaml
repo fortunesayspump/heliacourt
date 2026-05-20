@@ -3,3 +3,7 @@ packages:
   - marketing
   - backend
   - contracts
+
+onlyBuiltDependencies:
+  - esbuild
+  - tesseract.js
