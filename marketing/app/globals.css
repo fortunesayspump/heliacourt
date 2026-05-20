@@ -312,7 +312,7 @@ a {
   font-size: clamp(48px, 7.4vw, 96px);
   font-weight: 700;
   letter-spacing: 0.035em;
-  line-height: 0.9;
+  line-height: 1;
   text-shadow: 0 16px 42px rgba(241, 211, 170, 0.62);
 }
 
@@ -331,7 +331,7 @@ a {
 }
 
 .hero-center h1 span + span {
-  margin-top: 0.08em;
+  margin-top: 0.16em;
 }
 
 .hero-center p {
@@ -1328,6 +1328,7 @@ a {
 
   .hero-center h1 {
     font-size: clamp(40px, 12vw, 62px);
+    line-height: 1.03;
   }
 
   .hero-center p,
