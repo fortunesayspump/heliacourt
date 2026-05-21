@@ -13,6 +13,8 @@ export type ApiCase = {
   receipt?: string
   probability?: string
   horizon?: string
+  visibility?: 'public' | 'unlisted' | 'private'
+  payerVisibility?: 'public' | 'private'
   witnesses?: string[]
   onchain?: {
     chainId: string

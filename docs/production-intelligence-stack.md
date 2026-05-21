@@ -18,8 +18,9 @@ The app is now a hybrid DB/onchain system:
 - First-party agents are protocol-owned for the MVP. Their payout rows are recorded per agent in the ledger and receipt payloads.
 - Users are stored by wallet address. A filer is linked to each case through `case_participants`.
 - Profile writes are protected by short-lived wallet-signature challenges.
+- Browse routes only expose public cases. Unlisted cases are excluded from case/ledger lists but remain open by direct link. Private cases are hidden from public case detail routes.
 
-The remaining production gap is private-case access control. Visibility fields exist, but API reads still need wallet-authenticated filtering before private records should be trusted in production.
+The remaining production gap is wallet-authenticated owner access for private case records.
 
 ## Why split it
 

@@ -28,7 +28,9 @@ export async function caseRoutes(app: FastifyInstance) {
     const jobs = await listHearingJobs()
 
     return {
-      cases: jobs.map((job) => summarizeCase(job)),
+      cases: jobs
+        .filter((job) => isPublicListCase(job))
+        .map((job) => summarizeCase(job)),
     }
   })
 
@@ -38,6 +40,10 @@ export async function caseRoutes(app: FastifyInstance) {
     const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
 
     if (!job) {
+      return reply.status(404).send({ error: 'case not found' })
+    }
+
+    if (getCaseVisibility(job) === 'private') {
       return reply.status(404).send({ error: 'case not found' })
     }
 
@@ -58,6 +64,7 @@ export async function caseRoutes(app: FastifyInstance) {
 
     return {
       rows: jobs
+        .filter((job) => isPublicListCase(job))
         .flatMap((job) => summarizeLedgerRows(job)),
     }
   })
@@ -102,6 +109,11 @@ export async function caseRoutes(app: FastifyInstance) {
         supportedMarkets: supportedPredictionMarketHosts,
       })
     }
+    if (data.visibility === 'private' && !data.filer) {
+      return reply.status(400).send({
+        error: 'private cases require a filer wallet',
+      })
+    }
 
     const marketCase: MarketCase = {
       id: data.id ?? createCaseId(data.question, data.onchain?.caseId, data.onchain?.txHash),
@@ -126,6 +138,16 @@ export async function caseRoutes(app: FastifyInstance) {
       job,
     })
   })
+}
+
+function isPublicListCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
+  return getCaseVisibility(job) === 'public'
+}
+
+function getCaseVisibility(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
+  const result = job.result as { marketCase?: MarketCase } | undefined
+  const marketCase = result?.marketCase ?? job.marketCase
+  return marketCase.visibility ?? 'public'
 }
 
 function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {

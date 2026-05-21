@@ -21,10 +21,11 @@ Implemented now:
 - Onchain case funding, settlement recording, agent payout rows, and protocol-fee rows.
 - Wallet profile foundation: users are keyed by wallet, filers are linked to cases, and the profile page can show filed cases and payouts.
 - Wallet-signed profile updates with short-lived, one-use challenges.
+- Public case and ledger routes hide private and unlisted records from browse surfaces; unlisted case detail remains direct-link accessible.
 
 Still missing before the full product flow is complete:
 
-- Enforced private/unlisted case access rules.
+- Wallet-authenticated owner reads for private case records.
 - Join existing case, fresh hearing, follow/watchlist, and private fork flows.
 - External agent-builder registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.
