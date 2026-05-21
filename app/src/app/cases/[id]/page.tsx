@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
-import { formatConfidence, getBackendCaseDetail } from '../../../lib/backend-data'
+import { formatConfidence, getBackendCaseDetail, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
 
 const tabs = [
@@ -133,22 +133,43 @@ export default async function CaseRecordPage({
                   ) : null}
                 </div>
                 <div className="court-transcript">
-                  {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => (
-                    <article className={`transcript-entry role-${formatTurnRole(turn.seat)}`} key={turn.id}>
-                      <div className="transcript-avatar">{turn.agentName.slice(0, 1)}</div>
-                      <div className="transcript-message">
-                        <div className="transcript-meta">
-                          <div>
-                            <strong>{turn.agentName}</strong>
-                            <span>{turn.stage}</span>
-                            {typeof turn.confidence === 'number' && <span>{formatConfidence(turn.confidence)}</span>}
+                  {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => {
+                    const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
+                    const hasContext = Boolean(replyTurn || turn.request)
+
+                    return (
+                      <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
+                        {hasContext ? (
+                          <div className="transcript-contexts">
+                            {replyTurn ? (
+                              <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
+                                <strong>{replyTurn.agentName}</strong>
+                                <span>{summarizeTurn(replyTurn)}</span>
+                              </a>
+                            ) : null}
+                            {turn.request ? (
+                              <div className="transcript-reply transcript-request-preview" aria-label={`Request to ${formatAgentLabel(turn.requestedAgentId)}`}>
+                                <strong>To {formatAgentLabel(turn.requestedAgentId)}</strong>
+                                <span>{turn.request}</span>
+                              </div>
+                            ) : null}
                           </div>
+                        ) : null}
+                        <div className="transcript-avatar">{turn.agentName.slice(0, 1)}</div>
+                        <div className="transcript-message">
+                          <div className="transcript-meta">
+                            <div>
+                              <strong>{turn.agentName}</strong>
+                              <span>{turn.stage}</span>
+                              {typeof turn.confidence === 'number' && <span>{formatConfidence(turn.confidence)}</span>}
+                              {turn.createdAt ? <time dateTime={turn.createdAt}>{formatTurnTime(turn.createdAt)}</time> : null}
+                            </div>
+                          </div>
+                          <p>{turn.message}</p>
                         </div>
-                        {turn.request && <p className="transcript-request">{turn.request}</p>}
-                        <p>{turn.message}</p>
-                      </div>
-                    </article>
-                  )) : (
+                      </article>
+                    )
+                  }) : (
                     <div className="empty-state">
                       <strong>No transcript turns yet</strong>
                       <p>Run the hearing to write live court turns into the backend record.</p>
@@ -312,6 +333,32 @@ function formatTurnRole(seat: string) {
   if (seat.includes('juror')) return 'jury'
   if (seat.includes('risk')) return 'risk'
   return 'witness'
+}
+
+function summarizeTurn(turn: ApiTranscriptTurn) {
+  return turn.message.length > 120 ? `${turn.message.slice(0, 117)}...` : turn.message
+}
+
+function formatAgentLabel(agentId?: string) {
+  if (!agentId) return 'court'
+
+  return agentId
+    .replace(/-(?:witness|counsel|judge|clerk|bailiff|juror)$/i, '')
+    .split('-')
+    .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+function formatTurnTime(value: string) {
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) return value
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
 }
 
 function formatReceiptType(type: string) {

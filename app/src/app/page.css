@@ -3265,10 +3265,10 @@ select {
 
 .transcript-entry.has-reply {
   grid-template-areas:
-    "reply-spine reply"
+    ". reply"
     "avatar message";
-  grid-template-rows: 22px auto;
-  row-gap: 0 !important;
+  grid-template-rows: auto auto;
+  row-gap: 2px !important;
   padding-top: 6px !important;
 }
 
@@ -3324,8 +3324,15 @@ select {
   color: var(--ag-muted) !important;
 }
 
-.transcript-reply {
+.transcript-contexts {
   grid-area: reply;
+  display: grid;
+  position: relative;
+  gap: 2px;
+  min-width: 0;
+}
+
+.transcript-reply {
   display: flex;
   align-items: center;
   gap: 7px;
@@ -3340,7 +3347,7 @@ select {
   text-decoration: none;
 }
 
-.transcript-reply::before {
+.transcript-contexts::before {
   content: "";
   position: absolute;
   top: 10px;
@@ -3350,6 +3357,10 @@ select {
   border-top: 2px solid rgba(var(--transcript-accent-rgb), 0.36);
   border-left: 2px solid rgba(var(--transcript-accent-rgb), 0.36);
   border-top-left-radius: 8px;
+}
+
+.transcript-request-preview strong {
+  color: var(--ag-ink);
 }
 
 .transcript-reply strong {
