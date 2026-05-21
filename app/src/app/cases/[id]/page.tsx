@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
+import { MarketPreviewImage } from '../../components/MarketPreviewImage'
 import { SourceEmbedCard } from '../../components/SourceEmbedCard'
 import { formatConfidence, getBackendCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
@@ -68,7 +69,8 @@ export default async function CaseRecordPage({
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
   const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
   const artifactById = new Map(caseDetail.artifacts.map((artifact) => [artifact.id, artifact]))
-  const relatedLinks = getRelatedLinks(courtCase.resolution, caseDetail.artifacts)
+  const relatedLinks = getRelatedLinks(courtCase.links, courtCase.resolution, caseDetail.artifacts)
+  const predictionMarketLink = [...courtCase.links ?? [], ...relatedLinks.map((link) => link.url)].find(isSupportedPredictionMarketLink)
 
   return (
     <main className="app-shell">
@@ -149,6 +151,7 @@ export default async function CaseRecordPage({
                   <Sparkle size={19} />
                 </div>
                 <div className="court-matter">
+                  <MarketPreviewImage fallbackTitle={courtCase.title} url={predictionMarketLink} />
                   <p className="eyebrow">Matter before the court</p>
                   <h3>{courtCase.title}</h3>
                   <p>{courtCase.resolution ?? 'Resolution context is stored with the backend case record.'}</p>
@@ -434,11 +437,17 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
     .slice(0, 3)
 }
 
-function getRelatedLinks(context: string | undefined, artifacts: ApiCourtArtifact[]) {
+function getRelatedLinks(caseLinks: string[] | undefined, context: string | undefined, artifacts: ApiCourtArtifact[]) {
+  const submittedLinks: TranscriptSourceCard[] = (caseLinks ?? []).map((url) => ({
+    url,
+    title: formatUrlLabel(url),
+    kind: isSupportedPredictionMarketLink(url) ? 'Market' : 'Case link',
+    detail: domainFromUrl(url),
+  }))
   const contextLinks: TranscriptSourceCard[] = extractUrls(context ?? '').map((url) => ({
     url,
     title: formatUrlLabel(url),
-    kind: 'Case link',
+    kind: isSupportedPredictionMarketLink(url) ? 'Market' : 'Case link',
     detail: domainFromUrl(url),
   }))
 
@@ -455,7 +464,7 @@ function getRelatedLinks(context: string | undefined, artifacts: ApiCourtArtifac
     }) ?? [])
 
   const seen = new Set<string>()
-  return [...contextLinks, ...sourceLinks]
+  return [...submittedLinks, ...contextLinks, ...sourceLinks]
     .filter((source) => {
       const key = normalizeUrlForCompare(source.url)
       if (seen.has(key)) return false
@@ -463,6 +472,15 @@ function getRelatedLinks(context: string | undefined, artifacts: ApiCourtArtifac
       return true
     })
     .slice(0, 8)
+}
+
+function isSupportedPredictionMarketLink(link: string) {
+  try {
+    const hostname = new URL(link).hostname.replace(/^www\./, '').toLowerCase()
+    return ['polymarket.com', 'kalshi.com', 'manifold.markets'].some((host) => hostname === host || hostname.endsWith(`.${host}`))
+  } catch {
+    return false
+  }
 }
 
 function shouldShowEvidenceSourceForTurn(url: string, title: string | undefined, capability: string | undefined, turnText: string) {

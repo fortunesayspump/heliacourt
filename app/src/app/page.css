@@ -2494,6 +2494,41 @@ textarea::placeholder {
   top: 88px;
 }
 
+@media (min-width: 1101px) {
+  .case-record-workspace {
+    height: calc(100dvh - 74px);
+    overflow: hidden;
+    padding-bottom: 18px;
+  }
+
+  .case-detail-shell {
+    height: calc(100dvh - 166px);
+    overflow: hidden;
+  }
+
+  .case-detail-sidebar,
+  .case-detail-main,
+  .case-detail-right {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-right: 4px;
+    scrollbar-width: thin;
+  }
+
+  .case-detail-sidebar,
+  .case-detail-right,
+  .hearing-side-stack {
+    position: static;
+    top: auto;
+  }
+
+  .case-detail-main > .panel {
+    min-height: 100%;
+  }
+}
+
 .case-sidebar-title h1 {
   margin: 10px 0;
   font-family: var(--font-title);
@@ -3168,6 +3203,64 @@ select {
     radial-gradient(circle at 8% 0%, rgba(132, 177, 120, 0.13), transparent 34%),
     linear-gradient(135deg, rgba(21, 26, 20, 0.96), rgba(13, 15, 13, 0.98)) !important;
   box-shadow: inset 0 1px 0 rgba(255, 250, 242, 0.04);
+}
+
+.market-preview-image {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 13px;
+  align-items: center;
+  min-height: 92px;
+  margin-bottom: 10px;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(241, 211, 170, 0.14);
+  border-radius: 9px;
+  background: rgba(255, 250, 242, 0.035);
+  text-decoration: none;
+}
+
+.market-preview-image > img,
+.market-preview-fallback {
+  width: 112px;
+  height: 92px;
+}
+
+.market-preview-image > img {
+  object-fit: cover;
+}
+
+.market-preview-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--ag-green);
+  background:
+    radial-gradient(circle at 35% 20%, rgba(132, 177, 120, 0.26), transparent 38%),
+    rgba(255, 250, 242, 0.05);
+}
+
+.market-preview-image > div:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding-right: 13px;
+}
+
+.market-preview-image span {
+  color: var(--ag-green);
+  font-size: 11px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.market-preview-image strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ag-ink);
+  font-size: 14px;
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 .hearing-transcript-panel .court-matter::after {

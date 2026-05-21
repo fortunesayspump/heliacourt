@@ -4,6 +4,7 @@ export type ApiCase = {
   title: string
   status: string
   market?: string
+  links?: string[]
   updated?: string
   createdAt?: string
   resolution?: string

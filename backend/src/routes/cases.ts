@@ -122,6 +122,7 @@ function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number])
     title: marketCase.question,
     status,
     market: marketCase.type,
+    links: marketCase.links ?? [],
     updated: job.updatedAt,
     createdAt: job.createdAt,
     resolution: marketCase.context,
