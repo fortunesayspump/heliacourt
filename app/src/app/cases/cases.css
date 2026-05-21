@@ -19,14 +19,6 @@
   letter-spacing: 0;
 }
 
-.cases-market-heading span {
-  display: block;
-  margin-top: 7px;
-  color: var(--ag-muted);
-  font-size: 13px;
-  font-weight: 650;
-}
-
 .cases-market-heading > svg {
   color: var(--ag-muted);
 }
@@ -41,7 +33,7 @@
   position: relative;
   display: grid;
   min-height: 184px;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto;
   gap: 12px;
   overflow: hidden;
   padding: 12px;
@@ -146,22 +138,6 @@
   font-size: 11px;
   font-weight: 760;
   line-height: 1;
-}
-
-.docket-case-card-main {
-  position: relative;
-  z-index: 1;
-}
-
-.docket-case-card-main p {
-  display: -webkit-box;
-  overflow: hidden;
-  margin: 0;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  color: var(--ag-muted);
-  font-size: 12.5px;
-  line-height: 1.4;
 }
 
 .case-market-lines {

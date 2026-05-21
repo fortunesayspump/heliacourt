@@ -4,7 +4,7 @@ import { FadeImageLayer } from './FadeImageLayer'
 type PageTitleProps = {
   eyebrow: string
   title: string
-  description: string
+  description?: string
   actions?: ReactNode
   imageSrc?: string
   imagePosition?: string
@@ -32,7 +32,7 @@ export function PageTitle({
       <div className="page-title-copy">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>
-        <p className="header-copy">{description}</p>
+        {description ? <p className="header-copy">{description}</p> : null}
       </div>
       <div className="page-title-visual" aria-hidden="true" />
       <div className="header-actions page-title-actions">{actions}</div>

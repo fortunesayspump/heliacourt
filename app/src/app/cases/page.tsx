@@ -19,7 +19,6 @@ export default async function CasesPage() {
         <PageTitle
           eyebrow="Docket"
           title="Cases"
-          description="Track active prediction-market intelligence cases by odds, horizon, and hearing status."
           imageSrc="/assets/socrates.1400x0.jpg"
           imagePosition="center 38%"
           actions={
@@ -35,7 +34,6 @@ export default async function CasesPage() {
             <div>
               <p className="eyebrow">Prediction docket</p>
               <h2>Markets under review</h2>
-              <span>{backendCases.length} backend case{backendCases.length === 1 ? '' : 's'} synced</span>
             </div>
             <Briefcase size={20} />
           </div>
@@ -59,10 +57,6 @@ export default async function CasesPage() {
                     <span>{provider}</span>
                   </div>
                   <strong className="case-status-pill">{item.status}</strong>
-                </div>
-
-                <div className="docket-case-card-main">
-                  <p>{item.resolution ?? item.verdict ?? 'Live hearing record pending.'}</p>
                 </div>
 
                 <div className="case-market-lines">
@@ -108,8 +102,7 @@ export default async function CasesPage() {
           </div>
           ) : (
             <div className="empty-state">
-              <h3>No backend hearings yet</h3>
-              <p>File a case to create the first live docket record. The docket reads backend records only.</p>
+              <h3>No cases yet</h3>
               <Link className="primary-button" href="/cases/new">
                 File case
                 <ArrowRight size={16} />
