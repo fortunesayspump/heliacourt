@@ -68,6 +68,7 @@ export default async function CaseRecordPage({
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
   const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
   const artifactById = new Map(caseDetail.artifacts.map((artifact) => [artifact.id, artifact]))
+  const relatedLinks = getRelatedLinks(courtCase.resolution, caseDetail.artifacts)
 
   return (
     <main className="app-shell">
@@ -116,6 +117,25 @@ export default async function CaseRecordPage({
                 ))}
               </div>
             </section>
+            {relatedLinks.length ? (
+              <section className="panel sidebar-card related-links-card">
+                <div className="panel-heading">
+                  <div>
+                    <p className="eyebrow">Related links</p>
+                    <h2>Sources</h2>
+                  </div>
+                </div>
+                <div className="related-link-list">
+                  {relatedLinks.map((link) => (
+                    <a href={link.url} key={link.url} target="_blank" rel="noreferrer">
+                      <span>{link.kind}</span>
+                      <strong>{link.title}</strong>
+                      <em>{domainFromUrl(link.url)}</em>
+                    </a>
+                  ))}
+                </div>
+              </section>
+            ) : null}
           </aside>
 
           <section className="case-detail-main">
@@ -412,6 +432,37 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
       return true
     })
     .slice(0, 3)
+}
+
+function getRelatedLinks(context: string | undefined, artifacts: ApiCourtArtifact[]) {
+  const contextLinks: TranscriptSourceCard[] = extractUrls(context ?? '').map((url) => ({
+    url,
+    title: formatUrlLabel(url),
+    kind: 'Case link',
+    detail: domainFromUrl(url),
+  }))
+
+  const sourceLinks: TranscriptSourceCard[] = artifacts
+    .flatMap((artifact) => artifact.toolEvidence ?? [])
+    .flatMap((evidence) => evidence.sources?.flatMap((source) => {
+      if (!source.url) return []
+      return [{
+        url: source.url,
+        title: source.title ?? formatUrlLabel(source.url),
+        kind: evidence.capability ? formatAgentLabel(evidence.capability.replace(/_/g, '-')) : 'Source',
+        detail: source.value,
+      }]
+    }) ?? [])
+
+  const seen = new Set<string>()
+  return [...contextLinks, ...sourceLinks]
+    .filter((source) => {
+      const key = normalizeUrlForCompare(source.url)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 8)
 }
 
 function shouldShowEvidenceSourceForTurn(url: string, title: string | undefined, capability: string | undefined, turnText: string) {

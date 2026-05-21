@@ -45,7 +45,9 @@ export function SourceEmbedCard({
 
   return (
     <a className={`transcript-source-card${preview?.image ? ' has-image' : ''}`} href={url} target="_blank" rel="noreferrer">
-      {preview?.image ? <img alt="" src={preview.image} /> : null}
+      <div className="source-card-media">
+        {preview?.image ? <img alt="" src={preview.image} /> : <span>{hostFromUrl(url).slice(0, 1).toUpperCase()}</span>}
+      </div>
       <span>{kind}</span>
       <strong>{displayTitle}</strong>
       {displayDetail ? <em>{displayDetail}</em> : null}
