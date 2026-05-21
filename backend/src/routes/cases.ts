@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { enqueueHearingJob, listHearingJobs } from '../agents/hearing-jobs.js'
+import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearing-jobs.js'
 import type { CaseType, CourtArtifact, MarketCase } from '../court/types.js'
 
 const createCaseSchema = z.object({
@@ -57,6 +57,26 @@ export async function caseRoutes(app: FastifyInstance) {
     return {
       rows: jobs
         .flatMap((job) => summarizeLedgerRows(job)),
+    }
+  })
+
+  app.post('/cases/:caseId/settle', async (request, reply) => {
+    const { caseId } = request.params as { caseId: string }
+
+    try {
+      const job = await retryOnchainSettlement(caseId)
+      if (!job) return reply.status(404).send({ error: 'case not found' })
+
+      const result = job.result as { onchainSettlement?: unknown } | undefined
+      return {
+        status: 'settlement-retried',
+        case: summarizeCase(job),
+        onchainSettlement: result?.onchainSettlement,
+      }
+    } catch (error) {
+      return reply.status(409).send({
+        error: error instanceof Error ? error.message : 'settlement retry failed',
+      })
     }
   })
 

@@ -5,6 +5,12 @@ import { z } from 'zod'
 
 loadLocalEnvFiles()
 
+const optionalHex = (bytes: number) => z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const normalized = value.trim().replace(/^['"]|['"]$/g, '')
+  return normalized || undefined
+}, z.string().regex(new RegExp(`^0x[a-fA-F0-9]{${bytes * 2}}$`)).optional())
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   APP_ORIGIN: z.string().url().default('http://localhost:3000'),
@@ -20,10 +26,10 @@ const envSchema = z.object({
   HELIA_REDIS_PREFIX: z.string().min(1).default('helia-court'),
   ARC_RPC_URL: z.string().url().default('https://rpc.testnet.arc.network'),
   ARC_CHAIN_ID: z.coerce.number().int().positive().default(5_042_002),
-  PRIVATE_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
-  SETTLEMENT_PRIVATE_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
-  CASE_ESCROW_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
-  COURT_RECEIPTS_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  PRIVATE_KEY: optionalHex(32),
+  SETTLEMENT_PRIVATE_KEY: optionalHex(32),
+  CASE_ESCROW_ADDRESS: optionalHex(20),
+  COURT_RECEIPTS_ADDRESS: optionalHex(20),
   PROTOCOL_FEE_BPS: z.coerce.number().int().min(0).max(1_000).default(500),
 })
 

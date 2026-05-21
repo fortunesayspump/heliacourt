@@ -119,6 +119,39 @@ export async function listHearingJobs() {
     .map(serializeJob)
 }
 
+export async function retryOnchainSettlement(caseId: string) {
+  const jobs = await listHearingJobs()
+  const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
+  if (!job) return undefined
+  if (job.status !== 'completed') {
+    throw new Error(`case is ${job.status}; settlement can only be retried after verdict`)
+  }
+
+  const result = job.result as LiveHearingResult | undefined
+  if (!result?.marketCase || !Array.isArray(result.artifacts) || !Array.isArray(result.transcript)) {
+    throw new Error('completed case is missing hearing artifacts or transcript')
+  }
+
+  const onchainSettlement = await settleHearingOnchain({
+    marketCase: result.marketCase,
+    artifacts: result.artifacts,
+    transcript: result.transcript,
+    recordHash: result.recordHash,
+  })
+  const updatedJob: HearingJob = {
+    ...job,
+    result: {
+      ...result,
+      onchainSettlement,
+      partial: false,
+    },
+    updatedAt: new Date().toISOString(),
+  }
+  await saveJob(updatedJob)
+
+  return serializeJob(updatedJob)
+}
+
 export function startHearingJobWorker() {
   if (queuePoller) return
 
