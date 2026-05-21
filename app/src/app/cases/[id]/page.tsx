@@ -135,23 +135,23 @@ export default async function CaseRecordPage({
                 <div className="court-transcript">
                   {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => {
                     const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
-                    const hasContext = Boolean(replyTurn || turn.request)
+                    const hasRequest = Boolean(turn.request)
+                    const hasContext = Boolean(replyTurn || hasRequest)
 
                     return (
                       <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
                         {hasContext ? (
                           <div className="transcript-contexts">
-                            {replyTurn ? (
-                              <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
-                                <strong>{replyTurn.agentName}</strong>
-                                <span>{summarizeTurn(replyTurn)}</span>
-                              </a>
-                            ) : null}
-                            {turn.request ? (
+                            {hasRequest ? (
                               <div className="transcript-reply transcript-request-preview" aria-label={`Request to ${formatAgentLabel(turn.requestedAgentId)}`}>
                                 <strong>To {formatAgentLabel(turn.requestedAgentId)}</strong>
                                 <span>{turn.request}</span>
                               </div>
+                            ) : replyTurn ? (
+                              <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
+                                <strong>{replyTurn.agentName}</strong>
+                                <span>{summarizeTurn(replyTurn)}</span>
+                              </a>
                             ) : null}
                           </div>
                         ) : null}
