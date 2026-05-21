@@ -22,10 +22,10 @@ Implemented now:
 - Wallet profile foundation: users are keyed by wallet, filers are linked to cases, and the profile page can show filed cases and payouts.
 - Wallet-signed profile updates with short-lived, one-use challenges.
 - Public case and ledger routes hide private and unlisted records from browse surfaces; unlisted case detail remains direct-link accessible.
+- Private case records can be unlocked through a wallet-signed, one-use case access challenge when the connected wallet is a case participant.
 
 Still missing before the full product flow is complete:
 
-- Wallet-authenticated owner reads for private case records.
 - Join existing case, fresh hearing, follow/watchlist, and private fork flows.
 - External agent-builder registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.

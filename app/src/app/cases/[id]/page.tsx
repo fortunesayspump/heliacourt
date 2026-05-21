@@ -4,6 +4,7 @@ import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
 import { MarketPreviewImage } from '../../components/MarketPreviewImage'
+import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
 import { SourceEmbedCard } from '../../components/SourceEmbedCard'
 import { formatConfidence, getBackendCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
@@ -47,10 +48,7 @@ export default async function CaseRecordPage({
             <ArrowLeft size={16} />
             Docket
           </Link>
-          <section className="panel empty-state">
-            <strong>Case record not found</strong>
-            <p>This page now reads backend case records only. Run or file a hearing to create this case.</p>
-          </section>
+          <PrivateCaseUnlockPanel caseId={id} />
         </section>
         <AppFooter />
       </main>

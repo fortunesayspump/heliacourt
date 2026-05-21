@@ -19,8 +19,9 @@ The app is now a hybrid DB/onchain system:
 - Users are stored by wallet address. A filer is linked to each case through `case_participants`.
 - Profile writes are protected by short-lived wallet-signature challenges.
 - Browse routes only expose public cases. Unlisted cases are excluded from case/ledger lists but remain open by direct link. Private cases are hidden from public case detail routes.
+- Private owner reads use one-use wallet-signature challenges and require the wallet to be recorded in `case_participants`.
 
-The remaining production gap is wallet-authenticated owner access for private case records.
+The remaining production gaps are follow/watchlist flows, join/fresh-hearing/private-fork routing, and a stronger session layer if the app needs repeated authenticated reads without signing each unlock.
 
 ## Why split it
 

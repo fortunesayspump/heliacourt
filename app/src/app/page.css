@@ -2399,7 +2399,8 @@ button {
   margin-top: 12px;
 }
 
-.profile-case-list a {
+.profile-case-list a,
+.profile-case-list > div {
   display: grid;
   gap: 4px;
   color: var(--ag-ink);
@@ -2409,6 +2410,17 @@ button {
 .profile-case-list span {
   color: var(--ag-muted);
   font-size: 12px;
+}
+
+.private-unlock-panel {
+  max-width: 820px;
+}
+
+.private-turn-list p {
+  color: var(--ag-muted);
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
 }
 
 .preview-witness-list > div,

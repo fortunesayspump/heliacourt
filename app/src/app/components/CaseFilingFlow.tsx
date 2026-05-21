@@ -57,6 +57,8 @@ export function CaseFilingFlow({
   const [horizon, setHorizon] = useState('')
   const [budget, setBudget] = useState('')
   const [metadataURI, setMetadataURI] = useState('')
+  const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>('public')
+  const [payerVisibility, setPayerVisibility] = useState<'public' | 'private'>('private')
   const [status, setStatus] = useState<FilingStatus | undefined>()
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>()
 
@@ -195,6 +197,8 @@ export function CaseFilingFlow({
           links,
           type: 'prediction-market',
           filer: address,
+          visibility,
+          payerVisibility,
           onchain: {
             chainId: String(arcTestnet.id),
             escrowAddress,
@@ -252,6 +256,17 @@ export function CaseFilingFlow({
             <input id="horizon" placeholder="e.g. June 30, 2026, 11:59 PM ET" value={horizon} onChange={(event) => setHorizon(event.target.value)} />
             <label htmlFor="budget">Maximum court budget</label>
             <input id="budget" inputMode="decimal" placeholder="5.00" value={budget} onChange={(event) => setBudget(event.target.value)} />
+            <label htmlFor="visibility">Case visibility</label>
+            <select id="visibility" value={visibility} onChange={(event) => setVisibility(event.target.value as 'public' | 'unlisted' | 'private')}>
+              <option value="public">Public</option>
+              <option value="unlisted">Unlisted</option>
+              <option value="private">Private</option>
+            </select>
+            <label htmlFor="payer-visibility">Payer visibility</label>
+            <select id="payer-visibility" value={payerVisibility} onChange={(event) => setPayerVisibility(event.target.value as 'public' | 'private')}>
+              <option value="private">Private payer</option>
+              <option value="public">Public payer</option>
+            </select>
           </div>
         </section>
 
