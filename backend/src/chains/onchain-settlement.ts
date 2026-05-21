@@ -266,20 +266,27 @@ async function readAgentPayoutReceipts(
       .map((agent) => [agent.onchain.payoutWallet?.toLowerCase(), agent.id] as const)
       .filter((entry): entry is [string, string] => Boolean(entry[0])),
   )
-  const logs = await publicClient.getLogs({
-    address: env.CASE_ESCROW_ADDRESS as Address,
-    abi: caseEscrowAbi,
-    eventName: 'AgentPaid',
-    args: { caseId },
-    fromBlock,
-    toBlock: 'latest',
-  } as never).catch(() => []) as Array<{
+  const latestBlock = await publicClient.getBlockNumber()
+  const logs: Array<{
     transactionHash: Hex
     args: {
       amount?: bigint
       agentWallet?: Address
     }
-  }>
+  }> = []
+  const step = 9_000n
+  for (let start = fromBlock; start <= latestBlock; start += step + 1n) {
+    const end = start + step > latestBlock ? latestBlock : start + step
+    const chunk = await publicClient.getLogs({
+      address: env.CASE_ESCROW_ADDRESS as Address,
+      abi: caseEscrowAbi,
+      eventName: 'AgentPaid',
+      args: { caseId },
+      fromBlock: start,
+      toBlock: end,
+    } as never).catch(() => []) as typeof logs
+    logs.push(...chunk)
+  }
 
   return logs.map((log) => ({
     type: 'agent-payout' as const,
