@@ -19,6 +19,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url().optional(),
   HELIA_HEARING_MAX_CONCURRENT: z.coerce.number().int().positive().default(1),
   HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().min(0).default(0),
+  HELIA_HEARING_STALE_RUNNING_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
   HELIA_HEARING_JOB_RETENTION_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   HELIA_HEARING_MAX_RETAINED_JOBS: z.coerce.number().int().positive().default(100),
   HELIA_HEARING_QUEUE_POLL_MS: z.coerce.number().int().positive().default(2_000),

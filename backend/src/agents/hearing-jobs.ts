@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { desc, eq } from 'drizzle-orm'
+import { and, desc, eq, lt } from 'drizzle-orm'
 import Redis from 'ioredis'
 import { settleHearingOnchain, type OnchainSettlementResult } from '../chains/onchain-settlement.js'
 import { env } from '../config/env.js'
@@ -47,6 +47,14 @@ let activeJobs = 0
 
 export async function enqueueHearingJob(marketCase: MarketCase) {
   await pruneJobs()
+
+  if (isDatabaseConfigured) {
+    const reusableJob = await findReusableDatabaseJob(marketCase)
+    if (reusableJob) {
+      void processQueue()
+      return serializeJob(reusableJob)
+    }
+  }
 
   const now = new Date().toISOString()
   const job: HearingJob = {
@@ -99,7 +107,7 @@ export async function getHearingJob(jobId: string) {
 
 export async function listHearingJobs() {
   if (isDatabaseConfigured) {
-    return (await listDatabaseJobs()).map(serializeJob)
+    return dedupeCaseJobs(await listDatabaseJobs()).map(serializeJob)
   }
 
   if (redis) {
@@ -164,6 +172,7 @@ export function startHearingJobWorker() {
 
 export async function getHearingQueueStats() {
   if (isDatabaseConfigured) {
+    await recoverStaleDatabaseJobs()
     const waiting = (await listDatabaseJobs()).filter((job) => job.status === 'queued').length
     return {
       backend: 'postgres',
@@ -207,6 +216,8 @@ export async function runHearingNow(marketCase: MarketCase) {
 }
 
 async function processQueue() {
+  if (isDatabaseConfigured) await recoverStaleDatabaseJobs()
+
   while (activeJobs < env.HELIA_HEARING_MAX_CONCURRENT) {
     const job = isDatabaseConfigured ? await popDatabaseJob() : redis ? await popRedisJob() : popMemoryJob()
     if (!job) break
@@ -385,6 +396,75 @@ async function listDatabaseJobs() {
     .orderBy(desc(hearingJobs.updatedAt))
 
   return rows.map(rowToJob)
+}
+
+async function findReusableDatabaseJob(marketCase: MarketCase) {
+  const existing = (await listDatabaseJobs())
+    .filter((job) => job.caseId === marketCase.id)
+    .sort(compareCanonicalJobs)
+
+  const candidate = existing[0]
+  if (!candidate) return undefined
+  if (candidate.status === 'completed' || candidate.status === 'queued') return candidate
+
+  if (candidate.status === 'running' && isStaleJob(candidate)) {
+    const requeued: HearingJob = {
+      ...candidate,
+      status: 'queued',
+      marketCase,
+      updatedAt: new Date().toISOString(),
+      error: undefined,
+    }
+    await saveDatabaseJob(requeued)
+    return requeued
+  }
+
+  if (candidate.status === 'running') return candidate
+  return undefined
+}
+
+async function recoverStaleDatabaseJobs() {
+  if (activeJobs > 0) return
+
+  const cutoff = new Date(Date.now() - env.HELIA_HEARING_STALE_RUNNING_MS)
+  await db!
+    .update(hearingJobs)
+    .set({
+      status: 'queued',
+      updatedAt: new Date(),
+      error: null,
+    })
+    .where(and(eq(hearingJobs.status, 'running'), lt(hearingJobs.updatedAt, cutoff)))
+}
+
+function dedupeCaseJobs(caseJobs: HearingJob[]) {
+  const byCase = new Map<string, HearingJob>()
+
+  for (const job of caseJobs) {
+    const current = byCase.get(job.caseId)
+    if (!current || compareCanonicalJobs(job, current) < 0) {
+      byCase.set(job.caseId, job)
+    }
+  }
+
+  return [...byCase.values()].sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+}
+
+function compareCanonicalJobs(left: HearingJob, right: HearingJob) {
+  const statusRank: Record<HearingJobStatus, number> = {
+    completed: 0,
+    running: 1,
+    queued: 2,
+    failed: 3,
+  }
+  const statusDelta = statusRank[left.status] - statusRank[right.status]
+  if (statusDelta !== 0) return statusDelta
+  return Date.parse(right.updatedAt) - Date.parse(left.updatedAt)
+}
+
+function isStaleJob(job: HearingJob) {
+  if (job.status !== 'running') return false
+  return Date.now() - Date.parse(job.updatedAt) > env.HELIA_HEARING_STALE_RUNNING_MS
 }
 
 async function saveDatabaseJob(job: HearingJob) {
