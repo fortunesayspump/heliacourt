@@ -11,10 +11,13 @@ export default async function LedgerPage() {
   const recorded = ledgerRows.filter((row) => row.status === 'Recorded')
   const pending = ledgerRows.filter((row) => row.status !== 'Anchored' && row.status !== 'Recorded')
   const payouts = ledgerRows.filter((row) => row.receiptType === 'agent-payout')
+  const payoutSummaries = ledgerRows.filter((row) => row.receiptType === 'agent-payout-summary')
+  const protocolFees = ledgerRows.filter((row) => row.receiptType === 'protocol-fee')
   const escrowed = ledgerRows
     .filter((row) => row.receiptType === 'case-funding')
     .reduce((total, row) => total + parseAmount(row.amount), 0)
-  const paid = payouts.reduce((total, row) => total + parseAmount(row.amount), 0)
+  const paid = [...payouts, ...payoutSummaries].reduce((total, row) => total + parseAmount(row.amount), 0)
+  const protocolFeeTotal = protocolFees.reduce((total, row) => total + parseAmount(row.amount), 0)
 
   return (
     <main className="app-shell">
@@ -47,7 +50,7 @@ export default async function LedgerPage() {
             <Bank size={19} />
             <div>
               <span>Protocol fees</span>
-              <strong>Pending</strong>
+              <strong>{protocolFeeTotal ? `${formatAmount(protocolFeeTotal)} USDC` : 'Pending'}</strong>
             </div>
           </div>
           <div className="metric">
@@ -99,4 +102,8 @@ export default async function LedgerPage() {
 function parseAmount(value: string) {
   const match = value.match(/^\d+(?:\.\d+)?/)
   return match ? Number(match[0]) : 0
+}
+
+function formatAmount(value: number) {
+  return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }

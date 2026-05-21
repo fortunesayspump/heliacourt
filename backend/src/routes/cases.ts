@@ -198,6 +198,8 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
     onchainSettlement?: {
       status?: string
       reason?: string
+      totalPayoutUsdc?: string
+      capped?: boolean
       receipts?: Array<{
         type: string
         txHash: string
@@ -227,6 +229,34 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
       chainId: marketCase.onchain.chainId,
       txHash: marketCase.onchain.txHash,
       receiptType: 'case-funding',
+    })
+  }
+
+  if (result?.onchainSettlement?.totalPayoutUsdc) {
+    rows.push({
+      caseId: marketCase.id,
+      title: marketCase.question,
+      item: 'Agent payouts',
+      amount: `${result.onchainSettlement.totalPayoutUsdc} USDC`,
+      status: result.onchainSettlement.status === 'recorded' ? 'Recorded' : 'Pending',
+      hash: result.recordHash,
+      updated: job.updatedAt,
+      chainId: marketCase.onchain?.chainId,
+      receiptType: 'agent-payout-summary',
+    })
+  }
+
+  if (marketCase.onchain && result?.onchainSettlement?.status === 'recorded') {
+    rows.push({
+      caseId: marketCase.id,
+      title: marketCase.question,
+      item: 'Protocol fee',
+      amount: `${formatProtocolFee(marketCase.onchain.budgetUsdc)} USDC`,
+      status: 'Recorded',
+      hash: result.onchainSettlement.receipts?.find((receipt) => receipt.type === 'case-close')?.txHash,
+      updated: job.updatedAt,
+      chainId: marketCase.onchain.chainId,
+      receiptType: 'protocol-fee',
     })
   }
 
@@ -260,6 +290,12 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
     updated: job.updatedAt,
     receiptType: settlement ? 'settlement-plan' : 'verdict-record',
   }]
+}
+
+function formatProtocolFee(budgetUsdc: string) {
+  const budget = Number(budgetUsdc)
+  if (!Number.isFinite(budget)) return '0.00'
+  return (budget * 0.05).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
 function formatReceiptType(type: string, agentId?: string) {
