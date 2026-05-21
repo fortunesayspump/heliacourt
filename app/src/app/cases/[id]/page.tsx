@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
+import { SourceEmbedCard } from '../../components/SourceEmbedCard'
 import { formatConfidence, getBackendCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
 
@@ -178,11 +179,7 @@ export default async function CaseRecordPage({
                           {sourceCards.length ? (
                             <div className="transcript-source-grid" aria-label="Referenced sources">
                               {sourceCards.map((source) => (
-                                <a className="transcript-source-card" href={source.url} key={`${turn.id}-${source.url}`} target="_blank" rel="noreferrer">
-                                  <span>{source.kind}</span>
-                                  <strong>{source.title}</strong>
-                                  {source.detail ? <em>{source.detail}</em> : null}
-                                </a>
+                                <SourceEmbedCard detail={source.detail} kind={source.kind} key={`${turn.id}-${source.url}`} title={source.title} url={source.url} />
                               ))}
                             </div>
                           ) : null}
@@ -360,21 +357,35 @@ function summarizeTurn(turn: ApiTranscriptTurn) {
 }
 
 function renderTextWithLinks(text: string) {
-  const parts = text.split(/(https?:\/\/[^\s)]+)/g)
+  const markdownParts = text.split(/(\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g)
 
-  return parts.map((part, index) => {
+  return markdownParts.flatMap((part, index) => {
+    const markdown = /^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/i.exec(part)
+    if (markdown) {
+      return (
+        <a href={markdown[2]} key={`${markdown[2]}-${index}`} target="_blank" rel="noreferrer">
+          {markdown[1]}
+        </a>
+      )
+    }
+
+    const parts = part.split(/(https?:\/\/[^\s)]+)/g)
+    return parts.map((piece, pieceIndex) => renderUrlPiece(piece, `${index}-${pieceIndex}`))
+  })
+}
+
+function renderUrlPiece(part: string, key: string) {
     if (!/^https?:\/\//i.test(part)) return part
 
     const cleanUrl = part.replace(/[.,;:!?]+$/, '')
     const trailing = part.slice(cleanUrl.length)
 
     return (
-      <span key={`${cleanUrl}-${index}`}>
+      <span key={`${cleanUrl}-${key}`}>
         <a href={cleanUrl} target="_blank" rel="noreferrer">{formatUrlLabel(cleanUrl)}</a>
         {trailing}
       </span>
     )
-  })
 }
 
 function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact) {
@@ -397,20 +408,8 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
     }) ?? [])
     ?? []
 
-  const evidenceItems: TranscriptSourceCard[] = artifact?.evidenceItems
-    ?.flatMap((item) => {
-      if (!item.sourceUrl) return []
-      return [{
-        url: item.sourceUrl,
-        title: item.sourceTitle ?? formatUrlLabel(item.sourceUrl),
-        kind: item.sourceType ? formatAgentLabel(item.sourceType) : 'Evidence',
-        detail: item.reliability,
-      }]
-    })
-    ?? []
-
   const seen = new Set<string>()
-  return [...directUrls, ...evidenceItems, ...evidenceSources]
+  return [...directUrls, ...evidenceSources]
     .filter((source) => {
       const key = source.url.toLowerCase()
       if (seen.has(key)) return false
