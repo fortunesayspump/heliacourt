@@ -2316,6 +2316,43 @@ button {
   gap: 10px;
 }
 
+.similar-case-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ag-border);
+  color: var(--ag-ink);
+  text-decoration: none;
+}
+
+.similar-case-row:last-child {
+  border-bottom: 0;
+}
+
+.similar-case-row div {
+  min-width: 0;
+}
+
+.similar-case-row strong,
+.similar-case-row span {
+  display: block;
+}
+
+.similar-case-row strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+}
+
+.similar-case-row span {
+  margin-top: 4px;
+  color: var(--ag-muted);
+  font-size: 12px;
+}
+
 .preview-witness-list > div,
 .preview-budget > div,
 .compact-list .compact-card,

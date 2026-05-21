@@ -1,19 +1,22 @@
 import { CurrencyDollar, Briefcase, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
-import { getBackendCases, getBackendLedgerRows } from '../../lib/backend-data'
+import { WalletButton } from '../components/WalletButton'
+import { getBackendAgents, getBackendCases, getBackendLedgerRows } from '../../lib/backend-data'
 import '../page.css'
 
 export default async function ProfilePage() {
-  const [cases, ledgerRows] = await Promise.all([
+  const [cases, ledgerRows, agents] = await Promise.all([
     getBackendCases(),
     getBackendLedgerRows(),
+    getBackendAgents(),
   ])
+  const payoutRows = ledgerRows.filter((row) => row.receiptType === 'agent-payout')
   const profileStats = [
     ['Backend cases', `${cases.length} records`, Briefcase],
     ['Recorded spend', summarizeLedgerSpend(ledgerRows), CurrencyDollar],
-    ['Wallet role', 'Not connected', UserCircle],
-    ['Payout route', 'Wallet pending', Wallet],
+    ['Agent payouts', `${payoutRows.length} rows`, Wallet],
+    ['Registry seats', `${agents.length} agents`, UserCircle],
   ] as const
 
   return (
@@ -46,7 +49,8 @@ export default async function ProfilePage() {
             <UserCircle size={18} />
             <div>
               <h3>Court identity</h3>
-              <p>Connect a wallet to publish identity, wallet address, Circle wallet status, and court reputation.</p>
+              <p>Wallet identity is read in-browser when you connect. Backend profile storage is not active yet, so this page only shows shared environment records.</p>
+              <WalletButton className="secondary-button compact-back" label="Connect wallet" />
             </div>
           </article>
           <article className="rail-card">

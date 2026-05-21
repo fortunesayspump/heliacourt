@@ -1,7 +1,7 @@
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
 import { PageTitle } from '../components/PageTitle'
-import { getBackendAgents } from '../../lib/backend-data'
+import { getBackendAgents, getBackendLedgerRows } from '../../lib/backend-data'
 import '../page.css'
 
 const seatLabels: Record<string, string> = {
@@ -18,7 +18,11 @@ const seatLabels: Record<string, string> = {
 }
 
 export default async function AgentsPage() {
-  const agents = await getBackendAgents()
+  const [agents, ledgerRows] = await Promise.all([
+    getBackendAgents(),
+    getBackendLedgerRows(),
+  ])
+  const payoutStats = summarizeAgentPayouts(ledgerRows)
 
   return (
     <main className="app-shell">
@@ -47,10 +51,14 @@ export default async function AgentsPage() {
               <span className="registry-agent-head">Agent</span>
               <span className="registry-seat">Seat</span>
               <span className="registry-rep">Mode</span>
-              <span className="registry-fee">Fee</span>
+              <span className="registry-fee">Payouts</span>
               <span className="registry-status">Status</span>
             </div>
-            {agents.length ? agents.map((agent, index) => (
+            {agents.length ? agents.map((agent, index) => {
+              const payouts = payoutStats.get(agent.id)
+              const payoutLabel = payouts ? `${formatAmount(payouts.total)} USDC` : '0 USDC'
+
+              return (
               <article className="registry-row" key={agent.id} role="row">
                 <span className="registry-rank">{String(index + 1).padStart(2, '0')}</span>
                 <div className="registry-agent">
@@ -62,12 +70,13 @@ export default async function AgentsPage() {
                 </div>
               <span className="registry-seat">{seatLabels[agent.seat] ?? agent.seat}</span>
               <strong className="registry-rep">{agent.runMode}</strong>
-              <strong className="registry-fee">{agent.priceUsd ? `${agent.priceUsd.toFixed(2)} USDC` : '0.00 USDC'}</strong>
+              <strong className="registry-fee" title={`${payouts?.count ?? 0} recorded payout rows`}>{payoutLabel}</strong>
                 <span className={`registry-status state-dot ${getAgentStatusClass(agent.onchain?.registrationStatus, agent.enabled)}`}>
                   {formatAgentStatus(agent.onchain?.registrationStatus, agent.enabled)}
                 </span>
               </article>
-            )) : (
+              )
+            }) : (
               <div className="empty-state">
                 <strong>Backend registry unavailable</strong>
                 <p>Start the backend server to load the agent roster.</p>
@@ -79,6 +88,31 @@ export default async function AgentsPage() {
       <AppFooter />
     </main>
   )
+}
+
+function summarizeAgentPayouts(rows: Awaited<ReturnType<typeof getBackendLedgerRows>>) {
+  const payouts = new Map<string, { total: number; count: number }>()
+
+  for (const row of rows) {
+    if (row.receiptType !== 'agent-payout' || !row.agentId) continue
+    const amount = parseAmount(row.amount)
+    const current = payouts.get(row.agentId) ?? { total: 0, count: 0 }
+    payouts.set(row.agentId, {
+      total: current.total + amount,
+      count: current.count + 1,
+    })
+  }
+
+  return payouts
+}
+
+function parseAmount(value: string) {
+  const match = value.match(/^\d+(?:\.\d+)?/)
+  return match ? Number(match[0]) : 0
+}
+
+function formatAmount(value: number) {
+  return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
 function formatAgentStatus(status: NonNullable<Awaited<ReturnType<typeof getBackendAgents>>[number]['onchain']>['registrationStatus'] | undefined, enabled: boolean) {

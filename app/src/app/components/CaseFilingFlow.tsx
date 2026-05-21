@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowRight, BookOpenText, CurrencyDollar, GitFork, MagnifyingGlass, Scales, ShieldCheck, UserCircleCheck, Wallet } from '@phosphor-icons/react'
+import { ArrowRight, BookOpenText, CurrencyDollar, MagnifyingGlass, Scales, ShieldCheck, UserCircleCheck, Wallet } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useMemo, useState } from 'react'
@@ -18,6 +18,15 @@ type WitnessOption = {
   priceUsd: number
 }
 
+type ExistingCase = {
+  id: string
+  title: string
+  status: string
+  probability?: string
+  links: string[]
+  updated?: string
+}
+
 type FilingStatus = {
   tone: 'muted' | 'good' | 'bad'
   text: string
@@ -30,11 +39,11 @@ const supportedMarkets = ['polymarket.com', 'kalshi.com', 'manifold.markets']
 export function CaseFilingFlow({
   witnessOptions,
   likelyBench,
-  estimatedWitnessSpend,
+  existingCases,
 }: {
   witnessOptions: WitnessOption[]
   likelyBench: WitnessOption[]
-  estimatedWitnessSpend: number
+  existingCases: ExistingCase[]
 }) {
   const router = useRouter()
   const publicClient = usePublicClient({ chainId: arcTestnet.id })
@@ -47,8 +56,6 @@ export function CaseFilingFlow({
   const [sourceLinks, setSourceLinks] = useState('')
   const [horizon, setHorizon] = useState('')
   const [budget, setBudget] = useState('')
-  const [hearingType, setHearingType] = useState('Verdict hearing')
-  const [visibility, setVisibility] = useState('Public verdict, private payer')
   const [metadataURI, setMetadataURI] = useState('')
   const [status, setStatus] = useState<FilingStatus | undefined>()
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>()
@@ -88,12 +95,14 @@ export function CaseFilingFlow({
     .map((link) => link.trim())
     .filter(Boolean)
   const predictionMarketLink = links.find(isSupportedPredictionMarketLink)
+  const relatedCases = useMemo(
+    () => findRelatedCases(question, predictionMarketLink, existingCases),
+    [existingCases, predictionMarketLink, question],
+  )
   const composedContext = [
     context.trim(),
     predictionMarketLink ? `Prediction market: ${predictionMarketLink}` : '',
     horizon.trim() ? `Time horizon: ${horizon.trim()}` : '',
-    hearingType.trim() ? `Hearing type: ${hearingType.trim()}` : '',
-    visibility.trim() ? `Visibility: ${visibility.trim()}` : '',
   ].filter(Boolean).join('\n\n')
 
   const fileCase = async () => {
@@ -243,10 +252,6 @@ export function CaseFilingFlow({
             <input id="horizon" placeholder="e.g. June 30, 2026, 11:59 PM ET" value={horizon} onChange={(event) => setHorizon(event.target.value)} />
             <label htmlFor="budget">Maximum court budget</label>
             <input id="budget" inputMode="decimal" placeholder="5.00" value={budget} onChange={(event) => setBudget(event.target.value)} />
-            <label htmlFor="hearing-type">Hearing type</label>
-            <input id="hearing-type" value={hearingType} onChange={(event) => setHearingType(event.target.value)} />
-            <label htmlFor="visibility">Visibility</label>
-            <input id="visibility" value={visibility} onChange={(event) => setVisibility(event.target.value)} />
           </div>
         </section>
 
@@ -262,10 +267,20 @@ export function CaseFilingFlow({
             Before funding, the court checks whether this question already has an active or recent record.
           </p>
           <div className="similar-case-list">
-            <div className="empty-state">
-              <strong>Similarity check will run on submit</strong>
-              <p>The MVP waits for a real case brief before checking nearby hearings.</p>
-            </div>
+            {relatedCases.length ? relatedCases.map((item) => (
+              <Link className="similar-case-row" href={`/cases/${item.id}`} key={item.id}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.status}{item.probability ? ` · ${item.probability}` : ''}</span>
+                </div>
+                <ArrowRight size={15} />
+              </Link>
+            )) : (
+              <div className="empty-state">
+                <strong>{question.trim() || predictionMarketLink ? 'No nearby backend case found' : 'Paste a market question to compare'}</strong>
+                <p>{existingCases.length ? `${existingCases.length} backend case records are available for comparison.` : 'No backend cases are available in this environment yet.'}</p>
+              </div>
+            )}
           </div>
         </aside>
 
@@ -306,8 +321,8 @@ export function CaseFilingFlow({
           </div>
           <div className="settlement-table">
             <div>
-              <span>Visible witness quote</span>
-              <strong>{estimatedWitnessSpend ? `${estimatedWitnessSpend.toFixed(2)} USDC` : 'Pending'}</strong>
+              <span>Available witnesses</span>
+              <strong>{witnessOptions.length ? `${witnessOptions.length} registry seats` : 'Pending'}</strong>
             </div>
             <div>
               <span>Escrow route</span>
@@ -359,36 +374,6 @@ export function CaseFilingFlow({
         </aside>
       </section>
 
-      <section className="panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Case routing</p>
-            <h2>Choose how this question should proceed</h2>
-          </div>
-          <GitFork size={19} />
-        </div>
-        <div className="route-choice-grid">
-          <article>
-            <span>01</span>
-            <h3>Join existing case</h3>
-            <p>Add funding, follow updates, and receive access to the shared verdict without duplicating work.</p>
-            <button type="button">Join active hearing</button>
-          </article>
-          <article>
-            <span>02</span>
-            <h3>Request fresh hearing</h3>
-            <p>Run an updated hearing when market conditions changed after the original court record.</p>
-            <button type="button">Refresh verdict</button>
-          </article>
-          <article>
-            <span>03</span>
-            <h3>Open private fork</h3>
-            <p>Keep the same market question private with custom context, budget, resolution notes, or constraints.</p>
-            <button type="button">Fork privately</button>
-          </article>
-        </div>
-      </section>
-
       <section className="panel case-preview-panel" id="case-preview">
         <div className="panel-heading">
           <div>
@@ -415,7 +400,7 @@ export function CaseFilingFlow({
           </article>
 
           <article className="case-box">
-            <p className="eyebrow">Auto-seated bench</p>
+            <p className="eyebrow">Available witness pool</p>
             <div className="preview-witness-list">
               {likelyBench.length ? likelyBench.map(({ id, category, agent }) => (
                 <div key={id}>
@@ -423,10 +408,10 @@ export function CaseFilingFlow({
                   <strong>{agent}</strong>
                 </div>
               )) : (
-                <div>
-                  <span>Registry</span>
-                  <strong>Pending backend</strong>
-                </div>
+              <div>
+                <span>Registry</span>
+                <strong>Pending backend</strong>
+              </div>
               )}
             </div>
           </article>
@@ -442,10 +427,6 @@ export function CaseFilingFlow({
           <article className="case-box">
             <p className="eyebrow">Budget check</p>
             <div className="settlement-table preview-budget">
-              <div>
-                <span>Quoted visible bench</span>
-                <strong>{estimatedWitnessSpend ? `${estimatedWitnessSpend.toFixed(2)} USDC` : 'Pending'}</strong>
-              </div>
               <div>
                 <span>Requested budget</span>
                 <strong>{budgetUnits > zero ? `${formatUnits(budgetUnits, usdcDecimals)} USDC` : 'Pending'}</strong>
@@ -485,5 +466,37 @@ function isSupportedPredictionMarketLink(link: string) {
     return supportedMarkets.some((host) => hostname === host || hostname.endsWith(`.${host}`))
   } catch {
     return false
+  }
+}
+
+function findRelatedCases(question: string, marketLink: string | undefined, existingCases: ExistingCase[]) {
+  const normalizedQuestion = normalizeSearchText(question)
+  const queryTerms = new Set(normalizedQuestion.split(' ').filter((word) => word.length >= 4))
+  const normalizedMarketLink = marketLink ? normalizeUrl(marketLink) : undefined
+
+  return existingCases
+    .map((item) => {
+      const linkScore = normalizedMarketLink && item.links.some((link) => normalizeUrl(link) === normalizedMarketLink) ? 100 : 0
+      const titleTerms = new Set(normalizeSearchText(item.title).split(' ').filter((word) => word.length >= 4))
+      const overlap = [...queryTerms].filter((term) => titleTerms.has(term)).length
+      const score = linkScore + overlap
+      return { ...item, score }
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 4)
+}
+
+function normalizeSearchText(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
+}
+
+function normalizeUrl(value: string) {
+  try {
+    const url = new URL(value)
+    url.hash = ''
+    return url.toString().replace(/\/$/, '').toLowerCase()
+  } catch {
+    return value.trim().replace(/\/$/, '').toLowerCase()
   }
 }

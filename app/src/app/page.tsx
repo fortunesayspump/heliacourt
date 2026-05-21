@@ -7,9 +7,7 @@ import {
   Play,
   Eye,
   Timer,
-  TrendUp,
   UserCircleCheck,
-  Wallet,
 } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { AppHeader } from './components/AppHeader'
@@ -131,25 +129,18 @@ export default async function DashboardPage() {
             <aside className="panel action-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">Fast petition</p>
-                  <h2>Ask a prediction question</h2>
+                  <p className="eyebrow">Petition desk</p>
+                  <h2>File from a market URL</h2>
                 </div>
-                <TrendUp size={19} />
+                <Gavel size={19} />
               </div>
               <div className="case-box">
-                <label htmlFor="quick-case">Question</label>
-                <textarea id="quick-case" placeholder="Paste a prediction-market question." />
-                <div className="case-controls">
-                  <button type="button">Crypto</button>
-                  <button type="button">Macro</button>
-                  <button type="button">Data</button>
-                </div>
                 <div className="duplicate-hint">
-                  <span>Similarity check pending</span>
-                  <p>Submit a real question to check backend hearings before paying for duplicate work.</p>
+                  <span>{backendCases.length} backend records available</span>
+                  <p>New cases are created from a supported Polymarket, Kalshi, or Manifold link, then escrow opens on Arc before Heliaia starts the hearing.</p>
                 </div>
                 <Link className="primary-button full-width" href="/cases/new">
-                  Configure court
+                  File funded case
                   <ArrowRight size={16} />
                 </Link>
               </div>

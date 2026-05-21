@@ -64,7 +64,7 @@ export default async function CaseRecordPage({
     ['Horizon', courtCase.horizon ?? 'Open', Timer],
     ['Market', courtCase.market ?? 'Prediction market', Briefcase],
   ] as const
-  const witnesses = courtCase.witnesses ?? []
+  const seatedAgents = summarizeSeatedAgents(caseDetail.transcript)
   const verdictArtifact = caseDetail.artifacts.findLast((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
   const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
@@ -301,11 +301,11 @@ export default async function CaseRecordPage({
                   <UserCircleCheck size={19} />
                 </div>
                 <div className="compact-list">
-                  {witnesses.length ? witnesses.map((name) => (
-                    <article className="roster-row" key={name}>
+                  {seatedAgents.length ? seatedAgents.map((agent) => (
+                    <article className="roster-row" key={agent.id}>
                       <div>
-                        <h3>{name}</h3>
-                        <p>Backend hearing participant</p>
+                        <h3>{agent.name}</h3>
+                        <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
                       </div>
                       <div className="roster-meta">
                         <span className="state-dot voting">Seated</span>
@@ -332,12 +332,12 @@ export default async function CaseRecordPage({
                 <UserCircleCheck size={19} />
               </div>
               <div className="compact-list">
-                {witnesses.length ? witnesses.map((name) => (
-                  <article className="compact-card bench-news" key={name}>
-                    <span className="agent-presence" aria-hidden="true">{name.slice(0, 1).toUpperCase()}</span>
+                {seatedAgents.length ? seatedAgents.map((agent) => (
+                  <article className="compact-card bench-news" key={agent.id}>
+                    <span className="agent-presence" aria-hidden="true">{agent.name.slice(0, 1).toUpperCase()}</span>
                     <div>
-                      <h3>{name}</h3>
-                      <p>Backend-selected agent</p>
+                      <h3>{agent.name}</h3>
+                      <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
                     </div>
                   </article>
                 )) : (
@@ -563,4 +563,24 @@ function formatReceiptType(type: string) {
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {
+  const byAgent = new Map<string, { id: string; name: string; seat: string; turns: number }>()
+
+  for (const turn of transcript) {
+    const current = byAgent.get(turn.agentId)
+    if (current) {
+      current.turns += 1
+    } else {
+      byAgent.set(turn.agentId, {
+        id: turn.agentId,
+        name: turn.agentName,
+        seat: turn.seat,
+        turns: 1,
+      })
+    }
+  }
+
+  return [...byAgent.values()].sort((left, right) => right.turns - left.turns)
 }
