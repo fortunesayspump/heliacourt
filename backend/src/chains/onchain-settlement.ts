@@ -9,6 +9,20 @@ import { arcTestnet } from './arc-testnet.js'
 const caseEscrowAbi = [
   {
     type: 'function',
+    name: 'cases',
+    stateMutability: 'view',
+    inputs: [{ name: 'caseId', type: 'uint256' }],
+    outputs: [
+      { name: 'petitioner', type: 'address' },
+      { name: 'budget', type: 'uint96' },
+      { name: 'paidOut', type: 'uint96' },
+      { name: 'status', type: 'uint8' },
+      { name: 'questionHash', type: 'bytes32' },
+      { name: 'metadataURI', type: 'string' },
+    ],
+  },
+  {
+    type: 'function',
     name: 'payAgent',
     stateMutability: 'nonpayable',
     inputs: [
@@ -102,6 +116,14 @@ export async function settleHearingOnchain(input: {
   })
 
   const caseId = BigInt(onchainCase.caseId)
+  const escrowState = await publicClient.readContract({
+    address: env.CASE_ESCROW_ADDRESS as Address,
+    abi: caseEscrowAbi,
+    functionName: 'cases',
+    args: [caseId],
+  })
+  const alreadyPaidOut = escrowState[2]
+  const escrowStatus = Number(escrowState[3])
   const recordHash = toBytes32(input.recordHash) ?? hashStable({
     case: input.marketCase,
     artifacts: input.artifacts.map((artifact) => ({
@@ -165,7 +187,7 @@ export async function settleHearingOnchain(input: {
     recordHash: verdictHash,
   })
 
-  const payoutPlan = buildPayoutPlan(input.artifacts, onchainCase.budgetUsdc)
+  const payoutPlan = buildPayoutPlan(input.artifacts, onchainCase.budgetUsdc, alreadyPaidOut)
   for (const payout of payoutPlan.payouts) {
     const txHash = await writeAndWait(walletClient, publicClient, {
       address: env.CASE_ESCROW_ADDRESS as Address,
@@ -194,18 +216,20 @@ export async function settleHearingOnchain(input: {
     })
   }
 
-  const closeTx = await writeAndWait(walletClient, publicClient, {
-    address: env.CASE_ESCROW_ADDRESS as Address,
-    abi: caseEscrowAbi,
-    functionName: 'closeCase',
-    args: [caseId],
-  })
-  receipts.push({
-    type: 'case-close',
-    txHash: closeTx,
-    chainId: String(env.ARC_CHAIN_ID),
-    caseId: onchainCase.caseId,
-  })
+  if (escrowStatus === 1) {
+    const closeTx = await writeAndWait(walletClient, publicClient, {
+      address: env.CASE_ESCROW_ADDRESS as Address,
+      abi: caseEscrowAbi,
+      functionName: 'closeCase',
+      args: [caseId],
+    })
+    receipts.push({
+      type: 'case-close',
+      txHash: closeTx,
+      chainId: String(env.ARC_CHAIN_ID),
+      caseId: onchainCase.caseId,
+    })
+  }
 
   return {
     status: 'recorded',
@@ -217,7 +241,7 @@ export async function settleHearingOnchain(input: {
   }
 }
 
-function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string) {
+function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string, alreadyPaidOut = 0n) {
   const agents = new Map(getAgentRegistryWithOnchainProfiles().map((agent) => [agent.id, agent]))
   const requested = new Map<string, bigint>()
 
@@ -232,9 +256,10 @@ function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string) {
 
   const budget = parseUnits(budgetUsdc, 6)
   const protocolFee = (budget * BigInt(env.PROTOCOL_FEE_BPS)) / 10_000n
-  const payableBudget = budget > protocolFee ? budget - protocolFee : 0n
+  const totalPayableBudget = budget > protocolFee ? budget - protocolFee : 0n
+  const payableBudget = totalPayableBudget > alreadyPaidOut ? totalPayableBudget - alreadyPaidOut : 0n
   const requestedTotal = [...requested.values()].reduce((total, amount) => total + amount, 0n)
-  const capped = requestedTotal > payableBudget
+  const capped = requestedTotal > payableBudget || alreadyPaidOut > 0n
   const payouts = [...requested.entries()]
     .map(([agentId, amount]) => {
       const agent = agents.get(agentId)
@@ -253,7 +278,7 @@ function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string) {
 
   return {
     payouts,
-    totalPaid: payouts.reduce((total, payout) => total + payout.amount, 0n),
+    totalPaid: alreadyPaidOut + payouts.reduce((total, payout) => total + payout.amount, 0n),
     capped,
   }
 }
