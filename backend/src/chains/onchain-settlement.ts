@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { createPublicClient, createWalletClient, http, keccak256, parseUnits, toBytes, type Address, type Hex } from 'viem'
+import { createPublicClient, createWalletClient, http, keccak256, parseAbiItem, parseUnits, toBytes, type Address, type Hex } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
 import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
 import { env } from '../config/env.js'
@@ -78,6 +78,8 @@ const courtReceiptsAbi = [
     outputs: [],
   },
 ] as const
+
+const agentPaidEvent = parseAbiItem('event AgentPaid(uint256 indexed caseId, address indexed agentWallet, uint96 amount, bytes32 reasonHash)')
 
 export type OnchainSettlementReceipt = {
   type: 'case-event' | 'verdict' | 'agent-payout' | 'case-close'
@@ -279,12 +281,11 @@ async function readAgentPayoutReceipts(
     const end = start + step > latestBlock ? latestBlock : start + step
     const chunk = await publicClient.getLogs({
       address: env.CASE_ESCROW_ADDRESS as Address,
-      abi: caseEscrowAbi,
-      eventName: 'AgentPaid',
+      event: agentPaidEvent,
       args: { caseId },
       fromBlock: start,
       toBlock: end,
-    } as never).catch(() => []) as typeof logs
+    }).catch(() => []) as typeof logs
     logs.push(...chunk)
   }
 
