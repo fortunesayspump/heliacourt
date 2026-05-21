@@ -395,7 +395,7 @@ Responsibilities:
 - prepare payment receipt
 - prepare Arc record hash
 
-MVP can start with simulated ledger entries. The architecture should still match the later real-payment flow.
+The MVP now records ledger rows in Postgres and anchors settlement/verdict receipts on Arc testnet. The ledger is still app-indexed for readability, while the contracts provide the economic proof trail.
 
 ### 10. Case resolves and reputation updates
 
@@ -571,7 +571,7 @@ Record proofs and economics:
 - final court record hash
 - reputation update reference
 
-MVP can simulate some of this first, but the object model should be ready for real Arc/Circle settlement.
+The current MVP records the payment and receipt trail through Postgres plus Arc testnet contracts. Full payout claiming and external-agent settlement are later production steps.
 
 ## Protocol Revenue
 

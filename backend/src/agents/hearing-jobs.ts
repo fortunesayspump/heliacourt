@@ -6,7 +6,7 @@ import { env } from '../config/env.js'
 import { runHeliaiaConfiguredHearing } from '../court/heliaia-ai.js'
 import type { CourtArtifact, CourtTranscriptTurn, MarketCase, ToolEvidence } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { cases, courtArtifacts, hearingJobs, onchainReceipts, settlementRows, toolEvidence, transcriptTurns, verdicts } from '../db/schema.js'
+import { caseParticipants, cases, courtArtifacts, hearingJobs, onchainReceipts, settlementRows, toolEvidence, transcriptTurns, users, verdicts } from '../db/schema.js'
 
 type HearingJobStatus = 'queued' | 'running' | 'completed' | 'failed'
 
@@ -509,6 +509,8 @@ async function upsertDatabaseCase(marketCase: MarketCase, updatedAt: string) {
       links: marketCase.links ?? null,
       type: marketCase.type,
       filer: marketCase.filer ?? null,
+      visibility: marketCase.visibility ?? 'public',
+      payerVisibility: marketCase.payerVisibility ?? 'private',
       createdAt: toDate(marketCase.createdAt),
       updatedAt: toDate(updatedAt),
     })
@@ -520,9 +522,43 @@ async function upsertDatabaseCase(marketCase: MarketCase, updatedAt: string) {
         links: marketCase.links ?? null,
         type: marketCase.type,
         filer: marketCase.filer ?? null,
+        visibility: marketCase.visibility ?? 'public',
+        payerVisibility: marketCase.payerVisibility ?? 'private',
         updatedAt: toDate(updatedAt),
       },
     })
+
+  if (marketCase.filer) {
+    const wallet = normalizeWallet(marketCase.filer)
+    const now = toDate(updatedAt)
+
+    await db!
+      .insert(users)
+      .values({
+        wallet,
+        createdAt: now,
+        updatedAt: now,
+        lastSeenAt: now,
+      })
+      .onConflictDoUpdate({
+        target: users.wallet,
+        set: {
+          updatedAt: now,
+          lastSeenAt: now,
+        },
+      })
+
+    await db!
+      .insert(caseParticipants)
+      .values({
+        id: `${marketCase.id}:${wallet}:filer`,
+        caseId: marketCase.id,
+        wallet,
+        role: 'filer',
+        createdAt: now,
+      })
+      .onConflictDoNothing()
+  }
 }
 
 async function persistJobResult(job: HearingJob) {
@@ -723,6 +759,10 @@ function rowToJob(row: typeof hearingJobs.$inferSelect): HearingJob {
 function toDate(value: string) {
   const date = new Date(value)
   return Number.isFinite(date.getTime()) ? date : new Date()
+}
+
+function normalizeWallet(value: string) {
+  return value.toLowerCase()
 }
 
 function serializeJob(job: HearingJob) {

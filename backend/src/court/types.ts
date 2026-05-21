@@ -7,6 +7,8 @@ export type MarketCase = {
   links?: string[]
   type: CaseType
   filer?: `0x${string}`
+  visibility?: 'public' | 'unlisted' | 'private'
+  payerVisibility?: 'public' | 'private'
   onchain?: {
     chainId: string
     escrowAddress: `0x${string}`

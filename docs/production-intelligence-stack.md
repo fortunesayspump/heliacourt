@@ -9,6 +9,17 @@ Helia Court should split light app work from heavy evidence work.
 - **Railway Postgres**: durable source for cases, hearing jobs, transcript turns, artifacts, tool evidence, verdicts, settlement rows, and onchain receipt pointers.
 - **Queue**: Postgres-backed hearing jobs for the MVP. Redis can be added later for higher-throughput job locking, rate limits, and cache-heavy work.
 
+## Current Production Shape
+
+The app is now a hybrid DB/onchain system:
+
+- Postgres is the operational source of truth for case records, transcript turns, profiles, participants, ledger rows, and receipt pointers.
+- Arc testnet contracts hold economic proof: case escrow, case close, verdict receipts, and settlement receipts.
+- First-party agents are protocol-owned for the MVP. Their payout rows are recorded per agent in the ledger and receipt payloads.
+- Users are stored by wallet address. A filer is linked to each case through `case_participants`.
+
+The remaining production gap is access control. Profile editing and private-case visibility need wallet-signature auth before private records should be trusted in production.
+
 ## Why split it
 
 Vercel is great for the product surface, but browser rendering and OCR can exceed serverless limits. Railway is better for workers because it can run Chrome, hold longer processes, and keep optional services warm.

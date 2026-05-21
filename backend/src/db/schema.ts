@@ -1,4 +1,17 @@
-import { index, jsonb, pgTable, real, text, timestamp } from 'drizzle-orm/pg-core'
+import { index, jsonb, pgTable, real, text, timestamp, uniqueIndex } from 'drizzle-orm/pg-core'
+
+export const users = pgTable('users', {
+  wallet: text('wallet').primaryKey(),
+  username: text('username'),
+  displayName: text('display_name'),
+  avatarUrl: text('avatar_url'),
+  bio: text('bio'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  lastSeenAt: timestamp('last_seen_at', { withTimezone: true }),
+}, (table) => [
+  uniqueIndex('users_username_idx').on(table.username),
+])
 
 export const cases = pgTable('cases', {
   id: text('id').primaryKey(),
@@ -7,9 +20,23 @@ export const cases = pgTable('cases', {
   links: jsonb('links').$type<string[]>(),
   type: text('type').notNull(),
   filer: text('filer'),
+  visibility: text('visibility').notNull().default('public'),
+  payerVisibility: text('payer_visibility').notNull().default('private'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
 })
+
+export const caseParticipants = pgTable('case_participants', {
+  id: text('id').primaryKey(),
+  caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),
+  wallet: text('wallet').notNull().references(() => users.wallet, { onDelete: 'cascade' }),
+  role: text('role').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  index('case_participants_case_idx').on(table.caseId),
+  index('case_participants_wallet_idx').on(table.wallet),
+  uniqueIndex('case_participants_case_wallet_role_idx').on(table.caseId, table.wallet, table.role),
+])
 
 export const hearingJobs = pgTable('hearing_jobs', {
   id: text('id').primaryKey(),

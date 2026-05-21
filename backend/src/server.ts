@@ -6,6 +6,7 @@ import { agentRoutes } from './routes/agents.js'
 import { caseRoutes } from './routes/cases.js'
 import { circleRoutes } from './routes/circle.js'
 import { healthRoutes } from './routes/health.js'
+import { userRoutes } from './routes/users.js'
 
 const app = Fastify({
   logger: true,
@@ -19,6 +20,7 @@ await app.register(healthRoutes)
 await app.register(circleRoutes)
 await app.register(caseRoutes)
 await app.register(agentRoutes)
+await app.register(userRoutes)
 
 startHearingJobWorker()
 

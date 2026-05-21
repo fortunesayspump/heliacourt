@@ -172,6 +172,43 @@ export type ApiHealth = {
   }
 }
 
+export type ApiUserProfile = {
+  wallet: string
+  username?: string | null
+  displayName?: string | null
+  avatarUrl?: string | null
+  bio?: string | null
+  createdAt?: string
+  updatedAt?: string
+  lastSeenAt?: string
+}
+
+export type ApiUserAccount = {
+  profile: ApiUserProfile
+  cases: Array<{
+    id: string
+    title: string
+    visibility: string
+    role: string
+    updated: string
+  }>
+  participation: Array<{
+    id: string
+    title: string
+    role: string
+    visibility: string
+    updated: string
+  }>
+  payouts: Array<{
+    caseId: string
+    txHash: string
+    agentId?: string
+    wallet?: string
+    amountUsdc?: string
+    createdAt: string
+  }>
+}
+
 const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
 
 export async function getBackendCases(): Promise<ApiCase[]> {

@@ -2353,6 +2353,64 @@ button {
   font-size: 12px;
 }
 
+.profile-editor-card {
+  align-items: flex-start;
+}
+
+.profile-form-grid {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.profile-form-grid label,
+.profile-form-grid span {
+  display: grid;
+  gap: 7px;
+}
+
+.profile-form-grid span {
+  color: var(--ag-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.profile-form-grid input,
+.profile-form-grid textarea {
+  width: 100%;
+  border: 1px solid var(--ag-border);
+  border-radius: var(--radius-sm);
+  background: var(--ag-inner-surface);
+  color: var(--ag-ink);
+  font: inherit;
+  padding: 11px 12px;
+}
+
+.profile-form-grid textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.profile-case-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.profile-case-list a {
+  display: grid;
+  gap: 4px;
+  color: var(--ag-ink);
+  text-decoration: none;
+}
+
+.profile-case-list span {
+  color: var(--ag-muted);
+  font-size: 12px;
+}
+
 .preview-witness-list > div,
 .preview-budget > div,
 .compact-list .compact-card,
