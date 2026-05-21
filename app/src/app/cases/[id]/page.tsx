@@ -375,21 +375,22 @@ function renderTextWithLinks(text: string) {
 }
 
 function renderUrlPiece(part: string, key: string) {
-    if (!/^https?:\/\//i.test(part)) return part
+  if (!/^https?:\/\//i.test(part)) return part
 
-    const cleanUrl = part.replace(/[.,;:!?]+$/, '')
-    const trailing = part.slice(cleanUrl.length)
+  const cleanUrl = part.replace(/[.,;:!?]+$/, '')
+  const trailing = part.slice(cleanUrl.length)
 
-    return (
-      <span key={`${cleanUrl}-${key}`}>
-        <a href={cleanUrl} target="_blank" rel="noreferrer">{formatUrlLabel(cleanUrl)}</a>
-        {trailing}
-      </span>
-    )
+  return (
+    <span key={`${cleanUrl}-${key}`}>
+      <a href={cleanUrl} target="_blank" rel="noreferrer">{formatUrlLabel(cleanUrl)}</a>
+      {trailing}
+    </span>
+  )
 }
 
 function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact) {
-  const directUrls: TranscriptSourceCard[] = extractUrls(`${turn.message} ${turn.request ?? ''}`).map((url) => ({
+  const turnText = `${turn.message} ${turn.request ?? ''}`
+  const directUrls: TranscriptSourceCard[] = extractUrls(turnText).map((url) => ({
     url,
     title: formatUrlLabel(url),
     kind: 'Referenced link',
@@ -399,6 +400,8 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
   const evidenceSources: TranscriptSourceCard[] = artifact?.toolEvidence
     ?.flatMap((evidence) => evidence.sources?.flatMap((source) => {
       if (!source.url) return []
+      if (!shouldShowEvidenceSourceForTurn(source.url, source.title, evidence.capability, turnText)) return []
+
       return [{
         url: source.url,
         title: source.title ?? formatUrlLabel(source.url),
@@ -419,9 +422,40 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
     .slice(0, 3)
 }
 
+function shouldShowEvidenceSourceForTurn(url: string, title: string | undefined, capability: string | undefined, turnText: string) {
+  const directUrls = extractUrls(turnText).map((value) => normalizeUrlForCompare(value))
+  if (directUrls.includes(normalizeUrlForCompare(url))) return true
+
+  if (capability && /^(web_page_scrape|visual_page_analysis|screenshot|image_read|social_activity_data)$/i.test(capability)) {
+    return true
+  }
+
+  const normalizedText = turnText.toLowerCase()
+  const host = domainFromUrl(url)?.toLowerCase()
+  if (host && normalizedText.includes(host.replace(/^www\./, ''))) return true
+
+  const titleWords = (title ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length >= 5)
+
+  return titleWords.length >= 2 && titleWords.slice(0, 5).filter((word) => normalizedText.includes(word)).length >= 2
+}
+
 function extractUrls(text: string) {
   return Array.from(text.matchAll(/https?:\/\/[^\s)]+/gi))
     .map((match) => match[0].replace(/[.,;:!?]+$/, ''))
+}
+
+function normalizeUrlForCompare(value: string) {
+  try {
+    const url = new URL(value)
+    url.hash = ''
+    return url.toString().replace(/\/$/, '').toLowerCase()
+  } catch {
+    return value.replace(/\/$/, '').toLowerCase()
+  }
 }
 
 function formatUrlLabel(value: string) {
