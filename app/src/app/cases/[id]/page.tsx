@@ -145,24 +145,16 @@ export default async function CaseRecordPage({
                     const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
                     const artifact = turn.artifactId ? artifactById.get(turn.artifactId) : undefined
                     const sourceCards = getTurnSourceCards(turn, artifact)
-                    const hasRequest = Boolean(turn.request)
-                    const hasContext = Boolean(replyTurn || hasRequest)
+                    const hasContext = Boolean(replyTurn)
 
                     return (
                       <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
-                        {hasContext ? (
+                        {replyTurn ? (
                           <div className="transcript-contexts">
-                            {hasRequest ? (
-                              <div className="transcript-reply transcript-request-preview" aria-label={`Request to ${formatAgentLabel(turn.requestedAgentId)}`}>
-                                <strong>To {formatAgentLabel(turn.requestedAgentId)}</strong>
-                                <span>{turn.request}</span>
-                              </div>
-                            ) : replyTurn ? (
-                              <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
-                                <strong>{replyTurn.agentName}</strong>
-                                <span>{summarizeTurn(replyTurn)}</span>
-                              </a>
-                            ) : null}
+                            <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
+                              <strong>{replyTurn.agentName}</strong>
+                              <span>{summarizeTurn(replyTurn)}</span>
+                            </a>
                           </div>
                         ) : null}
                         <div className="transcript-avatar">{turn.agentName.slice(0, 1)}</div>

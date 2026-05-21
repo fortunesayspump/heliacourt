@@ -3359,10 +3359,6 @@ select {
   border-top-left-radius: 8px;
 }
 
-.transcript-request-preview strong {
-  color: var(--ag-ink);
-}
-
 .transcript-reply strong {
   flex: 0 0 auto;
   color: var(--transcript-accent);
