@@ -25,6 +25,7 @@ type FilingStatus = {
 
 const usdcDecimals = 6
 const zero = BigInt(0)
+const supportedMarkets = ['polymarket.com', 'kalshi.com', 'manifold.markets']
 
 export function CaseFilingFlow({
   witnessOptions,
@@ -86,8 +87,10 @@ export function CaseFilingFlow({
     .split(/\s+/)
     .map((link) => link.trim())
     .filter(Boolean)
+  const predictionMarketLink = links.find(isSupportedPredictionMarketLink)
   const composedContext = [
     context.trim(),
+    predictionMarketLink ? `Prediction market: ${predictionMarketLink}` : '',
     horizon.trim() ? `Time horizon: ${horizon.trim()}` : '',
     hearingType.trim() ? `Hearing type: ${hearingType.trim()}` : '',
     visibility.trim() ? `Visibility: ${visibility.trim()}` : '',
@@ -116,6 +119,14 @@ export function CaseFilingFlow({
     }
     if (!question.trim()) {
       setStatus({ tone: 'bad', text: 'Paste the market question first.' })
+      return
+    }
+    if (!links.length) {
+      setStatus({ tone: 'bad', text: 'Add the actual prediction market URL before filing.' })
+      return
+    }
+    if (!predictionMarketLink) {
+      setStatus({ tone: 'bad', text: `Add a supported market link: ${supportedMarkets.join(', ')}.` })
       return
     }
     if (budgetUnits <= zero) {
@@ -169,7 +180,7 @@ export function CaseFilingFlow({
           'content-type': 'application/json',
         },
         body: JSON.stringify({
-          id: `arc-${onchainCaseId}`,
+          id: txHash,
           question: question.trim(),
           context: composedContext || undefined,
           links,
@@ -191,11 +202,11 @@ export function CaseFilingFlow({
         throw new Error(payload.error ?? 'case filing failed after escrow opened')
       }
 
-      setStatus({ tone: 'good', text: `Case arc-${onchainCaseId} funded and queued.` })
+      setStatus({ tone: 'good', text: `Case ${txHash.slice(0, 10)}...${txHash.slice(-6)} funded and queued.` })
       void allowance.refetch()
       void balance.refetch()
       void nextCaseId.refetch()
-      router.push(`/cases/arc-${onchainCaseId}`)
+      router.push(`/cases/${txHash}`)
     } catch (error) {
       setStatus({ tone: 'bad', text: error instanceof Error ? error.message : 'Case filing failed.' })
     }
@@ -224,7 +235,7 @@ export function CaseFilingFlow({
             <label htmlFor="source-links">Market and source links</label>
             <textarea
               id="source-links"
-              placeholder={`Market URL\nPrimary resolution source URL`}
+              placeholder={`Polymarket, Kalshi, or Manifold market URL required\nPrimary resolution source URL`}
               value={sourceLinks}
               onChange={(event) => setSourceLinks(event.target.value)}
             />
@@ -465,5 +476,14 @@ function safeBudget(value: string) {
     return parsed > zero ? parsed : zero
   } catch {
     return zero
+  }
+}
+
+function isSupportedPredictionMarketLink(link: string) {
+  try {
+    const hostname = new URL(link).hostname.replace(/^www\./, '').toLowerCase()
+    return supportedMarkets.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+  } catch {
+    return false
   }
 }

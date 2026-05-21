@@ -7,7 +7,7 @@ const createCaseSchema = z.object({
   id: z.string().trim().min(1).optional(),
   question: z.string().trim().min(1),
   context: z.string().trim().optional(),
-  links: z.array(z.string().trim().url()).optional(),
+  links: z.array(z.string().trim().url()).min(1),
   type: z.enum(['crypto-market', 'prediction-market', 'macro', 'real-world-event']).optional(),
   filer: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value)).optional(),
   onchain: z.object({
@@ -73,12 +73,23 @@ export async function caseRoutes(app: FastifyInstance) {
     }
 
     const data = parsed.data
+    const predictionMarketLink = data.links.find(isSupportedPredictionMarketLink)
+    if (!predictionMarketLink) {
+      return reply.status(400).send({
+        error: 'prediction market link required',
+        supportedMarkets: supportedPredictionMarketHosts,
+      })
+    }
+
     const marketCase: MarketCase = {
-      id: data.id ?? createCaseId(data.question, data.onchain?.caseId),
+      id: data.id ?? createCaseId(data.question, data.onchain?.caseId, data.onchain?.txHash),
       question: data.question,
-      context: data.context || undefined,
-      links: data.links?.filter(Boolean),
-      type: (data.type ?? 'prediction-market') as CaseType,
+      context: [
+        data.context || undefined,
+        `Prediction market: ${predictionMarketLink}`,
+      ].filter(Boolean).join('\n\n'),
+      links: data.links.filter(Boolean),
+      type: 'prediction-market' as CaseType,
       filer: data.filer,
       onchain: data.onchain,
       createdAt: new Date().toISOString(),
@@ -133,7 +144,19 @@ function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number])
   }
 }
 
-function createCaseId(question: string, onchainCaseId?: string) {
+const supportedPredictionMarketHosts = ['polymarket.com', 'kalshi.com', 'manifold.markets']
+
+function isSupportedPredictionMarketLink(link: string) {
+  try {
+    const hostname = new URL(link).hostname.replace(/^www\./, '').toLowerCase()
+    return supportedPredictionMarketHosts.some((host) => hostname === host || hostname.endsWith(`.${host}`))
+  } catch {
+    return false
+  }
+}
+
+function createCaseId(question: string, onchainCaseId?: string, txHash?: string) {
+  if (txHash) return txHash
   if (onchainCaseId) return `arc-${onchainCaseId}`
 
   const slug = question
