@@ -1,16 +1,21 @@
 import { CurrencyDollar, Briefcase, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
+import { getBackendCases, getBackendLedgerRows } from '../../lib/backend-data'
 import '../page.css'
 
-const profileStats = [
-  ['Filed cases', '12 active', Briefcase],
-  ['Agent spend', '8.42 USDC', CurrencyDollar],
-  ['Wallet role', 'Court participant', UserCircle],
-  ['Payout route', 'Arc Testnet', Wallet],
-]
+export default async function ProfilePage() {
+  const [cases, ledgerRows] = await Promise.all([
+    getBackendCases(),
+    getBackendLedgerRows(),
+  ])
+  const profileStats = [
+    ['Backend cases', `${cases.length} records`, Briefcase],
+    ['Recorded spend', summarizeLedgerSpend(ledgerRows), CurrencyDollar],
+    ['Wallet role', 'Not connected', UserCircle],
+    ['Payout route', 'Wallet pending', Wallet],
+  ] as const
 
-export default function ProfilePage() {
   return (
     <main className="app-shell">
       <AppHeader active="profile" />
@@ -41,14 +46,14 @@ export default function ProfilePage() {
             <UserCircle size={18} />
             <div>
               <h3>Court identity</h3>
-              <p>Display name, wallet address, Circle wallet status, and public court reputation.</p>
+              <p>Connect a wallet to publish identity, wallet address, Circle wallet status, and court reputation.</p>
             </div>
           </article>
           <article className="rail-card">
             <Briefcase size={18} />
             <div>
               <h3>Recent proceedings</h3>
-              <p>Cases filed, witness testimony purchased, jury votes, and sealed verdict receipts.</p>
+              <p>{cases.length ? `${cases.length} backend case records are available for this environment.` : 'No backend case records are tied to this browser session yet.'}</p>
             </div>
           </article>
         </section>
@@ -56,4 +61,13 @@ export default function ProfilePage() {
       <AppFooter />
     </main>
   )
+}
+
+function summarizeLedgerSpend(rows: Awaited<ReturnType<typeof getBackendLedgerRows>>) {
+  const total = rows.reduce((sum, row) => {
+    const amount = Number.parseFloat(row.amount)
+    return Number.isFinite(amount) ? sum + amount : sum
+  }, 0)
+
+  return total ? `${total.toFixed(2)} USDC` : 'No records'
 }

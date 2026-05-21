@@ -1,0 +1,305 @@
+import { createHash } from 'node:crypto'
+import { createPublicClient, createWalletClient, http, keccak256, parseUnits, toBytes, type Address, type Hex } from 'viem'
+import { privateKeyToAccount } from 'viem/accounts'
+import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
+import { env } from '../config/env.js'
+import type { CourtArtifact, CourtTranscriptTurn, MarketCase } from '../court/types.js'
+import { arcTestnet } from './arc-testnet.js'
+
+const caseEscrowAbi = [
+  {
+    type: 'function',
+    name: 'payAgent',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'caseId', type: 'uint256' },
+      { name: 'agentWallet', type: 'address' },
+      { name: 'amount', type: 'uint96' },
+      { name: 'reasonHash', type: 'bytes32' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'closeCase',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'caseId', type: 'uint256' }],
+    outputs: [],
+  },
+] as const
+
+const courtReceiptsAbi = [
+  {
+    type: 'function',
+    name: 'recordCaseEvent',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'caseId', type: 'uint256' },
+      { name: 'eventType', type: 'bytes32' },
+      { name: 'contentHash', type: 'bytes32' },
+      { name: 'uri', type: 'string' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'recordVerdict',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'caseId', type: 'uint256' },
+      { name: 'verdictHash', type: 'bytes32' },
+      { name: 'confidenceBps', type: 'uint16' },
+      { name: 'uri', type: 'string' },
+    ],
+    outputs: [],
+  },
+] as const
+
+export type OnchainSettlementReceipt = {
+  type: 'case-event' | 'verdict' | 'agent-payout' | 'case-close'
+  txHash: Hex
+  chainId: string
+  caseId: string
+  recordHash?: Hex
+  amountUsdc?: string
+  agentId?: string
+  wallet?: Address
+}
+
+export type OnchainSettlementResult = {
+  status: 'skipped' | 'recorded' | 'error'
+  reason?: string
+  receipts: OnchainSettlementReceipt[]
+  recordHash?: Hex
+  verdictHash?: Hex
+  totalPayoutUsdc?: string
+  capped?: boolean
+}
+
+export async function settleHearingOnchain(input: {
+  marketCase: MarketCase
+  artifacts: CourtArtifact[]
+  transcript: CourtTranscriptTurn[]
+  recordHash?: string
+}): Promise<OnchainSettlementResult> {
+  const onchainCase = input.marketCase.onchain
+  if (!onchainCase) return { status: 'skipped', reason: 'case was not opened onchain', receipts: [] }
+  const signerKey = env.SETTLEMENT_PRIVATE_KEY ?? env.PRIVATE_KEY
+  if (!signerKey) return { status: 'skipped', reason: 'SETTLEMENT_PRIVATE_KEY or PRIVATE_KEY is not configured for backend settlement', receipts: [] }
+  if (!env.CASE_ESCROW_ADDRESS || !env.COURT_RECEIPTS_ADDRESS) {
+    return { status: 'skipped', reason: 'escrow or receipts contract address is missing', receipts: [] }
+  }
+
+  const account = privateKeyToAccount(signerKey as Hex)
+  const publicClient = createPublicClient({
+    chain: arcTestnet,
+    transport: http(env.ARC_RPC_URL),
+  })
+  const walletClient = createWalletClient({
+    account,
+    chain: arcTestnet,
+    transport: http(env.ARC_RPC_URL),
+  })
+
+  const caseId = BigInt(onchainCase.caseId)
+  const recordHash = toBytes32(input.recordHash) ?? hashStable({
+    case: input.marketCase,
+    artifacts: input.artifacts.map((artifact) => ({
+      id: artifact.id,
+      agentId: artifact.agentId,
+      type: artifact.type,
+      summary: artifact.summary,
+      confidence: artifact.confidence,
+      createdAt: artifact.createdAt,
+    })),
+    transcript: input.transcript.map((turn) => ({
+      id: turn.id,
+      agentId: turn.agentId,
+      kind: turn.kind,
+      stage: turn.stage,
+      message: turn.message,
+      createdAt: turn.createdAt,
+    })),
+  })
+  const verdict = input.artifacts.filter((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge').at(-1)
+  const verdictHash = hashStable(verdict ?? { verdict: 'pending', caseId: input.marketCase.id })
+  const confidenceBps = Math.max(0, Math.min(10_000, Math.round((verdict?.confidence ?? 0) * 10_000)))
+  const uriBase = onchainCase.metadataURI || `helia-case://${input.marketCase.id}`
+  const receipts: OnchainSettlementReceipt[] = []
+
+  const eventHash = await writeAndWait(walletClient, publicClient, {
+    address: env.COURT_RECEIPTS_ADDRESS as Address,
+    abi: courtReceiptsAbi,
+    functionName: 'recordCaseEvent',
+    args: [
+      caseId,
+      keccak256(toBytes('HEARING_RECORD')),
+      recordHash,
+      `${uriBase}#hearing-record`,
+    ],
+  })
+  receipts.push({
+    type: 'case-event',
+    txHash: eventHash,
+    chainId: String(env.ARC_CHAIN_ID),
+    caseId: onchainCase.caseId,
+    recordHash,
+  })
+
+  const verdictTx = await writeAndWait(walletClient, publicClient, {
+    address: env.COURT_RECEIPTS_ADDRESS as Address,
+    abi: courtReceiptsAbi,
+    functionName: 'recordVerdict',
+    args: [
+      caseId,
+      verdictHash,
+      confidenceBps,
+      `${uriBase}#verdict`,
+    ],
+  })
+  receipts.push({
+    type: 'verdict',
+    txHash: verdictTx,
+    chainId: String(env.ARC_CHAIN_ID),
+    caseId: onchainCase.caseId,
+    recordHash: verdictHash,
+  })
+
+  const payoutPlan = buildPayoutPlan(input.artifacts, onchainCase.budgetUsdc)
+  for (const payout of payoutPlan.payouts) {
+    const txHash = await writeAndWait(walletClient, publicClient, {
+      address: env.CASE_ESCROW_ADDRESS as Address,
+      abi: caseEscrowAbi,
+      functionName: 'payAgent',
+      args: [
+        caseId,
+        payout.wallet,
+        payout.amount,
+        hashStable({
+          caseId: input.marketCase.id,
+          agentId: payout.agentId,
+          amount: payout.amount.toString(),
+          reason: 'hearing-agent-payout',
+        }),
+      ],
+    })
+    receipts.push({
+      type: 'agent-payout',
+      txHash,
+      chainId: String(env.ARC_CHAIN_ID),
+      caseId: onchainCase.caseId,
+      amountUsdc: formatUsdc(payout.amount),
+      agentId: payout.agentId,
+      wallet: payout.wallet,
+    })
+  }
+
+  const closeTx = await writeAndWait(walletClient, publicClient, {
+    address: env.CASE_ESCROW_ADDRESS as Address,
+    abi: caseEscrowAbi,
+    functionName: 'closeCase',
+    args: [caseId],
+  })
+  receipts.push({
+    type: 'case-close',
+    txHash: closeTx,
+    chainId: String(env.ARC_CHAIN_ID),
+    caseId: onchainCase.caseId,
+  })
+
+  return {
+    status: 'recorded',
+    receipts,
+    recordHash,
+    verdictHash,
+    totalPayoutUsdc: formatUsdc(payoutPlan.totalPaid),
+    capped: payoutPlan.capped,
+  }
+}
+
+function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string) {
+  const agents = new Map(getAgentRegistryWithOnchainProfiles().map((agent) => [agent.id, agent]))
+  const requested = new Map<string, bigint>()
+
+  for (const artifact of artifacts) {
+    if (!artifact.costUsd || artifact.costUsd <= 0) continue
+    const agent = agents.get(artifact.agentId)
+    const wallet = agent?.onchain.payoutWallet
+    if (!wallet) continue
+
+    requested.set(artifact.agentId, (requested.get(artifact.agentId) ?? 0n) + parseUsdc(artifact.costUsd))
+  }
+
+  const budget = parseUnits(budgetUsdc, 6)
+  const protocolFee = (budget * BigInt(env.PROTOCOL_FEE_BPS)) / 10_000n
+  const payableBudget = budget > protocolFee ? budget - protocolFee : 0n
+  const requestedTotal = [...requested.values()].reduce((total, amount) => total + amount, 0n)
+  const capped = requestedTotal > payableBudget
+  const payouts = [...requested.entries()]
+    .map(([agentId, amount]) => {
+      const agent = agents.get(agentId)
+      const wallet = agent?.onchain.payoutWallet
+      if (!wallet) return undefined
+      const scaledAmount = capped && requestedTotal > 0n ? (amount * payableBudget) / requestedTotal : amount
+      if (scaledAmount <= 0n) return undefined
+
+      return {
+        agentId,
+        wallet,
+        amount: scaledAmount,
+      }
+    })
+    .filter((payout): payout is { agentId: string; wallet: Address; amount: bigint } => Boolean(payout))
+
+  return {
+    payouts,
+    totalPaid: payouts.reduce((total, payout) => total + payout.amount, 0n),
+    capped,
+  }
+}
+
+async function writeAndWait(
+  walletClient: ReturnType<typeof createWalletClient>,
+  publicClient: ReturnType<typeof createPublicClient>,
+  request: Record<string, unknown>,
+) {
+  const txHash = await walletClient.writeContract({
+    ...request,
+    account: walletClient.account!,
+    chain: arcTestnet,
+  } as never)
+  await publicClient.waitForTransactionReceipt({ hash: txHash })
+  return txHash
+}
+
+function hashStable(value: unknown): Hex {
+  const json = JSON.stringify(sortForHash(value))
+  return keccak256(toBytes(json))
+}
+
+function sortForHash(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(sortForHash)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, item]) => [key, sortForHash(item)]),
+  )
+}
+
+function toBytes32(value?: string): Hex | undefined {
+  if (value && /^0x[a-fA-F0-9]{64}$/.test(value)) return value as Hex
+  if (!value) return undefined
+
+  return `0x${createHash('sha256').update(value).digest('hex')}` as Hex
+}
+
+function parseUsdc(value: number) {
+  return parseUnits(value.toFixed(6), 6)
+}
+
+function formatUsdc(value: bigint) {
+  const whole = value / 1_000_000n
+  const decimals = (value % 1_000_000n).toString().padStart(6, '0').replace(/0+$/, '')
+  return decimals ? `${whole}.${decimals}` : whole.toString()
+}

@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract CourtReceipts {
-    address public owner;
+import { Initializable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+contract CourtReceipts is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     mapping(address account => bool approvedRecorder) public recorders;
 
     event RecorderSet(address indexed recorder, bool approved);
@@ -20,18 +23,17 @@ contract CourtReceipts {
         string uri
     );
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not owner");
-        _;
-    }
-
     modifier onlyRecorder() {
-        require(msg.sender == owner || recorders[msg.sender], "not recorder");
+        require(msg.sender == owner() || recorders[msg.sender], "not recorder");
         _;
     }
 
     constructor() {
-        owner = msg.sender;
+        _disableInitializers();
+    }
+
+    function initialize(address owner_) external initializer {
+        __Ownable_init(owner_);
     }
 
     function setRecorder(address recorder, bool approved) external onlyOwner {
@@ -53,4 +55,6 @@ contract CourtReceipts {
         require(confidenceBps <= 10_000, "confidence too high");
         emit VerdictRecorded(caseId, verdictHash, confidenceBps, uri);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

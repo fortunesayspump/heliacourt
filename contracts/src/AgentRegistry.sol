@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-contract AgentRegistry {
+import { Initializable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+
+contract AgentRegistry is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     struct Agent {
         address owner;
         address payoutWallet;
@@ -11,8 +15,7 @@ contract AgentRegistry {
         string metadataURI;
     }
 
-    address public owner;
-    uint256 public nextAgentId = 1;
+    uint256 public nextAgentId;
 
     mapping(uint256 agentId => Agent agent) public agents;
     mapping(address account => bool approvedRegistrar) public registrars;
@@ -29,13 +32,8 @@ contract AgentRegistry {
     event AgentUpdated(uint256 indexed agentId, string role, string metadataURI, uint96 feeQuote, bool active);
     event AgentPayoutWalletUpdated(uint256 indexed agentId, address indexed payoutWallet);
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not owner");
-        _;
-    }
-
     modifier onlyRegistrar() {
-        require(msg.sender == owner || registrars[msg.sender], "not registrar");
+        require(msg.sender == owner() || registrars[msg.sender], "not registrar");
         _;
     }
 
@@ -45,7 +43,12 @@ contract AgentRegistry {
     }
 
     constructor() {
-        owner = msg.sender;
+        _disableInitializers();
+    }
+
+    function initialize(address owner_) external initializer {
+        __Ownable_init(owner_);
+        nextAgentId = 1;
     }
 
     function setRegistrar(address registrar, bool approved) external onlyOwner {
@@ -93,4 +96,6 @@ contract AgentRegistry {
 
         emit AgentPayoutWalletUpdated(agentId, payoutWallet);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

@@ -1,21 +1,26 @@
-import { ArrowRight, CurrencyDollar, BookOpenText, GitFork, MagnifyingGlass, Scales, ShieldCheck, UserCircleCheck } from '@phosphor-icons/react/ssr'
+import { ArrowRight } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { PageTitle } from '../../components/PageTitle'
 import { WalletNotice } from '../../components/WalletNotice'
+import { CaseFilingFlow } from '../../components/CaseFilingFlow'
 import { getBackendAgents } from '../../../lib/backend-data'
 import '../../page.css'
 
 export default async function NewCasePage() {
-  const witnessOptions = (await getBackendAgents())
+  const liveAgents = await getBackendAgents()
+  const witnessOptions = liveAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
     .map((agent) => ({
       id: agent.id,
       category: formatAgentCategory(agent.description),
       agent: agent.name,
       detail: formatAgentDetail(agent.description),
+      priceUsd: agent.priceUsd,
     }))
+  const likelyBench = witnessOptions.slice(0, 5)
+  const estimatedWitnessSpend = likelyBench.reduce((total, agent) => total + agent.priceUsd, 0)
 
   return (
     <main className="app-shell">
@@ -45,230 +50,11 @@ export default async function NewCasePage() {
           action="Connect and fund"
         />
 
-        <section className="form-grid">
-          <section className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Case brief</p>
-                <h2>Market question</h2>
-              </div>
-            </div>
-            <div className="case-box case-form">
-              <label htmlFor="question">Question</label>
-              <textarea id="question" defaultValue="Will ETH outperform SOL over the next 7 days?" />
-              <label htmlFor="case-context">Case context</label>
-              <textarea
-                id="case-context"
-                defaultValue="Resolution rules, primary sources, exclusions, market URL, and any exact contract text the court must preserve."
-              />
-              <label htmlFor="source-links">Market and source links</label>
-              <textarea
-                id="source-links"
-                defaultValue={`https://polymarket.com/...
-https://www.fifa.com/...`}
-              />
-              <label htmlFor="horizon">Time horizon</label>
-              <input id="horizon" defaultValue="7 days" />
-              <label htmlFor="budget">Maximum court budget</label>
-              <input id="budget" defaultValue="8.00 USDC" />
-              <label htmlFor="hearing-type">Hearing type</label>
-              <input id="hearing-type" defaultValue="Standard hearing, verdict only" />
-              <label htmlFor="visibility">Visibility</label>
-              <input id="visibility" defaultValue="Public verdict, private payer" />
-            </div>
-          </section>
-
-          <aside className="panel similar-case-panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Similarity check</p>
-                <h2>Existing hearings found</h2>
-              </div>
-              <MagnifyingGlass size={19} />
-            </div>
-            <p className="panel-copy">
-              Before funding, the court checks whether this question already has an active or recent record.
-            </p>
-            <div className="similar-case-list">
-              <div className="empty-state">
-                <strong>Similarity check will run on submit</strong>
-                <p>The MVP waits for a real case brief before checking nearby hearings.</p>
-              </div>
-            </div>
-          </aside>
-
-          <aside className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Witness bench</p>
-                <h2>Court-selected agents</h2>
-              </div>
-              <UserCircleCheck size={19} />
-            </div>
-            <p className="panel-copy">
-              Heliaia seats witnesses from the case brief, market type, horizon, and budget. Users do not manually pick agents for the MVP.
-            </p>
-            <div className="compact-list">
-              {witnessOptions.length ? witnessOptions.map(({ id, category, agent, detail }) => (
-                <article className="witness-option" key={id}>
-                  <span>{category}</span>
-                  <strong>{agent}</strong>
-                  <p>{detail}</p>
-                </article>
-              )) : (
-                <div className="empty-state">
-                  <strong>Backend registry unavailable</strong>
-                  <p>Set BACKEND_URL to preview the live witness bench.</p>
-                </div>
-              )}
-            </div>
-          </aside>
-
-          <aside className="panel">
-            <div className="panel-heading">
-              <div>
-                <p className="eyebrow">Settlement</p>
-                <h2>Budget preview</h2>
-              </div>
-              <CurrencyDollar size={19} />
-            </div>
-            <div className="settlement-table">
-              <div>
-                <span>Witness rounds</span>
-                <strong>4.20 USDC</strong>
-              </div>
-              <div>
-                <span>Counsel and jury</span>
-                <strong>2.40 USDC</strong>
-              </div>
-              <div>
-                <span>Protocol fee</span>
-                <strong>0.60 USDC</strong>
-              </div>
-              <div>
-                <span>Reserved total</span>
-                <strong>7.20 USDC</strong>
-              </div>
-            </div>
-            <button className="primary-button full-width wallet-primary" type="button">
-              Connect wallet to reserve budget
-            </button>
-            <div className="direction-strip inline-strip">
-              <ShieldCheck size={19} />
-              <p>Agent payouts stay scoped to the approved budget before the court begins.</p>
-            </div>
-          </aside>
-        </section>
-
-        <section className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Case routing</p>
-              <h2>Choose how this question should proceed</h2>
-            </div>
-            <GitFork size={19} />
-          </div>
-          <div className="route-choice-grid">
-            <article>
-              <span>01</span>
-              <h3>Join existing case</h3>
-              <p>Add funding, follow updates, and receive access to the shared verdict without duplicating work.</p>
-              <button type="button">Join active hearing</button>
-            </article>
-            <article>
-              <span>02</span>
-              <h3>Request fresh hearing</h3>
-              <p>Run an updated hearing when market conditions changed after the original court record.</p>
-              <button type="button">Refresh verdict</button>
-            </article>
-            <article>
-              <span>03</span>
-              <h3>Open private fork</h3>
-              <p>Keep the same market question private with custom context, budget, resolution notes, or constraints.</p>
-              <button type="button">Fork privately</button>
-            </article>
-          </div>
-        </section>
-
-        <section className="panel case-preview-panel" id="case-preview">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Draft preview</p>
-              <h2>Review before filing</h2>
-            </div>
-            <BookOpenText size={19} />
-          </div>
-
-          <div className="case-preview-grid">
-            <article className="case-box preview-summary">
-              <div>
-                <p className="eyebrow">Case question</p>
-                <h3>Will ETH outperform SOL over the next 7 days?</h3>
-              </div>
-              <p>
-                The court will seat market, onchain, news, and risk witnesses before counsel argues both sides
-                and the dikasts produce a signed verdict record. Heliaia may question witnesses again when counsel finds contradictions.
-              </p>
-              <p>
-                Case context is preserved separately for resolution criteria, source rules, and market-specific caveats, so witnesses do not confuse contract text with evidence already proven.
-              </p>
-              <div className="preview-pill-row">
-                <span>7 day horizon</span>
-                <span>Standard hearing</span>
-                <span>Public verdict</span>
-                <span>Joinable match found</span>
-                <span>8.00 USDC max</span>
-              </div>
-            </article>
-
-            <article className="case-box">
-              <p className="eyebrow">Auto-seated bench</p>
-              <div className="preview-witness-list">
-                {witnessOptions.length ? witnessOptions.map(({ id, category, agent }) => (
-                  <div key={id}>
-                    <span>{category}</span>
-                    <strong>{agent}</strong>
-                  </div>
-                )) : (
-                  <div>
-                    <span>Registry</span>
-                    <strong>Pending backend</strong>
-                  </div>
-                )}
-              </div>
-            </article>
-
-            <article className="case-box">
-              <p className="eyebrow">Settlement route</p>
-              <div className="preview-route">
-                <Scales size={19} />
-                <p>Choose join, refresh, or private fork first. Then reserve budget, pay summoned agents, store the receipt, and release payouts after verdict.</p>
-              </div>
-            </article>
-
-            <article className="case-box">
-              <p className="eyebrow">Budget check</p>
-              <div className="settlement-table preview-budget">
-                <div>
-                  <span>Estimated spend</span>
-                  <strong>7.20 USDC</strong>
-                </div>
-                <div>
-                  <span>Unspent reserve</span>
-                  <strong>0.80 USDC</strong>
-                </div>
-              </div>
-            </article>
-          </div>
-
-          <div className="preview-actions">
-            <a className="secondary-button" href="#question">Back to edit</a>
-            <button className="primary-button wallet-primary" type="button">
-              File case
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        </section>
+        <CaseFilingFlow
+          witnessOptions={witnessOptions}
+          likelyBench={likelyBench}
+          estimatedWitnessSpend={estimatedWitnessSpend}
+        />
       </section>
       <AppFooter />
     </main>

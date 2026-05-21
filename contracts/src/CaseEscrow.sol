@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import { Initializable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import { OwnableUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import { UUPSUpgradeable } from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import { IERC20 } from "./interfaces/IERC20.sol";
 
-contract CaseEscrow {
+contract CaseEscrow is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     enum CaseStatus {
         None,
         Open,
@@ -20,11 +23,10 @@ contract CaseEscrow {
         string metadataURI;
     }
 
-    IERC20 public immutable usdc;
-    address public owner;
+    IERC20 public usdc;
     address public treasury;
     uint16 public protocolFeeBps;
-    uint256 public nextCaseId = 1;
+    uint256 public nextCaseId;
 
     mapping(uint256 caseId => CourtCase courtCase) public cases;
     mapping(address account => bool approvedClerk) public clerks;
@@ -37,25 +39,26 @@ contract CaseEscrow {
     event CaseClosed(uint256 indexed caseId, uint96 protocolFee, uint96 refund);
     event CaseCancelled(uint256 indexed caseId, uint96 refund);
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "not owner");
-        _;
-    }
-
     modifier onlyClerk() {
-        require(msg.sender == owner || clerks[msg.sender], "not clerk");
+        require(msg.sender == owner() || clerks[msg.sender], "not clerk");
         _;
     }
 
-    constructor(address usdc_, address treasury_, uint16 protocolFeeBps_) {
+    constructor() {
+        _disableInitializers();
+    }
+
+    function initialize(address owner_, address usdc_, address treasury_, uint16 protocolFeeBps_) external initializer {
         require(usdc_ != address(0), "usdc required");
         require(treasury_ != address(0), "treasury required");
         require(protocolFeeBps_ <= 1_000, "fee too high");
 
+        __Ownable_init(owner_);
+
         usdc = IERC20(usdc_);
-        owner = msg.sender;
         treasury = treasury_;
         protocolFeeBps = protocolFeeBps_;
+        nextCaseId = 1;
     }
 
     function setClerk(address clerk, bool approved) external onlyOwner {
@@ -130,7 +133,7 @@ contract CaseEscrow {
     function cancelCase(uint256 caseId) external {
         CourtCase storage courtCase = cases[caseId];
         require(courtCase.status == CaseStatus.Open, "case not open");
-        require(msg.sender == courtCase.petitioner || clerks[msg.sender] || msg.sender == owner, "not authorized");
+        require(msg.sender == courtCase.petitioner || clerks[msg.sender] || msg.sender == owner(), "not authorized");
 
         courtCase.status = CaseStatus.Cancelled;
         uint96 refund = courtCase.budget - courtCase.paidOut;
@@ -140,4 +143,6 @@ contract CaseEscrow {
 
         emit CaseCancelled(caseId, refund);
     }
+
+    function _authorizeUpgrade(address) internal override onlyOwner {}
 }

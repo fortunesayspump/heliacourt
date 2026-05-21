@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import { Test } from "forge-std/Test.sol";
 import { AgentRegistry } from "../src/AgentRegistry.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract AgentRegistryTest is Test {
     AgentRegistry private registry;
@@ -11,7 +12,10 @@ contract AgentRegistryTest is Test {
     address private payoutWallet = address(0xB0B);
 
     function setUp() public {
-        registry = new AgentRegistry();
+        AgentRegistry implementation = new AgentRegistry();
+        registry = AgentRegistry(
+            address(new ERC1967Proxy(address(implementation), abi.encodeCall(AgentRegistry.initialize, (address(this)))))
+        );
     }
 
     function testRegisterAgent() public {

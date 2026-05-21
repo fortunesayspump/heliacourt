@@ -1,11 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { desc, eq } from 'drizzle-orm'
 import Redis from 'ioredis'
+import { settleHearingOnchain, type OnchainSettlementResult } from '../chains/onchain-settlement.js'
 import { env } from '../config/env.js'
 import { runHeliaiaConfiguredHearing } from '../court/heliaia-ai.js'
 import type { CourtArtifact, CourtTranscriptTurn, MarketCase, ToolEvidence } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { cases, courtArtifacts, hearingJobs, settlementRows, toolEvidence, transcriptTurns, verdicts } from '../db/schema.js'
+import { cases, courtArtifacts, hearingJobs, onchainReceipts, settlementRows, toolEvidence, transcriptTurns, verdicts } from '../db/schema.js'
 
 type HearingJobStatus = 'queued' | 'running' | 'completed' | 'failed'
 
@@ -28,6 +29,7 @@ type LiveHearingResult = {
   transcript: CourtTranscriptTurn[]
   recordHash?: string
   partial: boolean
+  onchainSettlement?: OnchainSettlementResult
 }
 
 const jobs = new Map<string, HearingJob>()
@@ -164,7 +166,7 @@ export async function runHearingNow(marketCase: MarketCase) {
 
   activeJobs += 1
   try {
-    return await runWithTimeout(() => runHeliaiaConfiguredHearing(marketCase), env.HELIA_HEARING_TIMEOUT_MS)
+    return await runWithOptionalTimeout(() => runHeliaiaConfiguredHearing(marketCase), env.HELIA_HEARING_TIMEOUT_MS)
   } finally {
     activeJobs = Math.max(0, activeJobs - 1)
     void processQueue()
@@ -192,7 +194,7 @@ async function processQueue() {
     job.result = liveResult
     void saveJob(job)
 
-    void runWithTimeout(
+    void runWithOptionalTimeout(
       () => runHeliaiaConfiguredHearing(job.marketCase, {
         onArtifact: async (artifact) => {
           liveResult.artifacts.push(artifact)
@@ -207,10 +209,16 @@ async function processQueue() {
       }),
       env.HELIA_HEARING_TIMEOUT_MS,
     )
-      .then((result) => {
+      .then(async (result) => {
+        const onchainSettlement = await settleHearingOnchain(result).catch((error) => ({
+          status: 'error' as const,
+          reason: error instanceof Error ? error.message : 'onchain settlement failed',
+          receipts: [],
+        }))
         job.status = 'completed'
         job.result = {
           ...result,
+          onchainSettlement,
           partial: false,
         }
         job.completedAt = new Date().toISOString()
@@ -248,7 +256,9 @@ async function popRedisJob() {
   return raw ? JSON.parse(raw) as HearingJob : undefined
 }
 
-async function runWithTimeout<T>(run: () => Promise<T>, timeoutMs: number): Promise<T> {
+async function runWithOptionalTimeout<T>(run: () => Promise<T>, timeoutMs: number): Promise<T> {
+  if (timeoutMs <= 0) return run()
+
   let timeout: NodeJS.Timeout | undefined
 
   try {
@@ -522,6 +532,29 @@ async function persistJobResult(job: HearingJob) {
           },
         })
     }
+  }
+
+  for (const receipt of result.onchainSettlement?.receipts ?? []) {
+    await db!
+      .insert(onchainReceipts)
+      .values({
+        id: `${job.id}:${receipt.type}:${receipt.txHash}`,
+        caseId: job.caseId,
+        jobId: job.id,
+        chainId: receipt.chainId,
+        txHash: receipt.txHash,
+        receiptType: receipt.type,
+        recordHash: receipt.recordHash ?? null,
+        payload: receipt,
+        createdAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: onchainReceipts.id,
+        set: {
+          recordHash: receipt.recordHash ?? null,
+          payload: receipt,
+        },
+      })
   }
 }
 

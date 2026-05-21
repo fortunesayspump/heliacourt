@@ -13,6 +13,20 @@ export type ApiCase = {
   probability?: string
   horizon?: string
   witnesses?: string[]
+  onchain?: {
+    chainId: string
+    escrowAddress: `0x${string}`
+    caseId: string
+    txHash: `0x${string}`
+    budgetUsdc: string
+    questionHash: `0x${string}`
+    metadataURI?: string
+  }
+  onchainSettlement?: {
+    status?: string
+    totalPayoutUsdc?: string
+    capped?: boolean
+  }
 }
 
 export type ApiLedgerRow = {
@@ -23,6 +37,11 @@ export type ApiLedgerRow = {
   status: string
   hash?: string
   updated?: string
+  chainId?: string
+  txHash?: string
+  receiptType?: string
+  agentId?: string
+  wallet?: string
 }
 
 export type ApiAgent = {
@@ -36,6 +55,95 @@ export type ApiAgent = {
   toolCapabilities: string[]
   enabled: boolean
   version: string
+  onchain?: {
+    onchainAgentId?: string
+    ownerKind: 'protocol' | 'external'
+    ownerWallet?: `0x${string}`
+    payoutWallet?: `0x${string}`
+    metadataURI?: string
+    feeQuoteUsd: number
+    registrationStatus: 'registered' | 'protocol-wallet-ready' | 'protocol-wallet-pending' | 'external-wallet-ready' | 'external-wallet-pending'
+  }
+}
+
+export type ApiTranscriptTurn = {
+  id: string
+  agentId: string
+  agentName: string
+  seat: string
+  kind: string
+  stage: string
+  message: string
+  replyToId?: string
+  requestedAgentId?: string
+  request?: string
+  confidence?: number
+  tags?: string[]
+  createdAt?: string
+}
+
+export type ApiCourtArtifact = {
+  id: string
+  agentId: string
+  type: string
+  summary: string
+  confidence?: number
+  costUsd?: number
+  transcriptMessage?: string
+  claims?: string[]
+  notes?: string[]
+  risks?: string[]
+  createdAt?: string
+}
+
+export type ApiCaseDetail = {
+  case: ApiCase
+  transcript: ApiTranscriptTurn[]
+  artifacts: ApiCourtArtifact[]
+  recordHash?: string
+  partial?: boolean
+  onchainSettlement?: {
+    status?: string
+    reason?: string
+    recordHash?: string
+    verdictHash?: string
+    totalPayoutUsdc?: string
+    capped?: boolean
+    receipts?: Array<{
+      type: string
+      txHash: string
+      chainId: string
+      caseId: string
+      recordHash?: string
+      amountUsdc?: string
+      agentId?: string
+      wallet?: string
+    }>
+  }
+}
+
+export type ApiHealth = {
+  ok: boolean
+  service: string
+  database?: {
+    backend: string
+    configured: boolean
+  }
+  hearingQueue?: {
+    backend?: string
+    waiting?: number
+    active?: number
+    maxConcurrent?: number
+    error?: string
+  }
+  onchain?: {
+    chainId: number
+    rpcUrl: string
+    caseEscrowConfigured: boolean
+    courtReceiptsConfigured: boolean
+    settlementSignerConfigured: boolean
+    settlementUsesDedicatedKey: boolean
+  }
 }
 
 const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
@@ -49,6 +157,26 @@ export async function getBackendCases(): Promise<ApiCase[]> {
     return Array.isArray(payload.cases) ? payload.cases : []
   } catch {
     return []
+  }
+}
+
+export async function getBackendCaseDetail(id: string): Promise<ApiCaseDetail | undefined> {
+  try {
+    const response = await fetch(`${backendUrl}/cases/${encodeURIComponent(id)}`, { cache: 'no-store' })
+    if (!response.ok) return undefined
+    const payload = await response.json() as Partial<ApiCaseDetail>
+    if (!payload.case) return undefined
+
+    return {
+      case: payload.case,
+      transcript: Array.isArray(payload.transcript) ? payload.transcript : [],
+      artifacts: Array.isArray(payload.artifacts) ? payload.artifacts : [],
+      recordHash: payload.recordHash,
+      partial: payload.partial,
+      onchainSettlement: payload.onchainSettlement,
+    }
+  } catch {
+    return undefined
   }
 }
 
@@ -73,6 +201,16 @@ export async function getBackendAgents(): Promise<ApiAgent[]> {
     return Array.isArray(payload.agents) ? payload.agents : []
   } catch {
     return []
+  }
+}
+
+export async function getBackendHealth(): Promise<ApiHealth | undefined> {
+  try {
+    const response = await fetch(`${backendUrl}/health`, { cache: 'no-store' })
+    if (!response.ok) return undefined
+    return await response.json() as ApiHealth
+  } catch {
+    return undefined
   }
 }
 

@@ -384,3 +384,86 @@ export const agentRegistry: AgentRegistryEntry[] = [
 export function getEnabledAgents() {
   return agentRegistry.filter((agent) => agent.enabled)
 }
+
+export type AgentOnchainProfile = {
+  onchainAgentId?: string
+  ownerKind: 'protocol' | 'external'
+  ownerWallet?: `0x${string}`
+  payoutWallet?: `0x${string}`
+  metadataURI?: string
+  feeQuoteUsd: number
+  registrationStatus: 'registered' | 'protocol-wallet-ready' | 'protocol-wallet-pending' | 'external-wallet-ready' | 'external-wallet-pending'
+}
+
+export function getAgentWithOnchainProfile(agent: AgentRegistryEntry): AgentRegistryEntry & { onchain: AgentOnchainProfile } {
+  const configured = getConfiguredOnchainProfile(agent.id)
+  const ownerKind = agent.owner === 'protocol' ? 'protocol' : 'external'
+  const ownerWallet = ownerKind === 'protocol'
+    ? configured.ownerWallet ?? getProtocolAgentOwnerWallet()
+    : configured.ownerWallet ?? asAddress(agent.owner)
+  const payoutWallet = configured.payoutWallet ?? (ownerKind === 'protocol' ? getProtocolAgentPayoutWallet() : ownerWallet)
+  const onchainAgentId = configured.onchainAgentId ?? agent.onchainAgentId
+  const metadataURI = configured.metadataURI ?? agent.metadataURI
+  const hasWallets = Boolean(ownerWallet && payoutWallet)
+
+  return {
+    ...agent,
+    onchainAgentId,
+    metadataURI,
+    onchain: {
+      onchainAgentId,
+      ownerKind,
+      ownerWallet,
+      payoutWallet,
+      metadataURI,
+      feeQuoteUsd: agent.priceUsd,
+      registrationStatus: onchainAgentId
+        ? 'registered'
+        : ownerKind === 'protocol'
+          ? hasWallets ? 'protocol-wallet-ready' : 'protocol-wallet-pending'
+          : hasWallets ? 'external-wallet-ready' : 'external-wallet-pending',
+    },
+  }
+}
+
+export function getAgentRegistryWithOnchainProfiles() {
+  return agentRegistry.map(getAgentWithOnchainProfile)
+}
+
+function getConfiguredOnchainProfile(agentId: string) {
+  const walletMap = parseAgentWalletMap()
+  const mapProfile = walletMap[agentId] ?? {}
+  const prefix = `HELIA_AGENT_${agentId.toUpperCase().replace(/[^A-Z0-9]/g, '_')}`
+
+  return {
+    onchainAgentId: process.env[`${prefix}_ONCHAIN_ID`] ?? mapProfile.onchainAgentId,
+    ownerWallet: asAddress(process.env[`${prefix}_OWNER_WALLET`] ?? mapProfile.ownerWallet),
+    payoutWallet: asAddress(process.env[`${prefix}_PAYOUT_WALLET`] ?? mapProfile.payoutWallet),
+    metadataURI: process.env[`${prefix}_METADATA_URI`] ?? mapProfile.metadataURI,
+  }
+}
+
+function getProtocolAgentOwnerWallet() {
+  return asAddress(process.env.HELIA_PROTOCOL_AGENT_OWNER_WALLET)
+}
+
+function getProtocolAgentPayoutWallet() {
+  return asAddress(process.env.HELIA_PROTOCOL_AGENT_PAYOUT_WALLET) ?? getProtocolAgentOwnerWallet()
+}
+
+function parseAgentWalletMap(): Record<string, Partial<AgentOnchainProfile>> {
+  const raw = process.env.HELIA_AGENT_WALLETS_JSON
+  if (!raw) return {}
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {}
+    return parsed as Record<string, Partial<AgentOnchainProfile>>
+  } catch {
+    return {}
+  }
+}
+
+function asAddress(value: string | undefined): `0x${string}` | undefined {
+  return value && /^0x[a-fA-F0-9]{40}$/.test(value) ? value as `0x${string}` : undefined
+}

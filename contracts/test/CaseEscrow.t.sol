@@ -4,6 +4,7 @@ pragma solidity ^0.8.24;
 import { Test } from "forge-std/Test.sol";
 import { CaseEscrow } from "../src/CaseEscrow.sol";
 import { MockUSDC } from "./MockUSDC.sol";
+import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract CaseEscrowTest is Test {
     MockUSDC private usdc;
@@ -15,7 +16,15 @@ contract CaseEscrowTest is Test {
 
     function setUp() public {
         usdc = new MockUSDC();
-        escrow = new CaseEscrow(address(usdc), treasury, 500);
+        CaseEscrow implementation = new CaseEscrow();
+        escrow = CaseEscrow(
+            address(
+                new ERC1967Proxy(
+                    address(implementation),
+                    abi.encodeCall(CaseEscrow.initialize, (address(this), address(usdc), treasury, 500))
+                )
+            )
+        );
         escrow.setClerk(address(this), true);
 
         usdc.mint(petitioner, 1_000_000);

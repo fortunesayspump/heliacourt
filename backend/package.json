@@ -9,6 +9,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "agents:smoke": "tsx src/scripts/smoke-witnesses.ts",
+    "agents:sync-onchain": "tsx src/scripts/sync-agent-registry-onchain.ts",
+    "onchain:approve-settlement-signer": "tsx src/scripts/approve-settlement-signer.ts",
     "hearing": "tsx src/scripts/run-hearing.ts",
     "start": "tsx src/server.ts"
   },
@@ -24,6 +26,7 @@
     "playwright-core": "^1.60.0",
     "postgres": "^3.4.9",
     "tesseract.js": "^7.0.0",
+    "viem": "^2.48.11",
     "zod": "^4.1.13"
   },
   "devDependencies": {

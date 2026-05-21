@@ -45,6 +45,8 @@ export type AgentRegistryEntry = {
   seat: CourtSeat
   description: string
   owner: 'protocol' | `0x${string}`
+  onchainAgentId?: string
+  metadataURI?: string
   mode: AgentMode
   endpoint?: string
   priceUsd: number

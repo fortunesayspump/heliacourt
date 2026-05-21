@@ -2,6 +2,9 @@
 logs
 *.log
 backend/tmp/
+contracts/broadcast/
+contracts/cache/DeployArcTestnet.s.sol/
+contracts/cache/test-failures
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*

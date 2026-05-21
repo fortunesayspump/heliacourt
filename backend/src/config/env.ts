@@ -12,12 +12,19 @@ const envSchema = z.object({
   CIRCLE_API_BASE_URL: z.string().url().default('https://api.circle.com'),
   DATABASE_URL: z.string().url().optional(),
   HELIA_HEARING_MAX_CONCURRENT: z.coerce.number().int().positive().default(1),
-  HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().positive().default(180_000),
+  HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().min(0).default(0),
   HELIA_HEARING_JOB_RETENTION_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   HELIA_HEARING_MAX_RETAINED_JOBS: z.coerce.number().int().positive().default(100),
   HELIA_HEARING_QUEUE_POLL_MS: z.coerce.number().int().positive().default(2_000),
   REDIS_URL: z.string().url().optional(),
   HELIA_REDIS_PREFIX: z.string().min(1).default('helia-court'),
+  ARC_RPC_URL: z.string().url().default('https://rpc.testnet.arc.network'),
+  ARC_CHAIN_ID: z.coerce.number().int().positive().default(5_042_002),
+  PRIVATE_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
+  SETTLEMENT_PRIVATE_KEY: z.string().regex(/^0x[a-fA-F0-9]{64}$/).optional(),
+  CASE_ESCROW_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  COURT_RECEIPTS_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+  PROTOCOL_FEE_BPS: z.coerce.number().int().min(0).max(1_000).default(500),
 })
 
 export const env = envSchema.parse(process.env)

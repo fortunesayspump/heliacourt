@@ -10,6 +10,11 @@ export default async function LedgerPage() {
   const anchored = ledgerRows.filter((row) => row.status === 'Anchored')
   const recorded = ledgerRows.filter((row) => row.status === 'Recorded')
   const pending = ledgerRows.filter((row) => row.status !== 'Anchored' && row.status !== 'Recorded')
+  const payouts = ledgerRows.filter((row) => row.receiptType === 'agent-payout')
+  const escrowed = ledgerRows
+    .filter((row) => row.receiptType === 'case-funding')
+    .reduce((total, row) => total + parseAmount(row.amount), 0)
+  const paid = payouts.reduce((total, row) => total + parseAmount(row.amount), 0)
 
   return (
     <main className="app-shell">
@@ -28,14 +33,14 @@ export default async function LedgerPage() {
             <Wallet size={19} />
             <div>
               <span>Escrowed budget</span>
-              <strong>{pending.length} pending</strong>
+              <strong>{escrowed ? `${escrowed.toFixed(2)} USDC` : `${pending.length} pending`}</strong>
             </div>
           </div>
           <div className="metric">
             <CurrencyCircleDollar size={19} />
             <div>
               <span>Agent payouts</span>
-              <strong>{ledgerRows.length} rows</strong>
+              <strong>{paid ? `${paid.toFixed(2)} USDC` : `${payouts.length} rows`}</strong>
             </div>
           </div>
           <div className="metric">
@@ -62,8 +67,8 @@ export default async function LedgerPage() {
             </div>
           </div>
           <div className="ledger-table">
-            {ledgerRows.length ? ledgerRows.map(({ caseId, title, item, amount, status, hash }) => (
-              <article className="case-row" key={`${caseId}-${item}`}>
+            {ledgerRows.length ? ledgerRows.map(({ caseId, title, item, amount, status, hash, txHash, receiptType }) => (
+              <article className="case-row" key={`${caseId}-${item}-${hash ?? txHash ?? receiptType}`}>
                 <code>{hash ? `${hash.slice(0, 6)}...${hash.slice(-4)}` : caseId}</code>
                 <div>
                   <h3>{title}</h3>
@@ -89,4 +94,9 @@ export default async function LedgerPage() {
       <AppFooter />
     </main>
   )
+}
+
+function parseAmount(value: string) {
+  const match = value.match(/^\d+(?:\.\d+)?/)
+  return match ? Number(match[0]) : 0
 }

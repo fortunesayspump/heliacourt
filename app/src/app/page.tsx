@@ -138,15 +138,15 @@ export default async function DashboardPage() {
               </div>
               <div className="case-box">
                 <label htmlFor="quick-case">Question</label>
-                <textarea id="quick-case" defaultValue="Will ETH outperform SOL over the next 7 days?" />
+                <textarea id="quick-case" placeholder="Paste a prediction-market question." />
                 <div className="case-controls">
                   <button type="button">Crypto</button>
                   <button type="button">Macro</button>
                   <button type="button">Data</button>
                 </div>
                 <div className="duplicate-hint">
-                  <span>Similar active case found</span>
-                  <p>ETH vs SOL, 7 day horizon. Join the active hearing or request a fresh verdict before paying.</p>
+                  <span>Similarity check pending</span>
+                  <p>Submit a real question to check backend hearings before paying for duplicate work.</p>
                 </div>
                 <Link className="primary-button full-width" href="/cases/new">
                   Configure court

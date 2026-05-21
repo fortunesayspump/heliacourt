@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearing-jobs.js'
-import { agentRegistry } from '../agents/registry.js'
+import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 
 const hearingRequestSchema = z.object({
@@ -15,7 +15,7 @@ const hearingRequestSchema = z.object({
 
 export async function agentRoutes(app: FastifyInstance) {
   app.get('/agents/registry', async () => ({
-    agents: agentRegistry.map((agent) => ({
+    agents: getAgentRegistryWithOnchainProfiles().map((agent) => ({
       id: agent.id,
       name: agent.name,
       seat: agent.seat,
@@ -26,6 +26,7 @@ export async function agentRoutes(app: FastifyInstance) {
       toolCapabilities: agent.toolCapabilities,
       enabled: agent.enabled,
       version: agent.version,
+      onchain: agent.onchain,
     })),
   }))
 

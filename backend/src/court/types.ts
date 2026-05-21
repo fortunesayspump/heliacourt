@@ -7,6 +7,15 @@ export type MarketCase = {
   links?: string[]
   type: CaseType
   filer?: `0x${string}`
+  onchain?: {
+    chainId: string
+    escrowAddress: `0x${string}`
+    caseId: string
+    txHash: `0x${string}`
+    budgetUsdc: string
+    questionHash: `0x${string}`
+    metadataURI?: string
+  }
   createdAt: string
 }
 

@@ -2,7 +2,8 @@ import { ArrowLeft, Briefcase, ShieldCheck, Sparkle, Timer, TrendUp, UserCircleC
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
-import { formatConfidence, getBackendCases } from '../../../lib/backend-data'
+import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
+import { formatConfidence, getBackendCaseDetail } from '../../../lib/backend-data'
 import '../../page.css'
 
 const tabs = [
@@ -25,7 +26,8 @@ export default async function CaseRecordPage({
 }) {
   const { id } = await params
   const query = await searchParams
-  const courtCase = (await getBackendCases()).find((item) => item.id === id)
+  const caseDetail = await getBackendCaseDetail(id)
+  const courtCase = caseDetail?.case
   const activeTab: CaseTab = tabs.some(([tab]) => tab === query?.tab) ? (query?.tab as CaseTab) : 'transcript'
 
   if (!courtCase) {
@@ -55,9 +57,13 @@ export default async function CaseRecordPage({
     ['Market', courtCase.market ?? 'Prediction market', Briefcase],
   ] as const
   const witnesses = courtCase.witnesses ?? []
+  const verdictArtifact = caseDetail.artifacts.findLast((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
+  const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
+  const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
 
   return (
     <main className="app-shell">
+      <CaseAutoRefresh active={Boolean(caseDetail.partial || courtCase.status === 'Hearing' || courtCase.status === 'Queued')} />
       <AppHeader active="cases" />
 
       <section className="workspace case-record-workspace">
@@ -118,10 +124,36 @@ export default async function CaseRecordPage({
                   <p className="eyebrow">Matter before the court</p>
                   <h3>{courtCase.title}</h3>
                   <p>{courtCase.resolution ?? 'Resolution context is stored with the backend case record.'}</p>
+                  {courtCase.onchain ? (
+                    <div className="onchain-facts case-onchain-facts">
+                      <span>Escrow case #{courtCase.onchain.caseId}</span>
+                      <span>{courtCase.onchain.budgetUsdc} USDC funded</span>
+                      <span>Chain {courtCase.onchain.chainId}</span>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="empty-state">
-                  <strong>Transcript API not wired yet</strong>
-                  <p>Backend hearing logs remain the source of truth until transcript streaming is exposed.</p>
+                <div className="court-transcript">
+                  {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => (
+                    <article className={`transcript-entry role-${formatTurnRole(turn.seat)}`} key={turn.id}>
+                      <div className="transcript-avatar">{turn.agentName.slice(0, 1)}</div>
+                      <div className="transcript-message">
+                        <div className="transcript-meta">
+                          <div>
+                            <strong>{turn.agentName}</strong>
+                            <span>{turn.stage}</span>
+                            {typeof turn.confidence === 'number' && <span>{formatConfidence(turn.confidence)}</span>}
+                          </div>
+                        </div>
+                        {turn.request && <p className="transcript-request">{turn.request}</p>}
+                        <p>{turn.message}</p>
+                      </div>
+                    </article>
+                  )) : (
+                    <div className="empty-state">
+                      <strong>No transcript turns yet</strong>
+                      <p>Run the hearing to write live court turns into the backend record.</p>
+                    </div>
+                  )}
                 </div>
               </section>
             )}
@@ -141,14 +173,26 @@ export default async function CaseRecordPage({
                   </div>
                   <div>
                     <p className="eyebrow">Backend outcome</p>
-                    <h2>{courtCase.verdict ?? 'Hearing pending'}</h2>
-                    <p>Confidence: {confidence}. Verdict-only intelligence; no trade is executed.</p>
+                    <h2>{verdictArtifact?.summary ?? courtCase.verdict ?? 'Hearing pending'}</h2>
+                    <p>{verdictArtifact?.transcriptMessage ?? `Confidence: ${confidence}. Verdict-only intelligence; no trade is executed.`}</p>
                   </div>
                   <ul>
                     <li><TrendUp size={16} /> {courtCase.probability ?? confidence} probability</li>
-                    <li><Sparkle size={16} /> {courtCase.receipt ?? 'Receipt pending'}</li>
+                    <li><Sparkle size={16} /> {caseDetail.recordHash ?? courtCase.receipt ?? 'Receipt pending'}</li>
                   </ul>
                 </div>
+                {verdictArtifact?.claims?.length ? (
+                  <div className="compact-list">
+                    {verdictArtifact.claims.map((claim) => (
+                      <article className="roster-row" key={claim}>
+                        <div>
+                          <h3>{claim}</h3>
+                          <p>Verdict claim from backend artifact</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
               </section>
             )}
 
@@ -162,10 +206,35 @@ export default async function CaseRecordPage({
                   <Sparkle size={19} />
                 </div>
                 <div className="settlement-table compact-settlement">
-                  <div><span>Record hash</span><strong>{courtCase.receipt ?? 'Pending'}</strong></div>
-                  <div><span>Settlement rows</span><strong>See ledger</strong></div>
+                  <div><span>Escrow case</span><strong>{courtCase.onchain ? `#${courtCase.onchain.caseId}` : 'Pending'}</strong></div>
+                  <div><span>Escrow funding</span><strong>{courtCase.onchain ? `${courtCase.onchain.budgetUsdc} USDC` : 'Pending'}</strong></div>
+                  <div><span>Funding tx</span><strong>{courtCase.onchain?.txHash ? `${courtCase.onchain.txHash.slice(0, 10)}...${courtCase.onchain.txHash.slice(-6)}` : 'Pending'}</strong></div>
+                  <div><span>Onchain settlement</span><strong>{caseDetail.onchainSettlement?.status ?? courtCase.onchainSettlement?.status ?? 'Pending'}</strong></div>
+                  <div><span>Agent payouts</span><strong>{caseDetail.onchainSettlement?.totalPayoutUsdc ? `${caseDetail.onchainSettlement.totalPayoutUsdc} USDC` : 'Pending'}</strong></div>
+                  <div><span>Record hash</span><strong>{caseDetail.recordHash ?? courtCase.receipt ?? 'Pending'}</strong></div>
+                  <div><span>Settlement artifact</span><strong>{settlementArtifact ? `${settlementArtifact.costUsd?.toFixed(2) ?? '0.00'} USDC` : 'Pending'}</strong></div>
                   <div><span>Source</span><strong>Backend hearing job</strong></div>
                 </div>
+                {onchainReceipts.length ? (
+                  <div className="compact-list">
+                    {onchainReceipts.map((receipt) => (
+                      <article className="roster-row" key={`${receipt.type}-${receipt.txHash}`}>
+                        <div>
+                          <h3>{formatReceiptType(receipt.type)}</h3>
+                          <p>{receipt.agentId ? `${receipt.agentId} · ` : ''}{receipt.amountUsdc ? `${receipt.amountUsdc} USDC · ` : ''}{receipt.txHash.slice(0, 10)}...{receipt.txHash.slice(-6)}</p>
+                        </div>
+                        <div className="roster-meta">
+                          <span className="state-dot voting">Arc</span>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : null}
+                {courtCase.onchain?.txHash ? (
+                  <a className="secondary-button compact-back" href={`https://explorer.testnet.arc.network/tx/${courtCase.onchain.txHash}`} target="_blank" rel="noreferrer">
+                    View funding tx
+                  </a>
+                ) : null}
               </section>
             )}
 
@@ -232,4 +301,22 @@ export default async function CaseRecordPage({
       <AppFooter />
     </main>
   )
+}
+
+function formatTurnRole(seat: string) {
+  if (seat.includes('counsel') && seat.includes('bull')) return 'counsel-bull'
+  if (seat.includes('counsel') && seat.includes('bear')) return 'counsel-bear'
+  if (seat.includes('witness')) return 'witness'
+  if (seat.includes('judge') || seat.includes('magistrate')) return 'bench'
+  if (seat.includes('clerk')) return 'clerk'
+  if (seat.includes('juror')) return 'jury'
+  if (seat.includes('risk')) return 'risk'
+  return 'witness'
+}
+
+function formatReceiptType(type: string) {
+  return type
+    .split('-')
+    .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
+    .join(' ')
 }

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { getHearingQueueStats } from '../agents/hearing-jobs.js'
+import { env } from '../config/env.js'
 import { isDatabaseConfigured } from '../db/client.js'
 
 export async function healthRoutes(app: FastifyInstance) {
@@ -17,6 +18,14 @@ export async function healthRoutes(app: FastifyInstance) {
         configured: isDatabaseConfigured,
       },
       hearingQueue,
+      onchain: {
+        chainId: env.ARC_CHAIN_ID,
+        rpcUrl: env.ARC_RPC_URL,
+        caseEscrowConfigured: Boolean(env.CASE_ESCROW_ADDRESS),
+        courtReceiptsConfigured: Boolean(env.COURT_RECEIPTS_ADDRESS),
+        settlementSignerConfigured: Boolean(env.SETTLEMENT_PRIVATE_KEY ?? env.PRIVATE_KEY),
+        settlementUsesDedicatedKey: Boolean(env.SETTLEMENT_PRIVATE_KEY),
+      },
     }
   })
 }

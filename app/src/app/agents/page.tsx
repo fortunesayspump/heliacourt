@@ -60,10 +60,12 @@ export default async function AgentsPage() {
                     <p>{agent.description}</p>
                   </div>
                 </div>
-                <span className="registry-seat">{seatLabels[agent.seat] ?? agent.seat}</span>
-                <strong className="registry-rep">{agent.runMode}</strong>
-                <strong className="registry-fee">{agent.priceUsd ? `${agent.priceUsd.toFixed(2)} USDC` : '0.00 USDC'}</strong>
-                <span className={`registry-status state-dot ${agent.enabled ? 'ready' : 'voting'}`}>{agent.enabled ? 'Enabled' : 'Disabled'}</span>
+              <span className="registry-seat">{seatLabels[agent.seat] ?? agent.seat}</span>
+              <strong className="registry-rep">{agent.runMode}</strong>
+              <strong className="registry-fee">{agent.priceUsd ? `${agent.priceUsd.toFixed(2)} USDC` : '0.00 USDC'}</strong>
+                <span className={`registry-status state-dot ${getAgentStatusClass(agent.onchain?.registrationStatus, agent.enabled)}`}>
+                  {formatAgentStatus(agent.onchain?.registrationStatus, agent.enabled)}
+                </span>
               </article>
             )) : (
               <div className="empty-state">
@@ -77,4 +79,19 @@ export default async function AgentsPage() {
       <AppFooter />
     </main>
   )
+}
+
+function formatAgentStatus(status: NonNullable<Awaited<ReturnType<typeof getBackendAgents>>[number]['onchain']>['registrationStatus'] | undefined, enabled: boolean) {
+  if (!enabled) return 'Disabled'
+  if (status === 'registered') return 'Onchain'
+  if (status === 'protocol-wallet-ready') return 'Protocol wallet'
+  if (status === 'external-wallet-ready') return 'External wallet'
+  return 'Wallet pending'
+}
+
+function getAgentStatusClass(status: NonNullable<Awaited<ReturnType<typeof getBackendAgents>>[number]['onchain']>['registrationStatus'] | undefined, enabled: boolean) {
+  if (!enabled) return 'voting'
+  if (status === 'registered') return 'ready'
+  if (status === 'protocol-wallet-ready' || status === 'external-wallet-ready') return 'active'
+  return 'voting'
 }
