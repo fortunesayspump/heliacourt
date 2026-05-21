@@ -40,6 +40,16 @@ const caseEscrowAbi = [
     inputs: [{ name: 'caseId', type: 'uint256' }],
     outputs: [],
   },
+  {
+    type: 'event',
+    name: 'AgentPaid',
+    inputs: [
+      { name: 'caseId', type: 'uint256', indexed: true },
+      { name: 'agentWallet', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint96', indexed: false },
+      { name: 'reasonHash', type: 'bytes32', indexed: false },
+    ],
+  },
 ] as const
 
 const courtReceiptsAbi = [
@@ -124,6 +134,8 @@ export async function settleHearingOnchain(input: {
   })
   const alreadyPaidOut = escrowState[2]
   const escrowStatus = Number(escrowState[3])
+  const fundingReceipt = await publicClient.getTransactionReceipt({ hash: onchainCase.txHash as Hex }).catch(() => undefined)
+  const fromBlock = fundingReceipt?.blockNumber ?? 0n
   const recordHash = toBytes32(input.recordHash) ?? hashStable({
     case: input.marketCase,
     artifacts: input.artifacts.map((artifact) => ({
@@ -216,6 +228,8 @@ export async function settleHearingOnchain(input: {
     })
   }
 
+  receipts.push(...await readAgentPayoutReceipts(publicClient, caseId, onchainCase.caseId, fromBlock))
+
   if (escrowStatus === 1) {
     const closeTx = await writeAndWait(walletClient, publicClient, {
       address: env.CASE_ESCROW_ADDRESS as Address,
@@ -233,12 +247,59 @@ export async function settleHearingOnchain(input: {
 
   return {
     status: 'recorded',
-    receipts,
+    receipts: dedupeReceipts(receipts),
     recordHash,
     verdictHash,
     totalPayoutUsdc: formatUsdc(payoutPlan.totalPaid),
     capped: payoutPlan.capped,
   }
+}
+
+async function readAgentPayoutReceipts(
+  publicClient: ReturnType<typeof createPublicClient>,
+  caseId: bigint,
+  displayCaseId: string,
+  fromBlock: bigint,
+): Promise<OnchainSettlementReceipt[]> {
+  const agentsByWallet = new Map(
+    getAgentRegistryWithOnchainProfiles()
+      .map((agent) => [agent.onchain.payoutWallet?.toLowerCase(), agent.id] as const)
+      .filter((entry): entry is [string, string] => Boolean(entry[0])),
+  )
+  const logs = await publicClient.getLogs({
+    address: env.CASE_ESCROW_ADDRESS as Address,
+    abi: caseEscrowAbi,
+    eventName: 'AgentPaid',
+    args: { caseId },
+    fromBlock,
+    toBlock: 'latest',
+  } as never).catch(() => []) as Array<{
+    transactionHash: Hex
+    args: {
+      amount?: bigint
+      agentWallet?: Address
+    }
+  }>
+
+  return logs.map((log) => ({
+    type: 'agent-payout' as const,
+    txHash: log.transactionHash,
+    chainId: String(env.ARC_CHAIN_ID),
+    caseId: displayCaseId,
+    amountUsdc: formatUsdc(log.args.amount ?? 0n),
+    agentId: agentsByWallet.get(log.args.agentWallet?.toLowerCase() ?? ''),
+    wallet: log.args.agentWallet,
+  }))
+}
+
+function dedupeReceipts(receipts: OnchainSettlementReceipt[]) {
+  const seen = new Set<string>()
+  return receipts.filter((receipt) => {
+    const key = `${receipt.type}:${receipt.txHash}:${receipt.agentId ?? ''}:${receipt.amountUsdc ?? ''}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string, alreadyPaidOut = 0n) {
