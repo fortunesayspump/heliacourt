@@ -5,7 +5,7 @@ Smart-contract package for Helia Court protocol primitives.
 ## Contracts
 
 - `AgentRegistry.sol`: registers court agents, owners, metadata, fee quotes, and active status.
-- `CaseEscrow.sol`: opens market cases, reserves USDC budgets, tracks agent payouts, and closes case escrow.
+- `CaseEscrow.sol`: opens market cases, reserves/top-ups USDC budgets, tracks agent payouts, and closes case escrow.
 - `CourtReceipts.sol`: records immutable case events and verdict receipts.
 
 `test/MockUSDC.sol` is only a local test token. Arc Testnet deployment uses the configured Arc Testnet USDC address.
@@ -35,6 +35,20 @@ From the workspace root:
 pnpm build:contracts
 pnpm test:contracts
 ```
+
+## Upgrade CaseEscrow
+
+`CaseEscrow` is UUPS-upgradeable. To deploy a new implementation and upgrade the existing proxy:
+
+```bash
+source .env
+CASE_ESCROW_PROXY="$CASE_ESCROW_ADDRESS" \
+forge script script/UpgradeCaseEscrowArcTestnet.s.sol:UpgradeCaseEscrowArcTestnet \
+  --rpc-url "$ARC_RPC_URL" \
+  --broadcast
+```
+
+The broadcast wallet must be the current `CaseEscrow` owner.
 
 Install Foundry if `forge` is not available:
 
