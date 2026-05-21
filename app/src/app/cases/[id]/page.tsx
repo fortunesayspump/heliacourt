@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
-import { formatConfidence, getBackendCaseDetail, type ApiTranscriptTurn } from '../../../lib/backend-data'
+import { formatConfidence, getBackendCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
 
 const tabs = [
@@ -14,6 +14,12 @@ const tabs = [
 ] as const
 
 type CaseTab = (typeof tabs)[number][0]
+type TranscriptSourceCard = {
+  url: string
+  title: string
+  kind: string
+  detail?: string
+}
 
 export const dynamic = 'force-dynamic'
 
@@ -60,6 +66,7 @@ export default async function CaseRecordPage({
   const verdictArtifact = caseDetail.artifacts.findLast((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
   const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
+  const artifactById = new Map(caseDetail.artifacts.map((artifact) => [artifact.id, artifact]))
 
   return (
     <main className="app-shell">
@@ -135,6 +142,8 @@ export default async function CaseRecordPage({
                 <div className="court-transcript">
                   {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => {
                     const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
+                    const artifact = turn.artifactId ? artifactById.get(turn.artifactId) : undefined
+                    const sourceCards = getTurnSourceCards(turn, artifact)
                     const hasRequest = Boolean(turn.request)
                     const hasContext = Boolean(replyTurn || hasRequest)
 
@@ -165,7 +174,18 @@ export default async function CaseRecordPage({
                               {turn.createdAt ? <time dateTime={turn.createdAt}>{formatTurnTime(turn.createdAt)}</time> : null}
                             </div>
                           </div>
-                          <p>{turn.message}</p>
+                          <p>{renderTextWithLinks(turn.message)}</p>
+                          {sourceCards.length ? (
+                            <div className="transcript-source-grid" aria-label="Referenced sources">
+                              {sourceCards.map((source) => (
+                                <a className="transcript-source-card" href={source.url} key={`${turn.id}-${source.url}`} target="_blank" rel="noreferrer">
+                                  <span>{source.kind}</span>
+                                  <strong>{source.title}</strong>
+                                  {source.detail ? <em>{source.detail}</em> : null}
+                                </a>
+                              ))}
+                            </div>
+                          ) : null}
                         </div>
                       </article>
                     )
@@ -337,6 +357,89 @@ function formatTurnRole(seat: string) {
 
 function summarizeTurn(turn: ApiTranscriptTurn) {
   return turn.message.length > 120 ? `${turn.message.slice(0, 117)}...` : turn.message
+}
+
+function renderTextWithLinks(text: string) {
+  const parts = text.split(/(https?:\/\/[^\s)]+)/g)
+
+  return parts.map((part, index) => {
+    if (!/^https?:\/\//i.test(part)) return part
+
+    const cleanUrl = part.replace(/[.,;:!?]+$/, '')
+    const trailing = part.slice(cleanUrl.length)
+
+    return (
+      <span key={`${cleanUrl}-${index}`}>
+        <a href={cleanUrl} target="_blank" rel="noreferrer">{formatUrlLabel(cleanUrl)}</a>
+        {trailing}
+      </span>
+    )
+  })
+}
+
+function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact) {
+  const directUrls: TranscriptSourceCard[] = extractUrls(`${turn.message} ${turn.request ?? ''}`).map((url) => ({
+    url,
+    title: formatUrlLabel(url),
+    kind: 'Referenced link',
+    detail: domainFromUrl(url),
+  }))
+
+  const evidenceSources: TranscriptSourceCard[] = artifact?.toolEvidence
+    ?.flatMap((evidence) => evidence.sources?.flatMap((source) => {
+      if (!source.url) return []
+      return [{
+        url: source.url,
+        title: source.title ?? formatUrlLabel(source.url),
+        kind: evidence.capability ? formatAgentLabel(evidence.capability.replace(/_/g, '-')) : 'Source',
+        detail: source.value ?? evidence.provider,
+      }]
+    }) ?? [])
+    ?? []
+
+  const evidenceItems: TranscriptSourceCard[] = artifact?.evidenceItems
+    ?.flatMap((item) => {
+      if (!item.sourceUrl) return []
+      return [{
+        url: item.sourceUrl,
+        title: item.sourceTitle ?? formatUrlLabel(item.sourceUrl),
+        kind: item.sourceType ? formatAgentLabel(item.sourceType) : 'Evidence',
+        detail: item.reliability,
+      }]
+    })
+    ?? []
+
+  const seen = new Set<string>()
+  return [...directUrls, ...evidenceItems, ...evidenceSources]
+    .filter((source) => {
+      const key = source.url.toLowerCase()
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+    .slice(0, 3)
+}
+
+function extractUrls(text: string) {
+  return Array.from(text.matchAll(/https?:\/\/[^\s)]+/gi))
+    .map((match) => match[0].replace(/[.,;:!?]+$/, ''))
+}
+
+function formatUrlLabel(value: string) {
+  try {
+    const url = new URL(value)
+    return `${url.hostname.replace(/^www\./, '')}${url.pathname === '/' ? '' : url.pathname}`.slice(0, 82)
+  } catch {
+    return value
+  }
+}
+
+function domainFromUrl(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./, '')
+  } catch {
+    return undefined
+  }
 }
 
 function formatAgentLabel(agentId?: string) {

@@ -77,9 +77,25 @@ export type ApiTranscriptTurn = {
   replyToId?: string
   requestedAgentId?: string
   request?: string
+  artifactId?: string
   confidence?: number
   tags?: string[]
   createdAt?: string
+}
+
+export type ApiEvidenceSource = {
+  title?: string
+  url?: string
+  value?: string
+}
+
+export type ApiToolEvidence = {
+  capability?: string
+  provider?: string
+  query?: string
+  status?: string
+  observations?: string[]
+  sources?: ApiEvidenceSource[]
 }
 
 export type ApiCourtArtifact = {
@@ -93,6 +109,15 @@ export type ApiCourtArtifact = {
   claims?: string[]
   notes?: string[]
   risks?: string[]
+  toolEvidence?: ApiToolEvidence[]
+  evidenceItems?: Array<{
+    id?: string
+    sourceTitle?: string
+    sourceUrl?: string
+    sourceType?: string
+    reliability?: string
+    claim?: string
+  }>
   createdAt?: string
 }
 
