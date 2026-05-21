@@ -5,7 +5,7 @@ import { verifyMessage } from 'viem'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseParticipants, cases, onchainReceipts, users } from '../db/schema.js'
+import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, users } from '../db/schema.js'
 
 const walletSchema = z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value))
 const profileFieldsSchema = z.object({
@@ -33,7 +33,7 @@ export async function userRoutes(app: FastifyInstance) {
 
     const wallet = normalizeWallet(parsed.data.wallet)
     const profile = await ensureUser(wallet)
-    const [participatedCases, payoutRows] = await Promise.all([
+    const [participatedCases, followedCases, payoutRows] = await Promise.all([
       db!
         .select({
           caseId: cases.id,
@@ -46,6 +46,18 @@ export async function userRoutes(app: FastifyInstance) {
         .innerJoin(cases, eq(cases.id, caseParticipants.caseId))
         .where(eq(caseParticipants.wallet, wallet))
         .orderBy(desc(cases.updatedAt)),
+      db!
+        .select({
+          caseId: cases.id,
+          question: cases.question,
+          visibility: cases.visibility,
+          followedAt: caseFollows.createdAt,
+          updatedAt: cases.updatedAt,
+        })
+        .from(caseFollows)
+        .innerJoin(cases, eq(cases.id, caseFollows.caseId))
+        .where(eq(caseFollows.wallet, wallet))
+        .orderBy(desc(caseFollows.createdAt)),
       db!
         .select()
         .from(onchainReceipts)
@@ -75,6 +87,13 @@ export async function userRoutes(app: FastifyInstance) {
         title: item.question,
         role: item.role,
         visibility: item.visibility,
+        updated: item.updatedAt.toISOString(),
+      })),
+      follows: followedCases.map((item) => ({
+        id: item.caseId,
+        title: item.question,
+        visibility: item.visibility,
+        followedAt: item.followedAt.toISOString(),
         updated: item.updatedAt.toISOString(),
       })),
       payouts: walletPayouts.map((row) => {

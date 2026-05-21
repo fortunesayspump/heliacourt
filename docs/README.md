@@ -23,9 +23,10 @@ Implemented now:
 - Wallet-signed profile updates with short-lived, one-use challenges.
 - Public case and ledger routes hide private and unlisted records from browse surfaces; unlisted case detail remains direct-link accessible.
 - Private case records can be unlocked through a wallet-signed, one-use case access challenge when the connected wallet is a case participant.
+- Signed case follows/watchlist records. Followed cases are stored by wallet and shown on the profile page.
 
 Still missing before the full product flow is complete:
 
-- Join existing case, fresh hearing, follow/watchlist, and private fork flows.
+- Join existing case, fresh hearing, and private fork flows.
 - External agent-builder registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.

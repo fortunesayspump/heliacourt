@@ -201,6 +201,13 @@ export type ApiUserAccount = {
     visibility: string
     updated: string
   }>
+  follows: Array<{
+    id: string
+    title: string
+    visibility: string
+    followedAt: string
+    updated: string
+  }>
   payouts: Array<{
     caseId: string
     txHash: string

@@ -38,6 +38,17 @@ export const caseParticipants = pgTable('case_participants', {
   uniqueIndex('case_participants_case_wallet_role_idx').on(table.caseId, table.wallet, table.role),
 ])
 
+export const caseFollows = pgTable('case_follows', {
+  id: text('id').primaryKey(),
+  caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),
+  wallet: text('wallet').notNull().references(() => users.wallet, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  index('case_follows_case_idx').on(table.caseId),
+  index('case_follows_wallet_idx').on(table.wallet),
+  uniqueIndex('case_follows_case_wallet_idx').on(table.caseId, table.wallet),
+])
+
 export const authChallenges = pgTable('auth_challenges', {
   id: text('id').primaryKey(),
   wallet: text('wallet').notNull().references(() => users.wallet, { onDelete: 'cascade' }),

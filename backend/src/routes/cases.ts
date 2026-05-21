@@ -7,7 +7,7 @@ import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../a
 import { env } from '../config/env.js'
 import type { CaseType, CourtArtifact, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseParticipants, users } from '../db/schema.js'
+import { authChallenges, caseFollows, caseParticipants, users } from '../db/schema.js'
 
 const createCaseSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -40,6 +40,7 @@ const caseAccessChallengeSchema = z.object({
   wallet: walletSchema,
 })
 const CASE_READ_PURPOSE_PREFIX = 'case:read'
+const CASE_FOLLOW_PURPOSE_PREFIX = 'case:follow'
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
 
 export async function caseRoutes(app: FastifyInstance) {
@@ -152,6 +153,123 @@ export async function caseRoutes(app: FastifyInstance) {
 
     const result = job.result as { artifacts?: CourtArtifact[]; transcript?: unknown[]; recordHash?: string; partial?: boolean; onchainSettlement?: unknown } | undefined
     return summarizeCaseDetail(job, result)
+  })
+
+  app.post('/cases/:caseId/follow-challenge', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const { caseId } = request.params as { caseId: string }
+    const parsed = caseAccessChallengeSchema.safeParse(request.body)
+    if (!parsed.success) return reply.status(400).send({ error: 'invalid wallet' })
+
+    const jobs = await listHearingJobs()
+    const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
+    if (!job) return reply.status(404).send({ error: 'case not found' })
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    if (getCaseVisibility(job) === 'private') {
+      const ownsCase = await isCaseParticipant({ caseId: job.marketCase.id, wallet })
+      if (!ownsCase) return reply.status(403).send({ error: 'wallet is not a participant on this private case' })
+    }
+
+    await ensureUser(wallet)
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + CHALLENGE_TTL_MS)
+    const nonce = randomUUID()
+    const message = buildCaseFollowChallengeMessage({
+      wallet,
+      caseId: job.marketCase.id,
+      nonce,
+      issuedAt: now,
+      expiresAt,
+    })
+
+    await db!
+      .insert(authChallenges)
+      .values({
+        id: randomUUID(),
+        wallet,
+        nonce,
+        message,
+        purpose: caseFollowPurpose(job.marketCase.id),
+        expiresAt,
+        createdAt: now,
+      })
+
+    const following = await isFollowingCase({ caseId: job.marketCase.id, wallet })
+
+    return {
+      wallet,
+      caseId: job.marketCase.id,
+      following,
+      nonce,
+      message,
+      expiresAt: expiresAt.toISOString(),
+    }
+  })
+
+  app.post('/cases/:caseId/follow', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const { caseId } = request.params as { caseId: string }
+    const parsed = signedCaseAccessSchema.extend({ following: z.boolean().default(true) }).safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid follow request',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      })
+    }
+
+    const jobs = await listHearingJobs()
+    const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
+    if (!job) return reply.status(404).send({ error: 'case not found' })
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    if (getCaseVisibility(job) === 'private') {
+      const ownsCase = await isCaseParticipant({ caseId: job.marketCase.id, wallet })
+      if (!ownsCase) return reply.status(403).send({ error: 'wallet is not a participant on this private case' })
+    }
+
+    const authorized = await consumeCaseActionChallenge({
+      wallet,
+      caseId: job.marketCase.id,
+      purpose: caseFollowPurpose(job.marketCase.id),
+      message: parsed.data.auth.message,
+      signature: parsed.data.auth.signature,
+      missingError: 'case follow challenge was not found or was already used',
+      expiredError: 'case follow challenge expired',
+      invalidError: 'case follow signature did not match the connected wallet',
+    })
+    if (!authorized.ok) return reply.status(401).send({ error: authorized.error })
+
+    await ensureUser(wallet)
+    if (parsed.data.following) {
+      await db!
+        .insert(caseFollows)
+        .values({
+          id: `${job.marketCase.id}:${wallet}`,
+          caseId: job.marketCase.id,
+          wallet,
+          createdAt: new Date(),
+        })
+        .onConflictDoNothing()
+    } else {
+      await db!
+        .delete(caseFollows)
+        .where(and(
+          eq(caseFollows.caseId, job.marketCase.id),
+          eq(caseFollows.wallet, wallet),
+        ))
+    }
+
+    return {
+      caseId: job.marketCase.id,
+      wallet,
+      following: parsed.data.following,
+    }
   })
 
   app.get('/ledger', async () => {
@@ -272,6 +390,19 @@ async function isCaseParticipant({ caseId, wallet }: { caseId: string; wallet: s
   return Boolean(participant)
 }
 
+async function isFollowingCase({ caseId, wallet }: { caseId: string; wallet: string }) {
+  if (!isDatabaseConfigured) return false
+  const [follow] = await db!
+    .select({ id: caseFollows.id })
+    .from(caseFollows)
+    .where(and(
+      eq(caseFollows.caseId, caseId),
+      eq(caseFollows.wallet, wallet),
+    ))
+    .limit(1)
+  return Boolean(follow)
+}
+
 async function ensureUser(wallet: string) {
   const now = new Date()
   await db!
@@ -301,19 +432,49 @@ async function consumeCaseReadChallenge({
   message: string
   signature: `0x${string}`
 }) {
+  return consumeCaseActionChallenge({
+    wallet,
+    caseId,
+    purpose: caseReadPurpose(caseId),
+    message,
+    signature,
+    missingError: 'case access challenge was not found or was already used',
+    expiredError: 'case access challenge expired',
+    invalidError: 'case access signature did not match the connected wallet',
+  })
+}
+
+async function consumeCaseActionChallenge({
+  wallet,
+  purpose,
+  message,
+  signature,
+  missingError,
+  expiredError,
+  invalidError,
+}: {
+  wallet: string
+  caseId: string
+  purpose: string
+  message: string
+  signature: `0x${string}`
+  missingError: string
+  expiredError: string
+  invalidError: string
+}) {
   const [challenge] = await db!
     .select()
     .from(authChallenges)
     .where(and(
       eq(authChallenges.wallet, wallet),
       eq(authChallenges.message, message),
-      eq(authChallenges.purpose, caseReadPurpose(caseId)),
+      eq(authChallenges.purpose, purpose),
       isNull(authChallenges.consumedAt),
     ))
     .limit(1)
 
-  if (!challenge) return { ok: false, error: 'case access challenge was not found or was already used' }
-  if (challenge.expiresAt.getTime() < Date.now()) return { ok: false, error: 'case access challenge expired' }
+  if (!challenge) return { ok: false, error: missingError }
+  if (challenge.expiresAt.getTime() < Date.now()) return { ok: false, error: expiredError }
 
   const isValid = await verifyMessage({
     address: wallet as `0x${string}`,
@@ -321,7 +482,7 @@ async function consumeCaseReadChallenge({
     signature,
   }).catch(() => false)
 
-  if (!isValid) return { ok: false, error: 'case access signature did not match the connected wallet' }
+  if (!isValid) return { ok: false, error: invalidError }
 
   await db!
     .update(authChallenges)
@@ -358,8 +519,39 @@ function buildCaseReadChallengeMessage({
   ].join('\n')
 }
 
+function buildCaseFollowChallengeMessage({
+  wallet,
+  caseId,
+  nonce,
+  issuedAt,
+  expiresAt,
+}: {
+  wallet: string
+  caseId: string
+  nonce: string
+  issuedAt: Date
+  expiresAt: Date
+}) {
+  return [
+    'Helia Court follow case',
+    '',
+    `Origin: ${env.APP_ORIGIN}`,
+    `Wallet: ${wallet}`,
+    `Case: ${caseId}`,
+    `Nonce: ${nonce}`,
+    `Issued At: ${issuedAt.toISOString()}`,
+    `Expires At: ${expiresAt.toISOString()}`,
+    '',
+    'Sign this message to follow or unfollow this Helia Court case. This does not send a transaction or spend gas.',
+  ].join('\n')
+}
+
 function caseReadPurpose(caseId: string) {
   return `${CASE_READ_PURPOSE_PREFIX}:${caseId}`
+}
+
+function caseFollowPurpose(caseId: string) {
+  return `${CASE_FOLLOW_PURPOSE_PREFIX}:${caseId}`
 }
 
 function normalizeWallet(value: string) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { Briefcase, CurrencyDollar, UserCircle, Wallet } from '@phosphor-icons/react'
+import { Bell, Briefcase, CurrencyDollar, UserCircle, Wallet } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
@@ -161,6 +161,13 @@ export function ProfileAccountPanel() {
             <strong>{loading ? 'Loading' : account?.profile.username ? `@${account.profile.username}` : 'Unnamed'}</strong>
           </div>
         </div>
+        <div className="metric">
+          <Bell size={19} />
+          <div>
+            <span>Watchlist</span>
+            <strong>{account?.follows.length ?? 0} cases</strong>
+          </div>
+        </div>
       </section>
 
       <section className="panel settings-list">
@@ -209,6 +216,25 @@ export function ProfileAccountPanel() {
             )}
           </div>
         </article>
+
+        <article className="rail-card">
+          <Bell size={18} />
+          <div>
+            <h3>Followed cases</h3>
+            {account?.follows.length ? (
+              <div className="profile-case-list">
+                {account.follows.slice(0, 8).map((item) => (
+                  <Link href={`/cases/${item.id}`} key={item.id}>
+                    <strong>{item.title}</strong>
+                    <span>{item.visibility} · followed {formatDate(item.followedAt)}</span>
+                  </Link>
+                ))}
+              </div>
+            ) : (
+              <p>No followed cases yet.</p>
+            )}
+          </div>
+        </article>
       </section>
     </>
   )
@@ -220,4 +246,11 @@ function shortAddress(address: string) {
 
 function formatAmount(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('en', {
+    month: 'short',
+    day: 'numeric',
+  }).format(new Date(value))
 }

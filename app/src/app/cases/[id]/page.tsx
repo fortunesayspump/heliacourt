@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
+import { CaseFollowButton } from '../../components/CaseFollowButton'
 import { MarketPreviewImage } from '../../components/MarketPreviewImage'
 import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
 import { SourceEmbedCard } from '../../components/SourceEmbedCard'
@@ -81,6 +82,7 @@ export default async function CaseRecordPage({
             <ArrowLeft size={16} />
             Docket
           </Link>
+          <CaseFollowButton caseId={courtCase.id} />
           <nav className="case-record-tabs top-record-tabs" aria-label="Case sections">
             {tabs.map(([tab, label]) => (
               <Link

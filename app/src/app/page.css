@@ -2423,6 +2423,17 @@ button {
   margin: 0;
 }
 
+.case-follow-control {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.case-follow-control span {
+  color: var(--ag-muted);
+  font-size: 12px;
+}
+
 .preview-witness-list > div,
 .preview-budget > div,
 .compact-list .compact-card,
