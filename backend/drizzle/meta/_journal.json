@@ -29,6 +29,13 @@
       "when": 1779401752937,
       "tag": "0003_add-case-follows",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1779402626234,
+      "tag": "0004_add-case-lineage",
+      "breakpoints": true
     }
   ]
 }

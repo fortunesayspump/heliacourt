@@ -54,7 +54,7 @@ export default async function CasesPage() {
                     <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
                       <h3>{item.title}</h3>
                     </Link>
-                    <span>{provider}</span>
+                    <span>{item.parentCaseId ? `${formatFilingKind(item.filingKind)} · ${provider}` : provider}</span>
                   </div>
                   <strong className="case-status-pill">{item.status}</strong>
                 </div>
@@ -175,4 +175,10 @@ function shortCaseId(id: string) {
   if (id.startsWith('0x') && id.length > 18) return `${id.slice(0, 8)}...${id.slice(-6)}`
   if (id.length > 18) return `${id.slice(0, 12)}...`
   return id
+}
+
+function formatFilingKind(kind?: string) {
+  if (kind === 'fresh-hearing') return 'Fresh hearing'
+  if (kind === 'private-fork') return 'Private fork'
+  return 'Original case'
 }

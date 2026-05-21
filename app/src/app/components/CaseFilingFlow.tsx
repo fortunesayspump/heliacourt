@@ -7,6 +7,7 @@ import { useMemo, useState } from 'react'
 import { formatUnits, keccak256, parseEventLogs, parseUnits, stringToBytes } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../lib/arc'
+import type { ApiCase } from '../../lib/backend-data'
 import { caseEscrowAbi, contractAddresses, erc20Abi, hasCaseEscrowAddress } from '../../lib/contracts'
 import { WalletButton } from './WalletButton'
 
@@ -37,10 +38,14 @@ const zero = BigInt(0)
 const supportedMarkets = ['polymarket.com', 'kalshi.com', 'manifold.markets']
 
 export function CaseFilingFlow({
+  parentCase,
+  filingKind = 'original',
   witnessOptions,
   likelyBench,
   existingCases,
 }: {
+  parentCase?: ApiCase
+  filingKind?: 'original' | 'fresh-hearing' | 'private-fork'
   witnessOptions: WitnessOption[]
   likelyBench: WitnessOption[]
   existingCases: ExistingCase[]
@@ -51,13 +56,13 @@ export function CaseFilingFlow({
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain()
   const { writeContractAsync, isPending } = useWriteContract()
 
-  const [question, setQuestion] = useState('')
-  const [context, setContext] = useState('')
-  const [sourceLinks, setSourceLinks] = useState('')
-  const [horizon, setHorizon] = useState('')
+  const [question, setQuestion] = useState(parentCase?.title ?? '')
+  const [context, setContext] = useState(parentCase?.resolution ?? '')
+  const [sourceLinks, setSourceLinks] = useState((parentCase?.links ?? []).join('\n'))
+  const [horizon, setHorizon] = useState(parentCase?.horizon ?? '')
   const [budget, setBudget] = useState('')
   const [metadataURI, setMetadataURI] = useState('')
-  const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>('public')
+  const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>(filingKind === 'private-fork' ? 'private' : 'public')
   const [payerVisibility, setPayerVisibility] = useState<'public' | 'private'>('private')
   const [status, setStatus] = useState<FilingStatus | undefined>()
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>()
@@ -102,6 +107,8 @@ export function CaseFilingFlow({
     [existingCases, predictionMarketLink, question],
   )
   const composedContext = [
+    parentCase ? `Linked parent case: ${parentCase.id}` : '',
+    parentCase && filingKind !== 'original' ? `Filing kind: ${formatFilingKind(filingKind)}` : '',
     context.trim(),
     predictionMarketLink ? `Prediction market: ${predictionMarketLink}` : '',
     horizon.trim() ? `Time horizon: ${horizon.trim()}` : '',
@@ -196,6 +203,8 @@ export function CaseFilingFlow({
           context: composedContext || undefined,
           links,
           type: 'prediction-market',
+          parentCaseId: parentCase?.id,
+          filingKind,
           filer: address,
           visibility,
           payerVisibility,
@@ -235,6 +244,12 @@ export function CaseFilingFlow({
               <h2>Market question</h2>
             </div>
           </div>
+          {parentCase ? (
+            <div className="direction-strip inline-strip lineage-strip">
+              <Scales size={19} />
+              <p>{formatFilingKind(filingKind)} linked to {shortCaseId(parentCase.id)}. This opens a new funded escrow and keeps the parent relationship in the case record.</p>
+            </div>
+          ) : null}
           <div className="case-box case-form">
             <label htmlFor="question">Question</label>
             <textarea id="question" placeholder="Paste the market question exactly as it appears." value={question} onChange={(event) => setQuestion(event.target.value)} />
@@ -514,4 +529,16 @@ function normalizeUrl(value: string) {
   } catch {
     return value.trim().replace(/\/$/, '').toLowerCase()
   }
+}
+
+function formatFilingKind(kind: 'original' | 'fresh-hearing' | 'private-fork') {
+  if (kind === 'fresh-hearing') return 'Fresh hearing'
+  if (kind === 'private-fork') return 'Private fork'
+  return 'Original case'
+}
+
+function shortCaseId(id: string) {
+  if (id.startsWith('0x') && id.length > 18) return `${id.slice(0, 8)}...${id.slice(-6)}`
+  if (id.length > 18) return `${id.slice(0, 12)}...`
+  return id
 }

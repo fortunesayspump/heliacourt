@@ -21,8 +21,9 @@ The app is now a hybrid DB/onchain system:
 - Browse routes only expose public cases. Unlisted cases are excluded from case/ledger lists but remain open by direct link. Private cases are hidden from public case detail routes.
 - Private owner reads use one-use wallet-signature challenges and require the wallet to be recorded in `case_participants`.
 - Case follows are wallet-owned records in `case_follows`, written through signed one-use challenges and surfaced in the profile watchlist.
+- Fresh hearings and private forks use the same onchain filing path as original cases, then store `parent_case_id` and `filing_kind` on the backend record.
 
-The remaining production gaps are join/fresh-hearing/private-fork routing and a stronger session layer if the app needs repeated authenticated reads without signing each action.
+The remaining production gaps are existing-case add-funding/join support and a stronger session layer if the app needs repeated authenticated reads without signing each action.
 
 ## Why split it
 

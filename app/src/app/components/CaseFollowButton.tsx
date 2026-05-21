@@ -1,7 +1,7 @@
 'use client'
 
 import { Bell, BellSlash } from '@phosphor-icons/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import { WalletButton } from './WalletButton'
 
@@ -11,10 +11,31 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
   const [following, setFollowing] = useState<boolean | undefined>()
   const [status, setStatus] = useState('')
 
+  useEffect(() => {
+    if (!address) {
+      setFollowing(undefined)
+      return
+    }
+
+    let cancelled = false
+
+    fetch(`/api/users/${address}`, { cache: 'no-store' })
+      .then(async (response) => {
+        const payload = await response.json().catch(() => undefined)
+        if (!response.ok || !payload || cancelled) return
+        const follows = Array.isArray(payload.follows) ? payload.follows : []
+        setFollowing(follows.some((item: { id?: string }) => item.id === caseId))
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [address, caseId])
+
   const toggleFollow = async () => {
     if (!address) return
 
-    const nextFollowing = !(following ?? false)
     setStatus('Preparing wallet signature...')
     const challengeResponse = await fetch(`/api/cases/${encodeURIComponent(caseId)}/follow-challenge`, {
       method: 'POST',
@@ -29,9 +50,12 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
       return
     }
 
+    const currentFollowing = typeof following === 'boolean' ? following : Boolean(challenge.following)
+    const nextFollowing = !currentFollowing
+
     let signature: `0x${string}`
     try {
-      setFollowing(challenge.following)
+      setFollowing(currentFollowing)
       setStatus(nextFollowing ? 'Sign to follow this case...' : 'Sign to unfollow this case...')
       signature = await signMessageAsync({ message: challenge.message })
     } catch (error) {

@@ -83,6 +83,12 @@ export default async function CaseRecordPage({
             Docket
           </Link>
           <CaseFollowButton caseId={courtCase.id} />
+          <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(courtCase.id)}&kind=fresh-hearing`}>
+            Fresh hearing
+          </Link>
+          <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(courtCase.id)}&kind=private-fork`}>
+            Private fork
+          </Link>
           <nav className="case-record-tabs top-record-tabs" aria-label="Case sections">
             {tabs.map(([tab, label]) => (
               <Link
@@ -160,6 +166,7 @@ export default async function CaseRecordPage({
                       <span>Escrow case #{courtCase.onchain.caseId}</span>
                       <span>{courtCase.onchain.budgetUsdc} USDC funded</span>
                       <span>Chain {courtCase.onchain.chainId}</span>
+                      {courtCase.parentCaseId ? <span>{formatFilingKind(courtCase.filingKind)} of {shortCaseId(courtCase.parentCaseId)}</span> : null}
                     </div>
                   ) : null}
                 </div>
@@ -563,6 +570,18 @@ function formatReceiptType(type: string) {
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+function formatFilingKind(kind?: string) {
+  if (kind === 'fresh-hearing') return 'Fresh hearing'
+  if (kind === 'private-fork') return 'Private fork'
+  return 'Case'
+}
+
+function shortCaseId(id: string) {
+  if (id.startsWith('0x') && id.length > 18) return `${id.slice(0, 8)}...${id.slice(-6)}`
+  if (id.length > 18) return `${id.slice(0, 12)}...`
+  return id
 }
 
 function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {

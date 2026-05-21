@@ -5,13 +5,21 @@ import { AppFooter } from '../../components/AppFooter'
 import { PageTitle } from '../../components/PageTitle'
 import { WalletNotice } from '../../components/WalletNotice'
 import { CaseFilingFlow } from '../../components/CaseFilingFlow'
-import { getBackendAgents, getBackendCases } from '../../../lib/backend-data'
+import { getBackendAgents, getBackendCaseDetail, getBackendCases } from '../../../lib/backend-data'
 import '../../page.css'
 
-export default async function NewCasePage() {
-  const [liveAgents, existingCases] = await Promise.all([
+export default async function NewCasePage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ parent?: string; kind?: string }>
+}) {
+  const query = await searchParams
+  const parentCaseId = query?.parent?.trim()
+  const filingKind = query?.kind === 'private-fork' ? 'private-fork' : query?.kind === 'fresh-hearing' ? 'fresh-hearing' : 'original'
+  const [liveAgents, existingCases, parentCase] = await Promise.all([
     getBackendAgents(),
     getBackendCases(),
+    parentCaseId ? getBackendCaseDetail(parentCaseId).then((detail) => detail?.case) : Promise.resolve(undefined),
   ])
   const witnessOptions = liveAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
@@ -53,6 +61,8 @@ export default async function NewCasePage() {
         />
 
         <CaseFilingFlow
+          parentCase={parentCase}
+          filingKind={parentCase ? filingKind : 'original'}
           witnessOptions={witnessOptions}
           likelyBench={likelyBench}
           existingCases={existingCases.map((item) => ({

@@ -19,12 +19,16 @@ export const cases = pgTable('cases', {
   context: text('context'),
   links: jsonb('links').$type<string[]>(),
   type: text('type').notNull(),
+  parentCaseId: text('parent_case_id'),
+  filingKind: text('filing_kind').notNull().default('original'),
   filer: text('filer'),
   visibility: text('visibility').notNull().default('public'),
   payerVisibility: text('payer_visibility').notNull().default('private'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
-})
+}, (table) => [
+  index('cases_parent_case_idx').on(table.parentCaseId),
+])
 
 export const caseParticipants = pgTable('case_participants', {
   id: text('id').primaryKey(),

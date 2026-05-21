@@ -15,6 +15,8 @@ const createCaseSchema = z.object({
   context: z.string().trim().optional(),
   links: z.array(z.string().trim().url()).min(1),
   type: z.enum(['crypto-market', 'prediction-market', 'macro', 'real-world-event']).optional(),
+  parentCaseId: z.string().trim().min(1).optional(),
+  filingKind: z.enum(['original', 'fresh-hearing', 'private-fork']).default('original'),
   filer: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value)).optional(),
   visibility: z.enum(['public', 'unlisted', 'private']).default('public'),
   payerVisibility: z.enum(['public', 'private']).default('private'),
@@ -337,6 +339,8 @@ export async function caseRoutes(app: FastifyInstance) {
       ].filter(Boolean).join('\n\n'),
       links: data.links.filter(Boolean),
       type: 'prediction-market' as CaseType,
+      parentCaseId: data.parentCaseId,
+      filingKind: data.parentCaseId ? data.filingKind : 'original',
       filer: data.filer,
       visibility: data.visibility,
       payerVisibility: data.payerVisibility,
@@ -587,6 +591,8 @@ function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number])
     horizon: extractHorizon(marketCase),
     visibility: marketCase.visibility ?? 'public',
     payerVisibility: marketCase.payerVisibility ?? 'private',
+    parentCaseId: marketCase.parentCaseId,
+    filingKind: marketCase.filingKind ?? 'original',
     witnesses: result?.artifacts
       ? Array.from(new Set(result.artifacts.filter((artifact) => artifact.type === 'witness-testimony').map((artifact) => artifact.agentId)))
       : [],

@@ -15,6 +15,8 @@ export type ApiCase = {
   horizon?: string
   visibility?: 'public' | 'unlisted' | 'private'
   payerVisibility?: 'public' | 'private'
+  parentCaseId?: string
+  filingKind?: 'original' | 'fresh-hearing' | 'private-fork'
   witnesses?: string[]
   onchain?: {
     chainId: string

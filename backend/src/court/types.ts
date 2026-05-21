@@ -6,6 +6,8 @@ export type MarketCase = {
   context?: string
   links?: string[]
   type: CaseType
+  parentCaseId?: string
+  filingKind?: 'original' | 'fresh-hearing' | 'private-fork'
   filer?: `0x${string}`
   visibility?: 'public' | 'unlisted' | 'private'
   payerVisibility?: 'public' | 'private'
