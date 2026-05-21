@@ -64,6 +64,16 @@ export const caseEscrowAbi = [
     outputs: [{ name: 'caseId', type: 'uint256' }],
   },
   {
+    type: 'function',
+    name: 'addFunding',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'caseId', type: 'uint256' },
+      { name: 'amount', type: 'uint96' },
+    ],
+    outputs: [],
+  },
+  {
     type: 'event',
     name: 'CaseOpened',
     inputs: [
@@ -72,6 +82,15 @@ export const caseEscrowAbi = [
       { name: 'budget', type: 'uint96', indexed: false },
       { name: 'questionHash', type: 'bytes32', indexed: false },
       { name: 'metadataURI', type: 'string', indexed: false },
+    ],
+  },
+  {
+    type: 'event',
+    name: 'CaseFunded',
+    inputs: [
+      { name: 'caseId', type: 'uint256', indexed: true },
+      { name: 'funder', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint96', indexed: false },
     ],
   },
 ] as const

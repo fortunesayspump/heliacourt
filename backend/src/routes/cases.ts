@@ -1,13 +1,14 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
-import { verifyMessage } from 'viem'
+import { createPublicClient, formatUnits, http, parseEventLogs, parseUnits, verifyMessage } from 'viem'
 import { z } from 'zod'
 import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearing-jobs.js'
+import { arcTestnet } from '../chains/arc-testnet.js'
 import { env } from '../config/env.js'
 import type { CaseType, CourtArtifact, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseFollows, caseParticipants, users } from '../db/schema.js'
+import { authChallenges, caseFollows, caseParticipants, onchainReceipts, users } from '../db/schema.js'
 
 const createCaseSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -41,9 +42,31 @@ const signedCaseAccessSchema = z.object({
 const caseAccessChallengeSchema = z.object({
   wallet: walletSchema,
 })
+const addFundingReceiptSchema = z.object({
+  wallet: walletSchema,
+  chainId: z.string().trim().min(1),
+  txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
+  amountUsdc: z.string().trim().min(1).optional(),
+})
 const CASE_READ_PURPOSE_PREFIX = 'case:read'
 const CASE_FOLLOW_PURPOSE_PREFIX = 'case:follow'
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
+const usdcDecimals = 6
+const publicClient = createPublicClient({
+  chain: arcTestnet,
+  transport: http(env.ARC_RPC_URL),
+})
+const caseEscrowFundingAbi = [
+  {
+    type: 'event',
+    name: 'CaseFunded',
+    inputs: [
+      { name: 'caseId', type: 'uint256', indexed: true },
+      { name: 'funder', type: 'address', indexed: true },
+      { name: 'amount', type: 'uint96', indexed: false },
+    ],
+  },
+] as const
 
 export async function caseRoutes(app: FastifyInstance) {
   app.get('/cases', async () => {
@@ -71,7 +94,7 @@ export async function caseRoutes(app: FastifyInstance) {
 
     const result = job.result as { artifacts?: CourtArtifact[]; transcript?: unknown[]; recordHash?: string; partial?: boolean; onchainSettlement?: unknown } | undefined
 
-    return summarizeCaseDetail(job, result)
+    return await summarizeCaseDetail(job, result)
   })
 
   app.post('/cases/:caseId/challenge', async (request, reply) => {
@@ -154,7 +177,7 @@ export async function caseRoutes(app: FastifyInstance) {
     if (!authorized.ok) return reply.status(401).send({ error: authorized.error })
 
     const result = job.result as { artifacts?: CourtArtifact[]; transcript?: unknown[]; recordHash?: string; partial?: boolean; onchainSettlement?: unknown } | undefined
-    return summarizeCaseDetail(job, result)
+    return await summarizeCaseDetail(job, result)
   })
 
   app.post('/cases/:caseId/follow-challenge', async (request, reply) => {
@@ -274,13 +297,97 @@ export async function caseRoutes(app: FastifyInstance) {
     }
   })
 
-  app.get('/ledger', async () => {
+  app.post('/cases/:caseId/funding', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const { caseId } = request.params as { caseId: string }
+    const parsed = addFundingReceiptSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid funding receipt',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      })
+    }
+
     const jobs = await listHearingJobs()
+    const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
+    if (!job) return reply.status(404).send({ error: 'case not found' })
+    if (!job.marketCase.onchain) return reply.status(400).send({ error: 'case has no onchain escrow record' })
+    if (String(env.ARC_CHAIN_ID) !== parsed.data.chainId || parsed.data.chainId !== job.marketCase.onchain.chainId) {
+      return reply.status(400).send({ error: 'funding receipt chain does not match the case chain' })
+    }
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    const verified = await verifyCaseFundingReceipt({
+      txHash: parsed.data.txHash,
+      wallet,
+      onchainCaseId: job.marketCase.onchain.caseId,
+      expectedAmountUsdc: parsed.data.amountUsdc,
+    }).catch((error) => ({
+      ok: false as const,
+      error: error instanceof Error ? error.message : 'funding receipt verification failed',
+    }))
+    if (!verified.ok) return reply.status(400).send({ error: verified.error })
+
+    const now = new Date()
+    await ensureUser(wallet)
+    await db!
+      .insert(caseParticipants)
+      .values({
+        id: `${job.marketCase.id}:${wallet}:backer`,
+        caseId: job.marketCase.id,
+        wallet,
+        role: 'backer',
+        createdAt: now,
+      })
+      .onConflictDoNothing()
+
+    const payload = {
+      type: 'case-added-funding',
+      wallet,
+      amountUsdc: verified.amountUsdc,
+      onchainCaseId: job.marketCase.onchain.caseId,
+    }
+    await db!
+      .insert(onchainReceipts)
+      .values({
+        id: `${job.id}:case-added-funding:${parsed.data.txHash}`,
+        caseId: job.marketCase.id,
+        jobId: job.id,
+        chainId: parsed.data.chainId,
+        txHash: parsed.data.txHash,
+        receiptType: 'case-added-funding',
+        recordHash: null,
+        payload,
+        createdAt: now,
+      })
+      .onConflictDoUpdate({
+        target: onchainReceipts.id,
+        set: { payload },
+      })
 
     return {
-      rows: jobs
-        .filter((job) => isPublicListCase(job))
-        .flatMap((job) => summarizeLedgerRows(job)),
+      caseId: job.marketCase.id,
+      wallet,
+      amountUsdc: verified.amountUsdc,
+      txHash: parsed.data.txHash,
+      role: 'backer',
+    }
+  })
+
+  app.get('/ledger', async () => {
+    const jobs = await listHearingJobs()
+    const publicJobs = jobs.filter((job) => isPublicListCase(job))
+    const fundingRows = await getAddedFundingLedgerRows(publicJobs)
+
+    return {
+      rows: [
+        ...publicJobs.flatMap((job) => summarizeLedgerRows(job)),
+        ...fundingRows,
+      ],
     }
   })
 
@@ -357,18 +464,57 @@ export async function caseRoutes(app: FastifyInstance) {
   })
 }
 
-function summarizeCaseDetail(
+async function summarizeCaseDetail(
   job: Awaited<ReturnType<typeof listHearingJobs>>[number],
   result: { artifacts?: CourtArtifact[]; transcript?: unknown[]; recordHash?: string; partial?: boolean; onchainSettlement?: unknown } | undefined,
 ) {
+  const extraReceipts = await getCaseRecordedReceipts(job.marketCase.id)
+  const settlement = isSettlementObject(result?.onchainSettlement) ? result.onchainSettlement : undefined
+  const onchainSettlement = extraReceipts.length
+    ? {
+        ...(settlement ?? {}),
+        receipts: [
+          ...(Array.isArray(settlement?.receipts) ? settlement.receipts : []),
+          ...extraReceipts,
+        ],
+      }
+    : result?.onchainSettlement
+
   return {
     case: summarizeCase(job),
     transcript: Array.isArray(result?.transcript) ? result.transcript : [],
     artifacts: Array.isArray(result?.artifacts) ? result.artifacts : [],
     recordHash: result?.recordHash,
     partial: Boolean(result?.partial),
-    onchainSettlement: result?.onchainSettlement,
+    onchainSettlement,
   }
+}
+
+function isSettlementObject(value: unknown): value is { status?: string; receipts?: unknown[] } {
+  return Boolean(value && typeof value === 'object')
+}
+
+async function getCaseRecordedReceipts(caseId: string) {
+  if (!isDatabaseConfigured) return []
+
+  const receipts = await db!
+    .select()
+    .from(onchainReceipts)
+    .where(eq(onchainReceipts.caseId, caseId))
+
+  return receipts
+    .filter((receipt) => receipt.receiptType === 'case-added-funding')
+    .map((receipt) => {
+      const payload = receipt.payload as { amountUsdc?: string; wallet?: string } | null
+      return {
+        type: receipt.receiptType,
+        txHash: receipt.txHash,
+        chainId: receipt.chainId,
+        caseId,
+        amountUsdc: payload?.amountUsdc,
+        wallet: payload?.wallet,
+      }
+    })
 }
 
 function isPublicListCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
@@ -423,6 +569,43 @@ async function ensureUser(wallet: string) {
         lastSeenAt: now,
       },
     })
+}
+
+async function verifyCaseFundingReceipt({
+  txHash,
+  wallet,
+  onchainCaseId,
+  expectedAmountUsdc,
+}: {
+  txHash: `0x${string}`
+  wallet: string
+  onchainCaseId: string
+  expectedAmountUsdc?: string
+}) {
+  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
+  if (receipt.status !== 'success') return { ok: false as const, error: 'funding transaction did not succeed' }
+
+  const logs = parseEventLogs({
+    abi: caseEscrowFundingAbi,
+    logs: receipt.logs,
+    eventName: 'CaseFunded',
+  })
+  const event = logs.find((log) => {
+    const args = log.args
+    return args.caseId?.toString() === onchainCaseId && args.funder?.toLowerCase() === wallet
+  })
+  if (!event) return { ok: false as const, error: 'CaseFunded event was not found for this wallet and case' }
+
+  const amount = event.args.amount
+  if (expectedAmountUsdc) {
+    const expected = parseUnits(expectedAmountUsdc, usdcDecimals)
+    if (amount !== expected) return { ok: false as const, error: 'funding amount does not match the transaction event' }
+  }
+
+  return {
+    ok: true as const,
+    amountUsdc: formatUnits(amount, usdcDecimals),
+  }
 }
 
 async function consumeCaseReadChallenge({
@@ -734,6 +917,36 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
   }]
 }
 
+async function getAddedFundingLedgerRows(publicJobs: Awaited<ReturnType<typeof listHearingJobs>>) {
+  if (!isDatabaseConfigured || !publicJobs.length) return []
+
+  const byCase = new Map(publicJobs.map((job) => [job.marketCase.id, job]))
+  const receipts = await db!
+    .select()
+    .from(onchainReceipts)
+    .where(eq(onchainReceipts.receiptType, 'case-added-funding'))
+
+  return receipts.flatMap((receipt) => {
+    const job = byCase.get(receipt.caseId)
+    if (!job) return []
+
+    const payload = receipt.payload as { amountUsdc?: string; wallet?: string } | null
+    return [{
+      caseId: job.marketCase.id,
+      title: job.marketCase.question,
+      item: 'Added case funding',
+      amount: payload?.amountUsdc ? `${payload.amountUsdc} USDC` : 'Recorded',
+      status: 'Anchored',
+      hash: receipt.txHash,
+      updated: receipt.createdAt.toISOString(),
+      chainId: receipt.chainId,
+      txHash: receipt.txHash,
+      receiptType: receipt.receiptType,
+      wallet: payload?.wallet,
+    }]
+  })
+}
+
 function formatProtocolFee(budgetUsdc: string) {
   const budget = Number(budgetUsdc)
   if (!Number.isFinite(budget)) return '0.00'
@@ -742,6 +955,7 @@ function formatProtocolFee(budgetUsdc: string) {
 
 function formatReceiptType(type: string, agentId?: string) {
   if (type === 'agent-payout') return agentId ? `Agent payout · ${agentId}` : 'Agent payout'
+  if (type === 'case-added-funding') return 'Added case funding'
   if (type === 'case-event') return 'Hearing record'
   if (type === 'case-close') return 'Escrow close'
   return type

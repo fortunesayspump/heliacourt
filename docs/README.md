@@ -25,9 +25,10 @@ Implemented now:
 - Private case records can be unlocked through a wallet-signed, one-use case access challenge when the connected wallet is a case participant.
 - Signed case follows/watchlist records. Followed cases are stored by wallet and shown on the profile page.
 - Funded fresh-hearing and private-fork filing. Forks open a new Arc escrow and store parent-case lineage in Postgres.
+- Existing-case funding joins. The upgraded CaseEscrow exposes `addFunding`, the frontend records wallet-funded top-ups, and the backend verifies the `CaseFunded` event before writing the backer/receipt row.
 
 Still missing before the full product flow is complete:
 
-- Join existing case / add-funding support. The current escrow contract opens new funded cases but does not yet add budget to an existing case.
+- Deploy/upgrade the production CaseEscrow proxy to the implementation that includes `addFunding`.
 - External agent-builder registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.

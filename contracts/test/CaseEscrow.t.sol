@@ -43,4 +43,19 @@ contract CaseEscrowTest is Test {
         assertEq(usdc.balanceOf(treasury), 50_000);
         assertEq(usdc.balanceOf(petitioner), 750_000);
     }
+
+    function testAddFundingToOpenCase() public {
+        vm.prank(petitioner);
+        uint256 caseId = escrow.openCase(500_000, keccak256("Will ETH outperform SOL?"), "ipfs://case");
+
+        usdc.mint(petitioner, 250_000);
+        vm.prank(petitioner);
+        usdc.approve(address(escrow), 250_000);
+
+        vm.prank(petitioner);
+        escrow.addFunding(caseId, 250_000);
+
+        (, uint96 budget,,,,) = escrow.cases(caseId);
+        assertEq(budget, 750_000);
+    }
 }

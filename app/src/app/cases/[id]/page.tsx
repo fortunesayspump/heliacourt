@@ -2,6 +2,7 @@ import { ArrowLeft, Briefcase, ShieldCheck, Sparkle, Timer, TrendUp, UserCircleC
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
+import { CaseAddFundingButton } from '../../components/CaseAddFundingButton'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
 import { CaseFollowButton } from '../../components/CaseFollowButton'
 import { MarketPreviewImage } from '../../components/MarketPreviewImage'
@@ -83,6 +84,7 @@ export default async function CaseRecordPage({
             Docket
           </Link>
           <CaseFollowButton caseId={courtCase.id} />
+          <CaseAddFundingButton caseId={courtCase.id} onchain={courtCase.onchain} />
           <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(courtCase.id)}&kind=fresh-hearing`}>
             Fresh hearing
           </Link>
@@ -566,6 +568,8 @@ function formatTurnTime(value: string) {
 }
 
 function formatReceiptType(type: string) {
+  if (type === 'case-added-funding') return 'Added Case Funding'
+
   return type
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))

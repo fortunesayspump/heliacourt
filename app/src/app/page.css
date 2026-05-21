@@ -2423,15 +2423,28 @@ button {
   margin: 0;
 }
 
-.case-follow-control {
+.case-follow-control,
+.case-add-funding-control {
   align-items: center;
   display: flex;
   gap: 8px;
 }
 
-.case-follow-control span {
+.case-follow-control span,
+.case-add-funding-control span {
   color: var(--ag-muted);
   font-size: 12px;
+}
+
+.case-add-funding-control input {
+  background: var(--ag-surface);
+  border: 1px solid var(--ag-border);
+  border-radius: 8px;
+  color: var(--ag-text);
+  font: inherit;
+  height: 36px;
+  max-width: 112px;
+  padding: 0 10px;
 }
 
 .preview-witness-list > div,
@@ -2525,10 +2538,10 @@ textarea::placeholder {
 }
 
 .case-detail-topbar {
-  display: grid;
+  display: flex;
   width: min(100% - 32px, 1720px);
-  grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
+  flex-wrap: wrap;
   gap: 14px;
   margin: 0 auto;
 }
@@ -2540,8 +2553,8 @@ textarea::placeholder {
 .case-detail-topbar .case-record-tabs {
   width: max-content;
   max-width: 100%;
-  justify-self: end;
   justify-content: flex-end;
+  margin-left: auto;
 }
 
 .case-detail-shell {

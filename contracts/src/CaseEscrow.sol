@@ -35,6 +35,7 @@ contract CaseEscrow is Initializable, OwnableUpgradeable, UUPSUpgradeable {
     event TreasuryUpdated(address indexed treasury);
     event ProtocolFeeUpdated(uint16 protocolFeeBps);
     event CaseOpened(uint256 indexed caseId, address indexed petitioner, uint96 budget, bytes32 questionHash, string metadataURI);
+    event CaseFunded(uint256 indexed caseId, address indexed funder, uint96 amount);
     event AgentPaid(uint256 indexed caseId, address indexed agentWallet, uint96 amount, bytes32 reasonHash);
     event CaseClosed(uint256 indexed caseId, uint96 protocolFee, uint96 refund);
     event CaseCancelled(uint256 indexed caseId, uint96 refund);
@@ -93,6 +94,16 @@ contract CaseEscrow is Initializable, OwnableUpgradeable, UUPSUpgradeable {
         });
 
         emit CaseOpened(caseId, msg.sender, budget, questionHash, metadataURI);
+    }
+
+    function addFunding(uint256 caseId, uint96 amount) external {
+        CourtCase storage courtCase = cases[caseId];
+        require(courtCase.status == CaseStatus.Open, "case not open");
+        require(amount > 0, "amount required");
+        require(usdc.transferFrom(msg.sender, address(this), amount), "funding failed");
+
+        courtCase.budget += amount;
+        emit CaseFunded(caseId, msg.sender, amount);
     }
 
     function payAgent(uint256 caseId, address agentWallet, uint96 amount, bytes32 reasonHash) external onlyClerk {
