@@ -1,16 +1,28 @@
-import { desc, eq } from 'drizzle-orm'
+import { randomUUID } from 'node:crypto'
+import { and, desc, eq, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
+import { verifyMessage } from 'viem'
 import { z } from 'zod'
+import { env } from '../config/env.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { caseParticipants, cases, onchainReceipts, users } from '../db/schema.js'
+import { authChallenges, caseParticipants, cases, onchainReceipts, users } from '../db/schema.js'
 
 const walletSchema = z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value))
-const updateProfileSchema = z.object({
+const profileFieldsSchema = z.object({
   username: z.string().trim().min(2).max(32).regex(/^[a-zA-Z0-9_]+$/).optional().or(z.literal('')),
   displayName: z.string().trim().max(80).optional().or(z.literal('')),
   avatarUrl: z.string().trim().url().optional().or(z.literal('')),
   bio: z.string().trim().max(280).optional().or(z.literal('')),
 })
+const updateProfileSchema = profileFieldsSchema.extend({
+  auth: z.object({
+    message: z.string().min(1),
+    signature: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]+$/.test(value)),
+  }),
+})
+
+const PROFILE_UPDATE_PURPOSE = 'profile:update'
+const CHALLENGE_TTL_MS = 5 * 60 * 1000
 
 export async function userRoutes(app: FastifyInstance) {
   app.get('/users/:wallet', async (request, reply) => {
@@ -79,6 +91,40 @@ export async function userRoutes(app: FastifyInstance) {
     }
   })
 
+  app.post('/users/:wallet/challenge', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const parsed = z.object({ wallet: walletSchema }).safeParse(request.params)
+    if (!parsed.success) return reply.status(400).send({ error: 'invalid wallet' })
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    await ensureUser(wallet)
+
+    const now = new Date()
+    const expiresAt = new Date(now.getTime() + CHALLENGE_TTL_MS)
+    const nonce = randomUUID()
+    const message = buildProfileChallengeMessage({ wallet, nonce, issuedAt: now, expiresAt })
+
+    await db!
+      .insert(authChallenges)
+      .values({
+        id: randomUUID(),
+        wallet,
+        nonce,
+        message,
+        purpose: PROFILE_UPDATE_PURPOSE,
+        expiresAt,
+        createdAt: now,
+      })
+
+    return {
+      wallet,
+      nonce,
+      message,
+      expiresAt: expiresAt.toISOString(),
+    }
+  })
+
   app.put('/users/:wallet', async (request, reply) => {
     if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
 
@@ -97,6 +143,16 @@ export async function userRoutes(app: FastifyInstance) {
     }
 
     const wallet = normalizeWallet(params.data.wallet)
+    const authorized = await consumeProfileChallenge({
+      wallet,
+      message: parsed.data.auth.message,
+      signature: parsed.data.auth.signature,
+    })
+
+    if (!authorized.ok) {
+      return reply.status(401).send({ error: authorized.error })
+    }
+
     const now = new Date()
     const values = {
       username: normalizeOptional(parsed.data.username),
@@ -118,6 +174,45 @@ export async function userRoutes(app: FastifyInstance) {
   })
 }
 
+async function consumeProfileChallenge({
+  wallet,
+  message,
+  signature,
+}: {
+  wallet: string
+  message: string
+  signature: `0x${string}`
+}) {
+  const [challenge] = await db!
+    .select()
+    .from(authChallenges)
+    .where(and(
+      eq(authChallenges.wallet, wallet),
+      eq(authChallenges.message, message),
+      eq(authChallenges.purpose, PROFILE_UPDATE_PURPOSE),
+      isNull(authChallenges.consumedAt),
+    ))
+    .limit(1)
+
+  if (!challenge) return { ok: false, error: 'profile signature challenge was not found or was already used' }
+  if (challenge.expiresAt.getTime() < Date.now()) return { ok: false, error: 'profile signature challenge expired' }
+
+  const isValid = await verifyMessage({
+    address: wallet as `0x${string}`,
+    message,
+    signature,
+  }).catch(() => false)
+
+  if (!isValid) return { ok: false, error: 'profile signature did not match the connected wallet' }
+
+  await db!
+    .update(authChallenges)
+    .set({ consumedAt: new Date() })
+    .where(eq(authChallenges.id, challenge.id))
+
+  return { ok: true }
+}
+
 async function ensureUser(wallet: string) {
   const now = new Date()
   await db!
@@ -132,7 +227,6 @@ async function ensureUser(wallet: string) {
       target: users.wallet,
       set: {
         lastSeenAt: now,
-        updatedAt: now,
       },
     })
 
@@ -165,4 +259,28 @@ function normalizeWallet(value: string) {
 function normalizeOptional(value: string | undefined) {
   const normalized = value?.trim()
   return normalized ? normalized : null
+}
+
+function buildProfileChallengeMessage({
+  wallet,
+  nonce,
+  issuedAt,
+  expiresAt,
+}: {
+  wallet: string
+  nonce: string
+  issuedAt: Date
+  expiresAt: Date
+}) {
+  return [
+    'Helia Court profile update',
+    '',
+    `Origin: ${env.APP_ORIGIN}`,
+    `Wallet: ${wallet}`,
+    `Nonce: ${nonce}`,
+    `Issued At: ${issuedAt.toISOString()}`,
+    `Expires At: ${expiresAt.toISOString()}`,
+    '',
+    'Sign this message to update your Helia Court profile. This does not send a transaction or spend gas.',
+  ].join('\n')
 }

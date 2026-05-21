@@ -17,8 +17,9 @@ The app is now a hybrid DB/onchain system:
 - Arc testnet contracts hold economic proof: case escrow, case close, verdict receipts, and settlement receipts.
 - First-party agents are protocol-owned for the MVP. Their payout rows are recorded per agent in the ledger and receipt payloads.
 - Users are stored by wallet address. A filer is linked to each case through `case_participants`.
+- Profile writes are protected by short-lived wallet-signature challenges.
 
-The remaining production gap is access control. Profile editing and private-case visibility need wallet-signature auth before private records should be trusted in production.
+The remaining production gap is private-case access control. Visibility fields exist, but API reads still need wallet-authenticated filtering before private records should be trusted in production.
 
 ## Why split it
 

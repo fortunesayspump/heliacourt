@@ -38,6 +38,20 @@ export const caseParticipants = pgTable('case_participants', {
   uniqueIndex('case_participants_case_wallet_role_idx').on(table.caseId, table.wallet, table.role),
 ])
 
+export const authChallenges = pgTable('auth_challenges', {
+  id: text('id').primaryKey(),
+  wallet: text('wallet').notNull().references(() => users.wallet, { onDelete: 'cascade' }),
+  nonce: text('nonce').notNull(),
+  message: text('message').notNull(),
+  purpose: text('purpose').notNull(),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  index('auth_challenges_wallet_idx').on(table.wallet),
+  uniqueIndex('auth_challenges_nonce_idx').on(table.nonce),
+])
+
 export const hearingJobs = pgTable('hearing_jobs', {
   id: text('id').primaryKey(),
   caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),

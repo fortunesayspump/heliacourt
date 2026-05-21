@@ -3,7 +3,7 @@
 import { Briefcase, CurrencyDollar, UserCircle, Wallet } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../lib/backend-data'
 import { WalletButton } from './WalletButton'
 
@@ -23,6 +23,7 @@ const emptyForm: ProfileForm = {
 
 export function ProfileAccountPanel() {
   const { address, isConnected } = useAccount()
+  const { signMessageAsync } = useSignMessage()
   const [account, setAccount] = useState<ApiUserAccount | undefined>()
   const [form, setForm] = useState<ProfileForm>(emptyForm)
   const [status, setStatus] = useState('')
@@ -71,13 +72,38 @@ export function ProfileAccountPanel() {
   const saveProfile = async () => {
     if (!address) return
 
+    setStatus('Preparing wallet signature...')
+    const challengeResponse = await fetch(`/api/users/${address}/challenge`, {
+      method: 'POST',
+    })
+    const challenge = await challengeResponse.json().catch(() => ({ error: 'challenge API returned a non-json response' }))
+    if (!challengeResponse.ok || !challenge.message) {
+      setStatus(challenge.error ?? 'Profile signature challenge failed')
+      return
+    }
+
+    let signature: `0x${string}`
+    try {
+      setStatus('Sign the profile update in your wallet...')
+      signature = await signMessageAsync({ message: challenge.message })
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Wallet signature was rejected')
+      return
+    }
+
     setStatus('Saving profile...')
     const response = await fetch(`/api/users/${address}`, {
       method: 'PUT',
       headers: {
         'content-type': 'application/json',
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        auth: {
+          message: challenge.message,
+          signature,
+        },
+      }),
     })
     const payload = await response.json().catch(() => ({ error: 'profile API returned a non-json response' }))
     if (!response.ok) {

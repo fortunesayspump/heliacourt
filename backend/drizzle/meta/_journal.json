@@ -15,6 +15,13 @@
       "when": 1779397781305,
       "tag": "0001_stiff_bucky",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779399441728,
+      "tag": "0002_add-auth-challenges",
+      "breakpoints": true
     }
   ]
 }

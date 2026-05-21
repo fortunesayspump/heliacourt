@@ -20,10 +20,10 @@ Implemented now:
 - Railway Postgres persistence for cases, hearing jobs, transcript turns, artifacts, ledger entries, and receipt pointers.
 - Onchain case funding, settlement recording, agent payout rows, and protocol-fee rows.
 - Wallet profile foundation: users are keyed by wallet, filers are linked to cases, and the profile page can show filed cases and payouts.
+- Wallet-signed profile updates with short-lived, one-use challenges.
 
 Still missing before the full product flow is complete:
 
-- Wallet-signature auth for profile edits and private records.
 - Enforced private/unlisted case access rules.
 - Join existing case, fresh hearing, follow/watchlist, and private fork flows.
 - External agent-builder registration and third-party payout claiming.

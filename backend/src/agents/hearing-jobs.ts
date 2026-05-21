@@ -543,7 +543,6 @@ async function upsertDatabaseCase(marketCase: MarketCase, updatedAt: string) {
       .onConflictDoUpdate({
         target: users.wallet,
         set: {
-          updatedAt: now,
           lastSeenAt: now,
         },
       })
