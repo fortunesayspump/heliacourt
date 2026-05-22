@@ -139,6 +139,9 @@ export async function retryOnchainSettlement(caseId: string) {
   if (!result?.marketCase || !Array.isArray(result.artifacts) || !Array.isArray(result.transcript)) {
     throw new Error('completed case is missing hearing artifacts or transcript')
   }
+  if (result.onchainSettlement?.status === 'recorded') {
+    return serializeJob(job)
+  }
 
   const onchainSettlement = await settleHearingOnchain({
     marketCase: result.marketCase,

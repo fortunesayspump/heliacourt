@@ -46,6 +46,8 @@ pnpm build
 - The frontend is UI and API proxy only.
 - The backend owns the court engine, agents, witnesses, tools, memory, hearing jobs, and logs.
 - Railway Postgres is the production database; set `DATABASE_URL` and run `pnpm --dir backend db:migrate`.
+- Case filing is contract-backed: the backend verifies the Arc `CaseOpened` event before queueing a hearing.
+- Settlement retry is a privileged backend action; set `HELIA_ADMIN_KEY` before using the retry route.
 - Generated hearing logs live under `backend/tmp/` and are ignored by git.
 - Local OSS research clones live under `research/open-source/` and are ignored by git.
 

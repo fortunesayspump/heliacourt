@@ -25,6 +25,7 @@ export async function healthRoutes(app: FastifyInstance) {
         courtReceiptsConfigured: Boolean(env.COURT_RECEIPTS_ADDRESS),
         settlementSignerConfigured: Boolean(env.SETTLEMENT_PRIVATE_KEY ?? env.PRIVATE_KEY),
         settlementUsesDedicatedKey: Boolean(env.SETTLEMENT_PRIVATE_KEY),
+        adminRetryConfigured: Boolean(env.HELIA_ADMIN_KEY),
       },
     }
   })

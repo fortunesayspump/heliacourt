@@ -71,7 +71,7 @@ Run migrations from the backend package after attaching Railway Postgres:
 pnpm --dir backend db:migrate
 ```
 
-Keep `OPENROUTER_API_KEY`, search provider keys, and crawler keys server-only.
+Keep `OPENROUTER_API_KEY`, search provider keys, crawler keys, `SETTLEMENT_PRIVATE_KEY`, and `HELIA_ADMIN_KEY` server-only. Case filing is accepted only after the backend verifies the Arc `CaseOpened` receipt, and manual settlement retry requires the admin key.
 
 ## Hearing API shape
 

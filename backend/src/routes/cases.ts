@@ -29,7 +29,7 @@ const createCaseSchema = z.object({
     budgetUsdc: z.string().trim().min(1),
     questionHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
     metadataURI: z.string().trim().optional(),
-  }).optional(),
+  }),
 })
 const walletSchema = z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value))
 const signedCaseAccessSchema = z.object({
@@ -57,6 +57,17 @@ const publicClient = createPublicClient({
   transport: http(env.ARC_RPC_URL),
 })
 const caseEscrowFundingAbi = [
+  {
+    type: 'event',
+    name: 'CaseOpened',
+    inputs: [
+      { name: 'caseId', type: 'uint256', indexed: true },
+      { name: 'petitioner', type: 'address', indexed: true },
+      { name: 'budget', type: 'uint96', indexed: false },
+      { name: 'questionHash', type: 'bytes32', indexed: false },
+      { name: 'metadataURI', type: 'string', indexed: false },
+    ],
+  },
   {
     type: 'event',
     name: 'CaseFunded',
@@ -325,6 +336,7 @@ export async function caseRoutes(app: FastifyInstance) {
       txHash: parsed.data.txHash,
       wallet,
       onchainCaseId: job.marketCase.onchain.caseId,
+      escrowAddress: job.marketCase.onchain.escrowAddress,
       expectedAmountUsdc: parsed.data.amountUsdc,
     }).catch((error) => ({
       ok: false as const,
@@ -392,6 +404,9 @@ export async function caseRoutes(app: FastifyInstance) {
   })
 
   app.post('/cases/:caseId/settle', async (request, reply) => {
+    const admin = authorizeAdminRequest(request.headers)
+    if (!admin.ok) return reply.status(admin.status).send({ error: admin.error })
+
     const { caseId } = request.params as { caseId: string }
 
     try {
@@ -436,6 +451,19 @@ export async function caseRoutes(app: FastifyInstance) {
         error: 'private cases require a filer wallet',
       })
     }
+    const opened = await verifyCaseOpenedReceipt({
+      txHash: data.onchain.txHash,
+      chainId: data.onchain.chainId,
+      escrowAddress: data.onchain.escrowAddress,
+      onchainCaseId: data.onchain.caseId,
+      budgetUsdc: data.onchain.budgetUsdc,
+      questionHash: data.onchain.questionHash,
+      filer: data.filer,
+    }).catch((error) => ({
+      ok: false as const,
+      error: error instanceof Error ? error.message : 'case opening receipt verification failed',
+    }))
+    if (!opened.ok) return reply.status(400).send({ error: opened.error })
 
     const marketCase: MarketCase = {
       id: data.id ?? createCaseId(data.question, data.onchain?.caseId, data.onchain?.txHash),
@@ -455,6 +483,28 @@ export async function caseRoutes(app: FastifyInstance) {
       createdAt: new Date().toISOString(),
     }
     const job = await enqueueHearingJob(marketCase)
+    if (isDatabaseConfigured) {
+      await db!
+        .insert(onchainReceipts)
+        .values({
+          id: `${job.id}:case-open:${data.onchain.txHash}`,
+          caseId: marketCase.id,
+          jobId: job.id,
+          chainId: data.onchain.chainId,
+          txHash: data.onchain.txHash,
+          receiptType: 'case-open',
+          recordHash: data.onchain.questionHash,
+          payload: {
+            type: 'case-open',
+            wallet: opened.petitioner,
+            amountUsdc: opened.budgetUsdc,
+            onchainCaseId: data.onchain.caseId,
+            metadataURI: opened.metadataURI,
+          },
+          createdAt: new Date(),
+        })
+        .onConflictDoNothing()
+    }
 
     return reply.status(202).send({
       status: 'queued',
@@ -575,19 +625,24 @@ async function verifyCaseFundingReceipt({
   txHash,
   wallet,
   onchainCaseId,
+  escrowAddress,
   expectedAmountUsdc,
 }: {
   txHash: `0x${string}`
   wallet: string
   onchainCaseId: string
+  escrowAddress: `0x${string}`
   expectedAmountUsdc?: string
 }) {
+  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
+    return { ok: false as const, error: 'funding escrow address does not match backend escrow configuration' }
+  }
   const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
   if (receipt.status !== 'success') return { ok: false as const, error: 'funding transaction did not succeed' }
 
   const logs = parseEventLogs({
     abi: caseEscrowFundingAbi,
-    logs: receipt.logs,
+    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
     eventName: 'CaseFunded',
   })
   const event = logs.find((log) => {
@@ -605,6 +660,54 @@ async function verifyCaseFundingReceipt({
   return {
     ok: true as const,
     amountUsdc: formatUnits(amount, usdcDecimals),
+  }
+}
+
+async function verifyCaseOpenedReceipt({
+  txHash,
+  chainId,
+  escrowAddress,
+  onchainCaseId,
+  budgetUsdc,
+  questionHash,
+  filer,
+}: {
+  txHash: `0x${string}`
+  chainId: string
+  escrowAddress: `0x${string}`
+  onchainCaseId: string
+  budgetUsdc: string
+  questionHash: `0x${string}`
+  filer?: `0x${string}`
+}) {
+  if (String(env.ARC_CHAIN_ID) !== chainId) return { ok: false as const, error: 'case opening chain does not match Arc chain configuration' }
+  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
+    return { ok: false as const, error: 'case opening escrow address does not match backend escrow configuration' }
+  }
+
+  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
+  if (receipt.status !== 'success') return { ok: false as const, error: 'case opening transaction did not succeed' }
+
+  const logs = parseEventLogs({
+    abi: caseEscrowFundingAbi,
+    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
+    eventName: 'CaseOpened',
+  })
+  const expectedBudget = parseUnits(budgetUsdc, usdcDecimals)
+  const event = logs.find((log) => {
+    const args = log.args
+    return args.caseId?.toString() === onchainCaseId
+      && args.budget === expectedBudget
+      && normalizeWallet(args.questionHash ?? '') === normalizeWallet(questionHash)
+      && (!filer || args.petitioner?.toLowerCase() === normalizeWallet(filer))
+  })
+  if (!event) return { ok: false as const, error: 'CaseOpened event was not found with the supplied case id, budget, question hash, and filer' }
+
+  return {
+    ok: true as const,
+    petitioner: normalizeWallet(event.args.petitioner),
+    budgetUsdc: formatUnits(event.args.budget, usdcDecimals),
+    metadataURI: event.args.metadataURI,
   }
 }
 
@@ -743,6 +846,28 @@ function caseFollowPurpose(caseId: string) {
 
 function normalizeWallet(value: string) {
   return value.toLowerCase()
+}
+
+function authorizeAdminRequest(headers: Record<string, string | string[] | undefined>) {
+  if (!env.HELIA_ADMIN_KEY) {
+    return {
+      ok: false as const,
+      status: 503,
+      error: 'admin settlement retry is disabled until HELIA_ADMIN_KEY is configured',
+    }
+  }
+
+  const header = headers['x-helia-admin-key']
+  const supplied = Array.isArray(header) ? header[0] : header
+  if (supplied !== env.HELIA_ADMIN_KEY) {
+    return {
+      ok: false as const,
+      status: 401,
+      error: 'invalid admin key',
+    }
+  }
+
+  return { ok: true as const }
 }
 
 function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
@@ -952,7 +1077,7 @@ async function getAddedFundingLedgerRows(publicJobs: Awaited<ReturnType<typeof l
 function formatProtocolFee(budgetUsdc: string) {
   const budget = Number(budgetUsdc)
   if (!Number.isFinite(budget)) return '0.00'
-  return (budget * 0.05).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+  return (budget * (env.PROTOCOL_FEE_BPS / 10_000)).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
 function formatReceiptType(type: string, agentId?: string) {

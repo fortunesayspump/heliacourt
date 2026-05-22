@@ -193,4 +193,5 @@ export const onchainReceipts = pgTable('onchain_receipts', {
 }, (table) => [
   index('onchain_receipts_case_idx').on(table.caseId),
   index('onchain_receipts_tx_idx').on(table.txHash),
+  uniqueIndex('onchain_receipts_tx_type_idx').on(table.txHash, table.receiptType),
 ])
