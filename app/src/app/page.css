@@ -4809,12 +4809,12 @@ select {
   }
 }
 
-/* Helia flat interface pass: content-first, blue-slate palette, quieter borders. */
+/* Helia flat interface pass: content-first, Polymarket dark base, Helia accents. */
 :root {
-  --ag-page: #171d27;
-  --ag-surface: #1e2633;
-  --ag-inner-surface: #253044;
-  --ag-inner-surface-strong: #2d394f;
+  --ag-page: #15191d;
+  --ag-surface: #222936;
+  --ag-inner-surface: #293242;
+  --ag-inner-surface-strong: #313c50;
   --ag-border: rgba(197, 215, 245, 0.15);
   --ag-border-strong: rgba(197, 215, 245, 0.28);
   --ag-ink: #fffaf2;
@@ -4823,8 +4823,8 @@ select {
   --ag-green: #476352;
   --ag-green-dark: #35493d;
   --ag-gold: #a79a67;
-  --ag-deep: #171d27;
-  --ag-deep-soft: #1e2633;
+  --ag-deep: #15191d;
+  --ag-deep-soft: #222936;
   --white: var(--ag-surface);
   --ivory: var(--ag-cream);
   --black: var(--ag-ink);
@@ -4856,15 +4856,13 @@ body,
 
 .app-topnav {
   min-height: 64px !important;
-  padding-inline: max(22px, calc((100% - 1180px) / 2)) !important;
   border-bottom: 1px solid var(--ag-border) !important;
-  background: rgba(23, 29, 39, 0.94) !important;
+  background: rgba(21, 25, 29, 0.94) !important;
   box-shadow: none !important;
   backdrop-filter: blur(14px);
 }
 
 .app-footer {
-  padding-inline: max(22px, calc((100% - 1180px) / 2)) !important;
   border-top: 1px solid var(--ag-border) !important;
   background: var(--ag-page) !important;
   box-shadow: none !important;
@@ -4908,8 +4906,8 @@ body,
 .workspace-header.page-title::before,
 .page-title::before {
   background:
-    linear-gradient(90deg, rgba(23, 29, 39, 0.86), rgba(23, 29, 39, 0.46) 52%, rgba(23, 29, 39, 0.8)),
-    linear-gradient(180deg, rgba(23, 29, 39, 0.24), rgba(23, 29, 39, 0.76)) !important;
+    linear-gradient(90deg, rgba(21, 25, 29, 0.86), rgba(21, 25, 29, 0.46) 52%, rgba(21, 25, 29, 0.8)),
+    linear-gradient(180deg, rgba(21, 25, 29, 0.24), rgba(21, 25, 29, 0.76)) !important;
 }
 
 .workspace-header.page-title::after,
@@ -5153,7 +5151,7 @@ select,
 @media (max-width: 760px) {
   .app-nav {
     border-color: var(--ag-border) !important;
-    background: rgba(23, 29, 39, 0.96) !important;
+    background: rgba(21, 25, 29, 0.96) !important;
     box-shadow: none !important;
   }
 
