@@ -4811,20 +4811,20 @@ select {
 
 /* Helia flat interface pass: content-first, warm palette, quieter borders. */
 :root {
-  --ag-page: #0d0c09;
-  --ag-surface: #14130f;
-  --ag-inner-surface: #211e17;
-  --ag-inner-surface-strong: #2c261c;
-  --ag-border: rgba(241, 211, 170, 0.14);
-  --ag-border-strong: rgba(241, 211, 170, 0.26);
+  --ag-page: #15130f;
+  --ag-surface: #1c1914;
+  --ag-inner-surface: #262218;
+  --ag-inner-surface-strong: #332d22;
+  --ag-border: rgba(241, 211, 170, 0.16);
+  --ag-border-strong: rgba(241, 211, 170, 0.3);
   --ag-ink: #fffaf2;
   --ag-muted: rgba(255, 250, 242, 0.72);
   --ag-cream: #f1d3aa;
   --ag-green: #476352;
   --ag-green-dark: #35493d;
   --ag-gold: #a79a67;
-  --ag-deep: #0d0c09;
-  --ag-deep-soft: #14130f;
+  --ag-deep: #15130f;
+  --ag-deep-soft: #1c1914;
   --white: var(--ag-surface);
   --ivory: var(--ag-cream);
   --black: var(--ag-ink);
@@ -4857,7 +4857,7 @@ body,
 .app-topnav {
   min-height: 64px !important;
   border-bottom: 1px solid var(--ag-border) !important;
-  background: rgba(13, 12, 9, 0.94) !important;
+  background: rgba(21, 19, 15, 0.94) !important;
   box-shadow: none !important;
   backdrop-filter: blur(14px);
 }
@@ -4887,7 +4887,9 @@ body,
 .page-title {
   border: 0 !important;
   background: transparent !important;
-  background-image: none !important;
+  background-image: var(--page-title-image) !important;
+  background-size: cover !important;
+  background-position: var(--page-title-position, center) !important;
   box-shadow: none !important;
   min-height: 220px !important;
   padding-block: 44px 30px !important;
@@ -4897,7 +4899,20 @@ body,
 .workspace-header.page-title .page-title-visual,
 .page-title .fade-image-layer,
 .page-title .page-title-visual {
-  display: none !important;
+  display: block !important;
+  opacity: 0.48 !important;
+}
+
+.workspace-header.page-title::before,
+.page-title::before {
+  background:
+    linear-gradient(90deg, rgba(21, 19, 15, 0.86), rgba(21, 19, 15, 0.46) 52%, rgba(21, 19, 15, 0.8)),
+    linear-gradient(180deg, rgba(21, 19, 15, 0.2), rgba(21, 19, 15, 0.72)) !important;
+}
+
+.workspace-header.page-title::after,
+.page-title::after {
+  background: linear-gradient(180deg, transparent, var(--ag-page)) !important;
 }
 
 .workspace-header.page-title h1,
@@ -5136,7 +5151,7 @@ select,
 @media (max-width: 760px) {
   .app-nav {
     border-color: var(--ag-border) !important;
-    background: rgba(13, 12, 9, 0.96) !important;
+    background: rgba(21, 19, 15, 0.96) !important;
     box-shadow: none !important;
   }
 
