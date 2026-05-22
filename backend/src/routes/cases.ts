@@ -835,6 +835,8 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
         agentId?: string
         wallet?: string
       }>
+      totalBudgetUsdc?: string
+      protocolFeeUsdc?: string
     }
   } | undefined
   const marketCase = result?.marketCase ?? job.marketCase
@@ -847,7 +849,7 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
       caseId: marketCase.id,
       title: marketCase.question,
       item: 'Case funding',
-      amount: `${marketCase.onchain.budgetUsdc} USDC`,
+      amount: `${result?.onchainSettlement?.totalBudgetUsdc ?? marketCase.onchain.budgetUsdc} USDC`,
       status: job.status === 'failed' ? 'Funded' : 'Opened',
       hash: marketCase.onchain.txHash,
       updated: job.updatedAt,
@@ -876,7 +878,7 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
       caseId: marketCase.id,
       title: marketCase.question,
       item: 'Protocol fee',
-      amount: `${formatProtocolFee(marketCase.onchain.budgetUsdc)} USDC`,
+      amount: `${result.onchainSettlement.protocolFeeUsdc ?? formatProtocolFee(marketCase.onchain.budgetUsdc)} USDC`,
       status: 'Recorded',
       hash: result.onchainSettlement.receipts?.find((receipt) => receipt.type === 'case-close')?.txHash,
       updated: job.updatedAt,

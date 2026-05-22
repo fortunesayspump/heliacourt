@@ -98,6 +98,8 @@ export type OnchainSettlementResult = {
   receipts: OnchainSettlementReceipt[]
   recordHash?: Hex
   verdictHash?: Hex
+  totalBudgetUsdc?: string
+  protocolFeeUsdc?: string
   totalPayoutUsdc?: string
   capped?: boolean
 }
@@ -134,6 +136,7 @@ export async function settleHearingOnchain(input: {
     functionName: 'cases',
     args: [caseId],
   })
+  const escrowBudget = escrowState[1]
   const alreadyPaidOut = escrowState[2]
   const escrowStatus = Number(escrowState[3])
   const fundingReceipt = await publicClient.getTransactionReceipt({ hash: onchainCase.txHash as Hex }).catch(() => undefined)
@@ -201,7 +204,7 @@ export async function settleHearingOnchain(input: {
     recordHash: verdictHash,
   })
 
-  const payoutPlan = buildPayoutPlan(input.artifacts, onchainCase.budgetUsdc, alreadyPaidOut)
+  const payoutPlan = buildPayoutPlan(input.artifacts, escrowBudget, alreadyPaidOut)
   for (const payout of payoutPlan.payouts) {
     const txHash = await writeAndWait(walletClient, publicClient, {
       address: env.CASE_ESCROW_ADDRESS as Address,
@@ -252,6 +255,8 @@ export async function settleHearingOnchain(input: {
     receipts: dedupeReceipts(receipts),
     recordHash,
     verdictHash,
+    totalBudgetUsdc: formatUsdc(escrowBudget),
+    protocolFeeUsdc: formatUsdc(payoutPlan.protocolFee),
     totalPayoutUsdc: formatUsdc(payoutPlan.totalPaid),
     capped: payoutPlan.capped,
   }
@@ -310,7 +315,7 @@ function dedupeReceipts(receipts: OnchainSettlementReceipt[]) {
   })
 }
 
-function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string, alreadyPaidOut = 0n) {
+function buildPayoutPlan(artifacts: CourtArtifact[], budget: bigint, alreadyPaidOut = 0n) {
   const agents = new Map(getAgentRegistryWithOnchainProfiles().map((agent) => [agent.id, agent]))
   const requested = new Map<string, bigint>()
 
@@ -320,10 +325,12 @@ function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string, already
     const wallet = agent?.onchain.payoutWallet
     if (!wallet) continue
 
-    requested.set(artifact.agentId, (requested.get(artifact.agentId) ?? 0n) + parseUsdc(artifact.costUsd))
+    const feeUsd = agent.priceUsd > 0 ? agent.priceUsd : artifact.costUsd
+    if (feeUsd <= 0) continue
+
+    requested.set(artifact.agentId, (requested.get(artifact.agentId) ?? 0n) + parseUsdc(feeUsd))
   }
 
-  const budget = parseUnits(budgetUsdc, 6)
   const protocolFee = (budget * BigInt(env.PROTOCOL_FEE_BPS)) / 10_000n
   const totalPayableBudget = budget > protocolFee ? budget - protocolFee : 0n
   const payableBudget = totalPayableBudget > alreadyPaidOut ? totalPayableBudget - alreadyPaidOut : 0n
@@ -348,6 +355,7 @@ function buildPayoutPlan(artifacts: CourtArtifact[], budgetUsdc: string, already
   return {
     payouts,
     totalPaid: alreadyPaidOut + payouts.reduce((total, payout) => total + payout.amount, 0n),
+    protocolFee,
     capped,
   }
 }
