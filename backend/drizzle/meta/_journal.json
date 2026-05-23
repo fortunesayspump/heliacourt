@@ -57,6 +57,13 @@
       "when": 1779660000000,
       "tag": "0008_add-x402-receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1779665400000,
+      "tag": "0009_add-telegram-alert-subscriptions",
+      "breakpoints": true
     }
   ]
 }
