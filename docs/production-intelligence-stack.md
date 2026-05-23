@@ -23,6 +23,7 @@ The app is now a hybrid DB/onchain system:
 - Case follows are wallet-owned records in `case_follows`, written through signed one-use challenges and surfaced in the profile watchlist.
 - Fresh hearings and private forks use the same onchain filing path as original cases, then store `parent_case_id` and `filing_kind` on the backend record.
 - Existing-case funding joins call `CaseEscrow.addFunding`, then the backend verifies the emitted `CaseFunded` event before writing a `backer` participant and `case-added-funding` receipt.
+- x402 paid API reads use Circle Gateway on Arc testnet. This is separate from case escrow: filing and join-funding spend normal wallet USDC, while x402 callers need Gateway balance for low-value bot/API reads.
 
 The remaining production gaps are deploying the upgraded escrow implementation and adding a stronger session layer if the app needs repeated authenticated reads without signing each action.
 
@@ -63,6 +64,10 @@ HELIA_HEARING_MAX_RETAINED_JOBS=100
 HELIA_HEARING_QUEUE_POLL_MS=2000
 REDIS_URL=redis://default:password@host:port
 HELIA_REDIS_PREFIX=helia-court
+HELIA_X402_RECEIVER_ADDRESS=0x...
+HELIA_X402_FACILITATOR_URL=https://gateway-api-testnet.circle.com
+HELIA_X402_PRICE_MICRO_USDC=10000
+HELIA_X402_SIGNING_SECRET=replace-with-a-long-random-secret
 ```
 
 Run migrations from the backend package after attaching Railway Postgres:

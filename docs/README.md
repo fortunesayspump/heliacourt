@@ -26,6 +26,7 @@ Implemented now:
 - Signed case follows/watchlist records. Followed cases are stored by wallet and shown on the profile page.
 - Funded fresh-hearing and private-fork filing. Forks open a new Arc escrow and store parent-case lineage in Postgres.
 - Existing-case funding joins. The upgraded CaseEscrow exposes `addFunding`, the frontend records wallet-funded top-ups, and the backend verifies the `CaseFunded` event before writing the backer/receipt row.
+- Circle Gateway x402 proof APIs. Public browsing stays free, app filing/funding uses normal wallet USDC, and agent-facing x402 reads use Gateway balance for tiny paid transcript, receipt, price, and proof calls.
 
 Still missing before the full product flow is complete:
 

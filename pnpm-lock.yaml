@@ -68,12 +68,21 @@ importers:
 
   backend:
     dependencies:
+      '@circle-fin/x402-batching':
+        specifier: ^3.0.4
+        version: 3.0.4(@x402/core@2.13.0)(@x402/evm@2.13.0(typescript@6.0.3))(viem@2.48.11(typescript@6.0.3)(zod@4.4.3))
       '@fastify/cors':
         specifier: ^11.2.0
         version: 11.2.0
       '@mozilla/readability':
         specifier: ^0.6.0
         version: 0.6.0
+      '@x402/core':
+        specifier: ^2.13.0
+        version: 2.13.0
+      '@x402/evm':
+        specifier: ^2.13.0
+        version: 2.13.0(typescript@6.0.3)
       cheerio:
         specifier: ^1.2.0
         version: 1.2.0
@@ -244,6 +253,17 @@ packages:
   '@bramus/specificity@2.4.2':
     resolution: {integrity: sha512-ctxtJ/eA+t+6q2++vj5j7FYX3nRu311q1wfYH3xjlLOsczhlhxAg2FWNUXhpGvAw3BWo1xBcvOV6/YLc2r5FJw==}
     hasBin: true
+
+  '@circle-fin/x402-batching@3.0.4':
+    resolution: {integrity: sha512-631ZdmNQiCdNRLCY3uNTiD8G+cK4wiIElk/iQESwcpziQfirBXPCR9At14Kqgeq6tyFF67wHrIZzSRhPWk7C6Q==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@x402/core': ^2.3.0
+      '@x402/evm': ^2.3.0
+      viem: ^2.0.0
+    peerDependenciesMeta:
+      '@x402/evm':
+        optional: true
 
   '@coinbase/cdp-sdk@1.49.2':
     resolution: {integrity: sha512-QojjrkLG2mgo5Lq2ybu+k8Rk1NtklKQrroPG/1VCvMM62kGnF59B5re4B3XySY4etrzu60oqCnPuLSRcwuhI1g==}
@@ -1763,6 +1783,12 @@ packages:
 
   '@walletconnect/window-metadata@1.0.1':
     resolution: {integrity: sha512-9koTqyGrM2cqFRW517BPY/iEtUDx2r1+Pwwu5m7sJ7ka79wi3EyqhqcICk/yDmv6jAS1rjKgTKXlEhanYjijcA==}
+
+  '@x402/core@2.13.0':
+    resolution: {integrity: sha512-wZjjYZ9UxXZh8O2uP/x0u4M4Dvuw5hHdN7uzEseoS4V9fkMewi+VAx9Wd98PdU9VegvG24+ES88fgFB4C5QVUw==}
+
+  '@x402/evm@2.13.0':
+    resolution: {integrity: sha512-EA1nXu5brkzWhpDX2OSKES30i/H6rNnqWSoEI/KXQ3OVz5vbW1bH8jd0tRHjx+w7kEkVl4Wr680Td0JCDCfocQ==}
 
   abitype@1.0.6:
     resolution: {integrity: sha512-MMSqYh4+C/aVqI2RQaWqbvI4Kxo5cQV40WQ4QFtDnNzCkqChm8MuENhElmynZlO0qUy/ObkEUaXtKqYnx1Kp3A==}
@@ -3496,6 +3522,13 @@ snapshots:
   '@bramus/specificity@2.4.2':
     dependencies:
       css-tree: 3.2.1
+
+  '@circle-fin/x402-batching@3.0.4(@x402/core@2.13.0)(@x402/evm@2.13.0(typescript@6.0.3))(viem@2.48.11(typescript@6.0.3)(zod@4.4.3))':
+    dependencies:
+      '@x402/core': 2.13.0
+      viem: 2.48.11(typescript@6.0.3)(zod@4.4.3)
+    optionalDependencies:
+      '@x402/evm': 2.13.0(typescript@6.0.3)
 
   '@coinbase/cdp-sdk@1.49.2(typescript@6.0.3)':
     dependencies:
@@ -5372,6 +5405,20 @@ snapshots:
       '@walletconnect/window-getters': 1.0.1
       tslib: 1.14.1
 
+  '@x402/core@2.13.0':
+    dependencies:
+      zod: 3.25.76
+
+  '@x402/evm@2.13.0(typescript@6.0.3)':
+    dependencies:
+      '@x402/core': 2.13.0
+      viem: 2.48.11(typescript@6.0.3)(zod@3.25.76)
+      zod: 3.25.76
+    transitivePeerDependencies:
+      - bufferutil
+      - typescript
+      - utf-8-validate
+
   abitype@1.0.6(typescript@6.0.3)(zod@3.25.76):
     optionalDependencies:
       typescript: 6.0.3
@@ -6944,8 +6991,7 @@ snapshots:
 
   zod@3.22.4: {}
 
-  zod@3.25.76:
-    optional: true
+  zod@3.25.76: {}
 
   zod@4.4.3: {}
 

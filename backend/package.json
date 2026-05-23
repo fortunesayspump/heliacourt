@@ -10,13 +10,17 @@
     "db:migrate": "drizzle-kit migrate",
     "agents:smoke": "tsx src/scripts/smoke-witnesses.ts",
     "agents:sync-onchain": "tsx src/scripts/sync-agent-registry-onchain.ts",
+    "agents:register-erc8004": "tsx src/scripts/register-erc8004-agent.ts",
     "onchain:approve-settlement-signer": "tsx src/scripts/approve-settlement-signer.ts",
     "hearing": "tsx src/scripts/run-hearing.ts",
     "start": "tsx src/server.ts"
   },
   "dependencies": {
+    "@circle-fin/x402-batching": "^3.0.4",
     "@fastify/cors": "^11.2.0",
     "@mozilla/readability": "^0.6.0",
+    "@x402/core": "^2.13.0",
+    "@x402/evm": "^2.13.0",
     "cheerio": "^1.2.0",
     "dotenv": "^17.2.3",
     "drizzle-orm": "^0.45.2",

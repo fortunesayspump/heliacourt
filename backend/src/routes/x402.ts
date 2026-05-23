@@ -1,4 +1,10 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { BatchFacilitatorClient } from '@circle-fin/x402-batching/server'
+import {
+  CIRCLE_BATCHING_NAME,
+  CIRCLE_BATCHING_VERSION,
+  GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS,
+} from '@circle-fin/x402-batching'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { listHearingJobs } from '../agents/hearing-jobs.js'
 import { env } from '../config/env.js'
@@ -6,7 +12,7 @@ import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
 
 const arcUsdcAddress = '0x3600000000000000000000000000000000000000'
 const gatewayWalletTestnet = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9'
-const maxTimeoutSeconds = 7 * 24 * 60 * 60 + 100
+const maxTimeoutSeconds = GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS
 
 type Challenge = {
   nonce: string
@@ -19,7 +25,21 @@ type PaidEvidence = {
   payer?: string
   txHash?: string
   amountMicroUsdc: number
+  network?: string
 }
+
+type X402PaymentRequirements = {
+  scheme: string
+  network: string
+  asset: string
+  amount: string
+  payTo: string
+  maxTimeoutSeconds: number
+  extra?: Record<string, unknown>
+}
+
+let paymentRequirementsCache: X402PaymentRequirements | undefined
+let paymentRequirementsCacheExpiresAt = 0
 
 export async function x402Routes(app: FastifyInstance) {
   app.get('/x402/status', async () => ({
@@ -37,10 +57,10 @@ export async function x402Routes(app: FastifyInstance) {
   }))
 
   app.get('/x402/price/:caseId', async (request, reply) => {
-    const paid = await requireX402Payment(request, reply)
-    if (!paid) return reply
     const job = await getPublicJob((request.params as { caseId: string }).caseId, reply)
     if (!job) return reply
+    const paid = await requireX402Payment(request, reply)
+    if (!paid) return reply
     const result = getResult(job)
     const verdict = findVerdict(result?.artifacts)
 
@@ -57,10 +77,10 @@ export async function x402Routes(app: FastifyInstance) {
   })
 
   app.get('/x402/transcript/:caseId', async (request, reply) => {
-    const paid = await requireX402Payment(request, reply)
-    if (!paid) return reply
     const job = await getPublicJob((request.params as { caseId: string }).caseId, reply)
     if (!job) return reply
+    const paid = await requireX402Payment(request, reply)
+    if (!paid) return reply
     const result = getResult(job)
 
     return {
@@ -71,10 +91,10 @@ export async function x402Routes(app: FastifyInstance) {
   })
 
   app.get('/x402/receipts/:caseId', async (request, reply) => {
-    const paid = await requireX402Payment(request, reply)
-    if (!paid) return reply
     const job = await getPublicJob((request.params as { caseId: string }).caseId, reply)
     if (!job) return reply
+    const paid = await requireX402Payment(request, reply)
+    if (!paid) return reply
     const result = getResult(job)
 
     return {
@@ -85,10 +105,10 @@ export async function x402Routes(app: FastifyInstance) {
   })
 
   app.get('/x402/proof/:caseId', async (request, reply) => {
-    const paid = await requireX402Payment(request, reply)
-    if (!paid) return reply
     const job = await getPublicJob((request.params as { caseId: string }).caseId, reply)
     if (!job) return reply
+    const paid = await requireX402Payment(request, reply)
+    if (!paid) return reply
     const result = getResult(job)
     const receipts = result?.onchainSettlement?.receipts ?? []
 
@@ -113,28 +133,36 @@ async function requireX402Payment(request: FastifyRequest, reply: FastifyReply):
     return undefined
   }
 
-  const paymentHeader = request.headers['x-payment']
+  const paymentHeader = getPaymentHeader(request)
   if (!paymentHeader || Array.isArray(paymentHeader)) {
-    sendChallenge(request, reply, receiver)
+    await sendChallenge(request, reply, receiver)
     return undefined
   }
 
   const challengeToken = request.headers['x-payment-challenge']
-  if (!challengeToken || Array.isArray(challengeToken)) {
-    sendChallenge(request, reply, receiver, 'x-payment-challenge header required')
-    return undefined
-  }
-
   const payment = parsePayment(paymentHeader)
-  const challenge = verifyChallenge(challengeToken, payment)
-  if (!payment || !challenge) {
-    sendChallenge(request, reply, receiver, 'payment challenge invalid or expired')
+  if (!payment) {
+    await sendChallenge(request, reply, receiver, 'payment payload could not be decoded')
     return undefined
   }
 
-  const amount = Number(payment.amount ?? payment.value ?? payment.payload?.value ?? 0)
+  const requirements = await getPaymentRequirements(receiver, payment.accepted?.network)
+  if (!requirements) {
+    reply.status(503).send({ error: 'x402 payment requirements are unavailable' })
+    return undefined
+  }
+
+  const hasChallenge = typeof challengeToken === 'string'
+  const challenge = hasChallenge ? verifyChallenge(challengeToken, payment) : undefined
+  const usesCircleAcceptedRequirements = isPaymentRequirements(payment.accepted)
+  if (!usesCircleAcceptedRequirements && !challenge) {
+    await sendChallenge(request, reply, receiver, 'payment challenge invalid or expired')
+    return undefined
+  }
+
+  const amount = Number(payment.accepted?.amount ?? payment.amount ?? payment.value ?? payment.payload?.value ?? 0)
   if (!Number.isFinite(amount) || amount < env.HELIA_X402_PRICE_MICRO_USDC) {
-    sendChallenge(request, reply, receiver, 'insufficient x402 payment amount')
+    await sendChallenge(request, reply, receiver, 'insufficient x402 payment amount')
     return undefined
   }
 
@@ -146,22 +174,32 @@ async function requireX402Payment(request: FastifyRequest, reply: FastifyReply):
     return undefined
   }
 
-  const settled = await settlePayment(payment, receiver)
+  const settled = await settlePayment(payment, requirements)
   if (!settled.ok) {
     reply.status(402).send({ error: settled.error })
     return undefined
   }
 
+  const paymentResponse = Buffer.from(JSON.stringify({
+    success: true,
+    transaction: settled.txHash,
+    network: requirements.network,
+    payer: settled.payer,
+  })).toString('base64')
+  reply.header('PAYMENT-RESPONSE', paymentResponse).header('payment-response', paymentResponse)
+
   return {
     payer: settled.payer,
     txHash: settled.txHash,
     amountMicroUsdc: amount,
+    network: requirements.network,
   }
 }
 
-function sendChallenge(request: FastifyRequest, reply: FastifyReply, receiver: `0x${string}`, detail?: string) {
+async function sendChallenge(request: FastifyRequest, reply: FastifyReply, receiver: `0x${string}`, detail?: string) {
   const resource = new URL(request.url, env.HELIA_PUBLIC_APP_URL).pathname
   const challenge = issueChallenge(resource)
+  const requirements = await getPaymentRequirements(receiver)
   const body = {
     x402Version: 2,
     resource: {
@@ -169,26 +207,12 @@ function sendChallenge(request: FastifyRequest, reply: FastifyReply, receiver: `
       description: 'Helia Court paid proof API',
       mimeType: 'application/json',
     },
-    accepts: [
-      {
-        scheme: 'exact',
-        network: `eip155:${env.ARC_CHAIN_ID}`,
-        asset: arcUsdcAddress,
-        amount: String(env.HELIA_X402_PRICE_MICRO_USDC),
-        maxTimeoutSeconds,
-        payTo: receiver,
-        nonce: challenge.nonce,
-        extra: {
-          name: 'GatewayWalletBatched',
-          version: '1',
-          verifyingContract: gatewayWalletTestnet,
-        },
-      },
-    ],
+    accepts: requirements ? [{ ...requirements, nonce: challenge.nonce }] : [],
   }
   const bodyJson = JSON.stringify(body)
   reply
     .status(402)
+    .header('PAYMENT-REQUIRED', Buffer.from(bodyJson).toString('base64'))
     .header('payment-required', Buffer.from(bodyJson).toString('base64'))
     .header('accept-payment', bodyJson)
     .header('x-payment-challenge', signChallenge(challenge))
@@ -232,44 +256,37 @@ function parsePayment(raw: string) {
   try {
     return JSON.parse(Buffer.from(raw, 'base64').toString('utf8')) as Record<string, any>
   } catch {
-    return undefined
+    try {
+      return JSON.parse(raw) as Record<string, any>
+    } catch {
+      return undefined
+    }
   }
 }
 
-async function settlePayment(payment: Record<string, any>, receiver: `0x${string}`): Promise<{ ok: true; payer?: string; txHash?: string } | { ok: false; error: string }> {
-  const response = await fetch(`${env.HELIA_X402_FACILITATOR_URL!.replace(/\/$/, '')}/v1/settle`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      scheme: 'exact',
-      network: `eip155:${env.ARC_CHAIN_ID}`,
-      payload: payment,
-      requirements: {
-        scheme: 'exact',
-        network: `eip155:${env.ARC_CHAIN_ID}`,
-        asset: arcUsdcAddress,
-        amount: String(env.HELIA_X402_PRICE_MICRO_USDC),
-        maxTimeoutSeconds,
-        payTo: receiver,
-        extra: {
-          name: 'GatewayWalletBatched',
-          version: '1',
-          verifyingContract: gatewayWalletTestnet,
-        },
-      },
-    }),
-  })
-  const payload = await response.json().catch(() => ({}))
-  if (!response.ok || payload.success === false) {
+async function settlePayment(payment: Record<string, any>, requirements: X402PaymentRequirements): Promise<{ ok: true; payer?: string; txHash?: string } | { ok: false; error: string }> {
+  try {
+    const facilitator = createFacilitatorClient()
+    const verify = await facilitator.verify(payment as any, requirements)
+    if (!verify.isValid) {
+      return { ok: false, error: verify.invalidReason ?? 'x402 payment verification failed' }
+    }
+
+    const settled = await facilitator.settle(payment as any, requirements)
+    if (!settled.success) {
+      return { ok: false, error: settled.errorReason ?? 'x402 payment settlement failed' }
+    }
+
+    return {
+      ok: true,
+      payer: settled.payer ?? verify.payer,
+      txHash: settled.transaction,
+    }
+  } catch (error) {
     return {
       ok: false,
-      error: payload.error ?? payload.reason ?? `x402 facilitator rejected payment: ${response.status}`,
+      error: error instanceof Error ? error.message : 'x402 facilitator settlement failed',
     }
-  }
-  return {
-    ok: true,
-    payer: payload.payer,
-    txHash: payload.tx_hash ?? payload.transactionHash ?? payload.transaction,
   }
 }
 
@@ -311,4 +328,67 @@ function getReceiverAddress(): `0x${string}` | undefined {
 
 function getSigningSecret() {
   return env.HELIA_X402_SIGNING_SECRET ?? 'helia-court-local-x402-signing-secret'
+}
+
+function getPaymentHeader(request: FastifyRequest) {
+  return request.headers['payment-signature'] ?? request.headers['x-payment']
+}
+
+async function getPaymentRequirements(receiver: `0x${string}`, requestedNetwork?: string): Promise<X402PaymentRequirements | undefined> {
+  const network = requestedNetwork ?? `eip155:${env.ARC_CHAIN_ID}`
+  if (paymentRequirementsCache && paymentRequirementsCache.network === network && paymentRequirementsCacheExpiresAt > Date.now()) {
+    return paymentRequirementsCache
+  }
+
+  let verifyingContract = gatewayWalletTestnet
+  if (env.HELIA_X402_FACILITATOR_URL) {
+    try {
+      const supported = await createFacilitatorClient().getSupported()
+      const kind = supported.kinds.find((item) => item.scheme === 'exact' && item.network === network && item.extra?.verifyingContract)
+      if (typeof kind?.extra?.verifyingContract === 'string') {
+        verifyingContract = kind.extra.verifyingContract
+      }
+    } catch {
+      verifyingContract = gatewayWalletTestnet
+    }
+  }
+
+  paymentRequirementsCache = {
+    scheme: 'exact',
+    network,
+    asset: arcUsdcAddress,
+    amount: String(env.HELIA_X402_PRICE_MICRO_USDC),
+    payTo: receiver,
+    maxTimeoutSeconds,
+    extra: {
+      name: CIRCLE_BATCHING_NAME,
+      version: CIRCLE_BATCHING_VERSION,
+      verifyingContract,
+    },
+  }
+  paymentRequirementsCacheExpiresAt = Date.now() + 5 * 60 * 1000
+  return paymentRequirementsCache
+}
+
+function createFacilitatorClient() {
+  return new BatchFacilitatorClient({
+    url: env.HELIA_X402_FACILITATOR_URL,
+    createAuthHeaders: env.CIRCLE_API_KEY ? async () => ({
+      verify: { authorization: `Bearer ${env.CIRCLE_API_KEY}` },
+      settle: { authorization: `Bearer ${env.CIRCLE_API_KEY}` },
+      supported: { authorization: `Bearer ${env.CIRCLE_API_KEY}` },
+    }) : undefined,
+  })
+}
+
+function isPaymentRequirements(value: unknown): value is X402PaymentRequirements {
+  if (!value || typeof value !== 'object') return false
+  const record = value as Record<string, unknown>
+  return (
+    record.scheme === 'exact'
+    && typeof record.network === 'string'
+    && typeof record.asset === 'string'
+    && typeof record.amount === 'string'
+    && typeof record.payTo === 'string'
+  )
 }
