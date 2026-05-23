@@ -17,6 +17,7 @@ const scraperUserAgent = process.env.HELIA_SCRAPER_USER_AGENT
   ?? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
 const firecrawlApiUrl = process.env.FIRECRAWL_API_URL ?? 'https://api.firecrawl.dev/v1/scrape'
 const localChromeExecutable = process.env.HELIA_CHROME_EXECUTABLE_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+const xPublicBearerToken = process.env.HELIA_X_PUBLIC_BEARER_TOKEN
 
 type ExtractionMode = 'public-endpoint' | 'static-readability' | 'static-cheerio' | 'browser-render' | 'firecrawl'
 
@@ -328,7 +329,8 @@ async function extractInstagramProfileEndpoint(originalUrl: string, handle: stri
 }
 
 async function extractXProfileEndpoint(originalUrl: string, handle: string): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
-  const bearer = '***REMOVED***'
+  const bearer = xPublicBearerToken
+  if (!bearer) return { ok: false, error: `${originalUrl}: HELIA_X_PUBLIC_BEARER_TOKEN is not configured.` }
   const queryId = process.env.HELIA_X_USER_BY_SCREEN_NAME_QUERY_ID ?? 'IGgvgiOx4QZndDHuD3x9TQ'
   const guestToken = await activateXGuestTokenForScraper(bearer)
   const endpoint = new URL(`https://x.com/i/api/graphql/${queryId}/UserByScreenName`)

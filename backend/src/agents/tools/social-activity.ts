@@ -2,6 +2,8 @@ import type { MarketCase, ToolEvidence } from '../../court/types'
 import { getNewsEvidence } from './news'
 import { getCaseSearchQuery } from './text'
 
+const xPublicBearerToken = process.env.HELIA_X_PUBLIC_BEARER_TOKEN
+
 type SocialWindow = {
   start?: string
   end?: string
@@ -513,7 +515,8 @@ async function getPublicProfileEvidence(targets: SocialTarget[], metric: SocialM
 }
 
 async function getXPublicWebProfile(handle: string) {
-  const bearer = '***REMOVED***'
+  const bearer = xPublicBearerToken
+  if (!bearer) throw new Error('HELIA_X_PUBLIC_BEARER_TOKEN is not configured')
   const queryId = process.env.HELIA_X_USER_BY_SCREEN_NAME_QUERY_ID ?? 'IGgvgiOx4QZndDHuD3x9TQ'
   const guestPayload = await activateXGuestToken(bearer)
 

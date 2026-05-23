@@ -20,7 +20,7 @@ forge fmt
 
 ## Arc Testnet Deploy
 
-Set `contracts/.env` from `.env.example`, then run:
+Create `contracts/.env` locally with the Arc RPC URL and deployer key, then run:
 
 ```bash
 source .env
