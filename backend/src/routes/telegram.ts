@@ -6,12 +6,12 @@ import { z } from 'zod'
 import { listHearingJobs } from '../agents/hearing-jobs.js'
 import { env } from '../config/env.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, telegramAccounts, telegramLinkRequests, users } from '../db/schema.js'
+import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, telegramAccounts, telegramAlertSubscriptions, telegramLinkRequests, users } from '../db/schema.js'
 import { buildTelegramBotReply } from '../integrations/telegram.js'
 
 type TelegramUpdate = {
   message?: {
-    chat?: { id?: number | string }
+    chat?: { id?: number | string; type?: string; title?: string; username?: string; first_name?: string }
     from?: { id?: number | string; username?: string; first_name?: string }
     text?: string
   }
@@ -41,9 +41,10 @@ export async function telegramRoutes(app: FastifyInstance) {
     }
 
     const update = request.body as TelegramUpdate
-    const chatId = update.message?.chat?.id
-    const from = update.message?.from
-    const text = update.message?.text
+    const message = update.message
+    const chatId = message?.chat?.id
+    const from = message?.from
+    const text = message?.text
 
     if (!chatId || !text) return { ok: true }
 
@@ -51,6 +52,8 @@ export async function telegramRoutes(app: FastifyInstance) {
     const responseText = await buildTelegramReply({
       text,
       chatId: String(chatId),
+      chatType: message?.chat?.type,
+      chatTitle: message?.chat?.title ?? message?.chat?.username ?? message?.chat?.first_name,
       telegramUserId: from?.id ? String(from.id) : String(chatId),
       username: from?.username,
       firstName: from?.first_name,
@@ -167,6 +170,9 @@ export async function telegramRoutes(app: FastifyInstance) {
       { command: 'account', description: 'Linked wallet account summary' },
       { command: 'mycases', description: 'Cases tied to your linked wallet' },
       { command: 'notifications', description: 'Wallet account notifications' },
+      { command: 'subscribe', description: 'Receive case alerts in this chat' },
+      { command: 'unsubscribe', description: 'Stop case alerts in this chat' },
+      { command: 'alerts', description: 'Check alert subscription status' },
       { command: 'disconnect', description: 'Unlink Telegram from your wallet' },
     ],
   }))
@@ -175,6 +181,8 @@ export async function telegramRoutes(app: FastifyInstance) {
 async function buildTelegramReply({
   text,
   chatId,
+  chatType,
+  chatTitle,
   telegramUserId,
   username,
   firstName,
@@ -182,6 +190,8 @@ async function buildTelegramReply({
 }: {
   text: string
   chatId: string
+  chatType?: string
+  chatTitle?: string
   telegramUserId: string
   username?: string
   firstName?: string
@@ -200,6 +210,25 @@ async function buildTelegramReply({
       '',
       'Open it, connect your wallet, and sign the message. No transaction or gas is required.',
     ].join('\n')
+  }
+
+  if (name === '/subscribe' || name === '/alerts_on') {
+    if (!isDatabaseConfigured) return 'Alert subscriptions are unavailable while the database is not configured.'
+    await subscribeChatToAlerts({ chatId, chatType, chatTitle, telegramUserId })
+    return 'This chat is subscribed to Helia Court alerts. Send /unsubscribe to stop them.'
+  }
+
+  if (name === '/unsubscribe' || name === '/alerts_off') {
+    if (!isDatabaseConfigured) return 'Alert subscriptions are unavailable while the database is not configured.'
+    await db!.delete(telegramAlertSubscriptions).where(eq(telegramAlertSubscriptions.chatId, chatId))
+    return 'This chat has been unsubscribed from Helia Court alerts. Send /subscribe to turn them back on.'
+  }
+
+  if (name === '/alerts') {
+    const subscribed = await isChatSubscribedToAlerts(chatId)
+    return subscribed
+      ? 'This chat is subscribed to Helia Court alerts. Send /unsubscribe to stop them.'
+      : 'This chat is not subscribed to Helia Court alerts. Send /subscribe to opt in.'
   }
 
   if (name === '/account' || name === '/me') {
@@ -286,6 +315,49 @@ async function createTelegramLinkRequest({
       createdAt: now,
     })
   return token
+}
+
+async function subscribeChatToAlerts({
+  chatId,
+  chatType,
+  chatTitle,
+  telegramUserId,
+}: {
+  chatId: string
+  chatType?: string
+  chatTitle?: string
+  telegramUserId: string
+}) {
+  const now = new Date()
+  await db!
+    .insert(telegramAlertSubscriptions)
+    .values({
+      chatId,
+      chatType,
+      title: chatTitle,
+      subscribedByTelegramUserId: telegramUserId,
+      createdAt: now,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: telegramAlertSubscriptions.chatId,
+      set: {
+        chatType,
+        title: chatTitle,
+        subscribedByTelegramUserId: telegramUserId,
+        updatedAt: now,
+      },
+    })
+}
+
+async function isChatSubscribedToAlerts(chatId: string) {
+  if (!isDatabaseConfigured) return false
+  const [subscription] = await db!
+    .select({ chatId: telegramAlertSubscriptions.chatId })
+    .from(telegramAlertSubscriptions)
+    .where(eq(telegramAlertSubscriptions.chatId, chatId))
+    .limit(1)
+  return Boolean(subscription)
 }
 
 async function getActiveLinkRequest(token: string) {

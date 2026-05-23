@@ -95,6 +95,15 @@ export const telegramAccounts = pgTable('telegram_accounts', {
   index('telegram_accounts_wallet_idx').on(table.wallet),
 ])
 
+export const telegramAlertSubscriptions = pgTable('telegram_alert_subscriptions', {
+  chatId: text('chat_id').primaryKey(),
+  chatType: text('chat_type'),
+  title: text('title'),
+  subscribedByTelegramUserId: text('subscribed_by_telegram_user_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+})
+
 export const hearingJobs = pgTable('hearing_jobs', {
   id: text('id').primaryKey(),
   caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),

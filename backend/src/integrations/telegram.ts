@@ -1,6 +1,8 @@
 import { env } from '../config/env.js'
 import type { HearingJob } from '../agents/hearing-jobs.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
+import { db, isDatabaseConfigured } from '../db/client.js'
+import { telegramAlertSubscriptions } from '../db/schema.js'
 
 type TelegramAlert = {
   title: string
@@ -11,7 +13,7 @@ type TelegramAlert = {
 const telegramApiBase = 'https://api.telegram.org'
 
 export async function sendTelegramAlert(alert: TelegramAlert) {
-  const chatIds = getTelegramChatIds()
+  const chatIds = await getTelegramChatIds()
   if (!env.TELEGRAM_BOT_TOKEN || !chatIds.length) return { sent: 0, skipped: true }
 
   const text = [
@@ -96,11 +98,22 @@ async function sendTelegramMessage(chatId: string, text: string) {
   }
 }
 
-function getTelegramChatIds() {
-  return (env.TELEGRAM_ALERT_CHAT_IDS ?? '')
+async function getTelegramChatIds() {
+  const configuredChatIds = (env.TELEGRAM_ALERT_CHAT_IDS ?? '')
     .split(',')
     .map((item) => item.trim())
     .filter(Boolean)
+
+  if (!isDatabaseConfigured) return configuredChatIds
+
+  const subscriptions = await db!
+    .select({ chatId: telegramAlertSubscriptions.chatId })
+    .from(telegramAlertSubscriptions)
+
+  return Array.from(new Set([
+    ...configuredChatIds,
+    ...subscriptions.map((item) => item.chatId),
+  ]))
 }
 
 function shortHash(value: string) {
@@ -120,6 +133,9 @@ export function buildTelegramBotReply(text: string, jobs: HearingJob[]) {
       '/transcript <id> - latest transcript turns',
       '/receipts <id> - Arc receipt summary',
       '/file <market-url> - prepare a filing link',
+      '/subscribe - receive case alerts in this chat',
+      '/unsubscribe - stop case alerts in this chat',
+      '/connect - link Telegram to your wallet',
     ].join('\n')
   }
 
