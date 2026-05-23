@@ -1044,8 +1044,22 @@ button {
 
 .live-court-feed-panel {
   display: grid;
-  gap: 14px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
   margin-top: 24px;
+  padding: 9px 10px;
+  border: 1px solid var(--surface-row-border);
+  border-radius: var(--surface-radius-inner);
+  background: var(--surface-inner);
+}
+
+.live-court-feed-label {
+  color: var(--ag-green);
+  font-size: 11px;
+  font-weight: 820;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .live-court-feed {
@@ -1057,8 +1071,8 @@ button {
 .live-court-feed-track {
   display: flex;
   width: max-content;
-  gap: 10px;
-  animation: live-feed-scroll 34s linear infinite;
+  gap: 24px;
+  animation: live-feed-scroll 42s linear infinite;
 }
 
 .live-court-feed:hover .live-court-feed-track {
@@ -1066,66 +1080,41 @@ button {
 }
 
 .live-court-feed-row {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  flex: 0 0 clamp(270px, 28vw, 350px);
-  gap: 10px;
+  display: inline-grid;
+  grid-template-columns: auto auto minmax(150px, max-content) auto;
+  flex: 0 0 auto;
+  gap: 8px;
   align-items: center;
-  min-height: 72px;
-  padding: 10px;
-  border: 1px solid var(--surface-row-border);
-  border-radius: var(--surface-radius-inner);
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
   color: var(--ag-ink);
-  background: var(--surface-inner);
+  background: transparent;
   text-decoration: none;
-  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  transition: color 160ms ease, transform 160ms ease;
   animation: surface-row-enter 420ms var(--ease-out) both;
 }
 
 .live-court-feed-row:hover {
-  border-color: rgba(241, 211, 170, 0.34);
-  background: var(--ag-inner-surface-strong);
+  color: var(--ag-green);
   transform: translateY(-1px);
 }
 
 .live-feed-mark {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(241, 211, 170, 0.14);
-  border-radius: var(--radius-sm);
-  color: var(--ag-on-dark);
-  background: var(--ag-green);
-  font-family: var(--font-title);
-  font-size: 13px;
+  display: inline-block;
+  color: var(--ag-green);
+  font-size: 11px;
   font-weight: 780;
   text-transform: uppercase;
 }
 
-.live-feed-mark.hearing {
-  background: #476352;
-}
-
-.live-feed-mark.queued {
-  background: #6f6040;
-}
-
-.live-feed-mark.sealed,
-.live-feed-mark.anchored {
-  background: #7d5f33;
-}
-
-.live-feed-mark.recorded {
-  background: #3d5648;
-}
-
-.live-court-feed-row span:nth-child(2) {
+.live-court-feed-row > span:nth-child(3) {
   min-width: 0;
 }
 
 .live-court-feed-row strong,
-.live-court-feed-row small {
+.live-court-feed-row > span:nth-child(3) {
   display: block;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1134,11 +1123,11 @@ button {
 
 .live-court-feed-row strong {
   color: var(--ag-ink);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 760;
 }
 
-.live-court-feed-row small,
+.live-court-feed-row > span:nth-child(3),
 .live-court-feed-row time {
   color: var(--ag-muted);
   font-size: 12px;
@@ -1147,6 +1136,92 @@ button {
 .live-court-feed-row time {
   justify-self: end;
   font-weight: 760;
+}
+
+.metrics-grid .metric {
+  position: relative;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(34px, 1fr);
+  gap: 10px 12px !important;
+  overflow: hidden;
+}
+
+.metrics-grid .metric > svg:not(.metric-sparkline) {
+  grid-row: 1;
+  align-self: start;
+}
+
+.metric-mini-bars {
+  grid-column: 1 / -1;
+  display: flex !important;
+  align-items: end;
+  gap: 5px;
+  height: 34px;
+  margin-top: 4px;
+}
+
+.metric-mini-bars i {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 20px;
+  height: var(--bar-height);
+  border-radius: 999px 999px 3px 3px;
+  background: linear-gradient(180deg, rgba(78, 119, 83, 0.92), rgba(154, 147, 80, 0.72));
+  transform-origin: bottom;
+  animation: metric-bar-rise 680ms var(--ease-out) both;
+}
+
+.metric-mini-bars i:nth-child(2) {
+  animation-delay: 70ms;
+}
+
+.metric-mini-bars i:nth-child(3) {
+  animation-delay: 140ms;
+}
+
+.metric-mini-bars i:nth-child(4) {
+  animation-delay: 210ms;
+}
+
+.metric-sparkline {
+  grid-column: 1 / -1;
+  display: block;
+  width: 100%;
+  height: 34px;
+  margin-top: 4px;
+  overflow: visible;
+}
+
+.metric-sparkline polyline {
+  fill: none;
+  stroke: var(--ag-green);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  stroke-dasharray: 180;
+  stroke-dashoffset: 180;
+  animation: metric-line-draw 900ms var(--ease-out) forwards;
+}
+
+@keyframes metric-bar-rise {
+  from {
+    opacity: 0.38;
+    transform: scaleY(0.22);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+@keyframes metric-line-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 
 @keyframes live-feed-scroll {

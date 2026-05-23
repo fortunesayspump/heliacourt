@@ -9,7 +9,7 @@ import {
   UserCircleCheck,
   Stamp,
 } from '@phosphor-icons/react/ssr'
-import { Suspense } from 'react'
+import { Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { AppHeader } from './components/AppHeader'
 import { AppFooter } from './components/AppFooter'
@@ -81,6 +81,7 @@ async function DashboardData() {
   const activeCases = backendCases.filter((item) => item.status !== 'Verdict')
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
   const liveFeed = buildLiveFeed(backendCases, ledgerRows).slice(0, 8)
+  const graphStats = buildDashboardGraphs(backendCases, ledgerRows)
   const benchAgents = registryAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
 
@@ -93,6 +94,7 @@ async function DashboardData() {
                 <span>Live cases</span>
                 <strong>{activeCases.length} active</strong>
               </div>
+              <MiniBars values={graphStats.statusBars} />
             </div>
             <div className="metric">
               <Timer size={19} />
@@ -100,6 +102,7 @@ async function DashboardData() {
                 <span>Case records</span>
                 <strong>{backendCases.length} cases</strong>
               </div>
+              <MiniSparkline values={graphStats.caseCadence} />
             </div>
             <div className="metric">
               <CurrencyDollar size={19} />
@@ -107,6 +110,7 @@ async function DashboardData() {
                 <span>Ledger rows</span>
                 <strong>{ledgerRows.length} rows</strong>
               </div>
+              <MiniBars values={graphStats.receiptBars} />
             </div>
             <div className="metric">
               <Eye size={19} />
@@ -114,36 +118,26 @@ async function DashboardData() {
                 <span>Public verdicts</span>
                 <strong>{backendCases.filter((item) => item.status === 'Verdict').length} sealed</strong>
               </div>
+              <MiniSparkline values={graphStats.verdictCadence} />
             </div>
         </section>
 
-        <section className="panel live-court-feed-panel" aria-label="Live court activity">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Live court feed</p>
-              <h2>Latest filings, hearings, and receipts</h2>
-            </div>
-            <Stamp size={19} />
-          </div>
+        <section className="live-court-feed-panel" aria-label="Live court activity">
+          <span className="live-court-feed-label">Live court feed</span>
           <div className="live-court-feed">
             {liveFeed.length ? (
               <div className="live-court-feed-track">
                 {[...liveFeed, ...liveFeed].map((item, index) => (
                   <Link className="live-court-feed-row" href={item.href} key={`${item.id}-${index}`}>
-                    <span className={`live-feed-mark ${item.tone}`}>{item.kind.slice(0, 1)}</span>
-                    <span>
-                      <strong>{item.label}</strong>
-                      <small>{item.title}</small>
-                    </span>
+                    <span className={`live-feed-mark ${item.tone}`}>{item.kind}</span>
+                    <strong>{item.label}</strong>
+                    <span>{item.title}</span>
                     <time>{formatRelativeTime(item.timestamp)}</time>
                   </Link>
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
-                <strong>No activity yet</strong>
-                <p>Case filings and receipts will appear here.</p>
-              </div>
+              <div className="live-court-feed-empty">No activity yet</div>
             )}
           </div>
         </section>
@@ -297,23 +291,15 @@ function DashboardDataSkeleton() {
           </div>
         ))}
       </section>
-      <section className="panel live-court-feed-panel skeleton-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="eyebrow">Live court feed</p>
-            <h2>Latest filings, hearings, and receipts</h2>
-          </div>
-          <Stamp size={19} />
-        </div>
+      <section className="live-court-feed-panel">
+        <span className="live-court-feed-label">Live court feed</span>
         <div className="live-court-feed">
           <div className="live-court-feed-track">
           {Array.from({ length: 4 }).map((_, index) => (
             <article className="live-court-feed-row" key={index}>
-              <span className="skeleton skeleton-icon small" />
-              <span>
-                <strong className="skeleton skeleton-line short" />
-                <small className="skeleton skeleton-line title" />
-              </span>
+              <span className="skeleton skeleton-line tiny" />
+              <strong className="skeleton skeleton-line short" />
+              <span className="skeleton skeleton-line title" />
               <time className="skeleton skeleton-line tiny" />
             </article>
           ))}
@@ -425,6 +411,72 @@ function formatReceiptType(value?: string) {
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+function MiniBars({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  return (
+    <span className="metric-mini-bars" aria-hidden="true">
+      {values.map((value, index) => (
+        <i key={index} style={{ '--bar-height': `${Math.max(14, Math.round((value / max) * 100))}%` } as CSSProperties} />
+      ))}
+    </span>
+  )
+}
+
+function MiniSparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  const points = values.length > 1
+    ? values.map((value, index) => {
+        const x = (index / (values.length - 1)) * 100
+        const y = 100 - ((value / max) * 78 + 11)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    : '0,89 100,89'
+
+  return (
+    <svg className="metric-sparkline" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
+function buildDashboardGraphs(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
+  const statusBars = [
+    cases.filter((item) => item.status === 'Queued').length,
+    cases.filter((item) => item.status === 'Hearing').length,
+    cases.filter((item) => item.status === 'Verdict').length,
+  ]
+  const receiptBars = [
+    ledgerRows.filter((item) => item.receiptType?.includes('funding')).length,
+    ledgerRows.filter((item) => item.receiptType?.includes('payout')).length,
+    ledgerRows.filter((item) => item.receiptType?.includes('fee')).length,
+    ledgerRows.filter((item) => item.receiptType?.includes('verdict') || item.receiptType?.includes('record')).length,
+  ]
+
+  return {
+    statusBars,
+    receiptBars,
+    caseCadence: countByRecentDay(cases.map((item) => item.createdAt ?? item.updated)),
+    verdictCadence: countByRecentDay(cases.filter((item) => item.status === 'Verdict').map((item) => item.updated ?? item.createdAt)),
+  }
+}
+
+function countByRecentDay(values: Array<string | undefined>) {
+  const counts = Array.from({ length: 7 }, () => 0)
+  const today = startOfDay(Date.now())
+  for (const value of values) {
+    if (!value) continue
+    const age = Math.floor((today - startOfDay(Date.parse(value))) / 86_400_000)
+    if (age >= 0 && age < counts.length) counts[counts.length - 1 - age] += 1
+  }
+  return counts
+}
+
+function startOfDay(value: number) {
+  const date = new Date(value)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime()
 }
 
 function buildLiveFeed(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
