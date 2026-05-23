@@ -1,4 +1,5 @@
 import { resolveMarketImageUrl } from './market-images'
+import { getAgentAvatarUrl } from './agent-images'
 
 export type ApiCase = {
   id: string
@@ -58,6 +59,7 @@ export type ApiAgent = {
   name: string
   seat: string
   description: string
+  avatarUrl?: string
   mode: string
   runMode: string
   priceUsd: number
@@ -1022,8 +1024,9 @@ export async function getBackendAgents(): Promise<ApiAgent[]> {
     const response = await fetchBackend('/agents/registry', { ttlMs: 10_000 })
     if (!response.ok) return getPreviewAgents()
     const payload = await response.json() as { agents?: ApiAgent[] }
+    const agents = Array.isArray(payload.agents) && payload.agents.length ? payload.agents : getPreviewAgents()
 
-    return Array.isArray(payload.agents) && payload.agents.length ? payload.agents : getPreviewAgents()
+    return agents.map(hydrateAgentAvatar)
   } catch {
     return getPreviewAgents()
   }
@@ -1089,7 +1092,11 @@ function getPreviewCases() {
 }
 
 function getPreviewAgents() {
-  return usePreviewData ? previewAgents : []
+  return usePreviewData ? previewAgents.map(hydrateAgentAvatar) : []
+}
+
+function hydrateAgentAvatar(agent: ApiAgent): ApiAgent {
+  return agent.avatarUrl ? agent : { ...agent, avatarUrl: getAgentAvatarUrl(agent.id, agent.name) }
 }
 
 function getPreviewLedgerRows() {

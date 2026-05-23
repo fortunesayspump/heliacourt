@@ -2,7 +2,7 @@
 
 import { Briefcase, Clock, MagnifyingGlass, Stamp, X } from '@phosphor-icons/react'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ApiCase } from '../../lib/backend-data'
 import { getPredictionMarketLink, MarketLogo } from './MarketLogo'
 
@@ -85,11 +85,30 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
 function CaseSearchCard({ caseItem, initialNow }: { caseItem: ApiCase; initialNow: number }) {
   const marketLink = getPredictionMarketLink(caseItem.links)
   const budget = caseItem.onchain?.budgetUsdc ? `${caseItem.onchain.budgetUsdc} USDC` : 'Not funded'
+  const [resolvedImage, setResolvedImage] = useState(caseItem.imageUrl)
+
+  useEffect(() => {
+    setResolvedImage(caseItem.imageUrl)
+    if (caseItem.imageUrl || !marketLink) return undefined
+
+    let cancelled = false
+    const params = new URLSearchParams({ url: marketLink, title: caseItem.title })
+    fetch(`/api/market-image?${params.toString()}`, { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() as Promise<{ image?: string }> : undefined)
+      .then((payload) => {
+        if (!cancelled && payload?.image) setResolvedImage(payload.image)
+      })
+      .catch(() => undefined)
+
+    return () => {
+      cancelled = true
+    }
+  }, [caseItem.imageUrl, caseItem.title, marketLink])
 
   return (
     <article className="docket-case-card">
       <div className="docket-case-card-banner">
-        {caseItem.imageUrl ? <img alt="" src={caseItem.imageUrl} /> : null}
+        {resolvedImage ? <img alt="" src={resolvedImage} /> : null}
         <div>
           <span>{caseItem.status}</span>
         </div>

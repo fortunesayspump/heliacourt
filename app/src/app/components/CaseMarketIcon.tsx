@@ -20,7 +20,8 @@ export function CaseMarketIcon({
     if (!url) return
     let cancelled = false
 
-    fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+    const params = new URLSearchParams({ url, title })
+    fetch(`/api/link-preview?${params.toString()}`)
       .then((response) => response.ok ? response.json() as Promise<Preview> : undefined)
       .then((preview) => {
         if (!cancelled) setImage(preview?.image)

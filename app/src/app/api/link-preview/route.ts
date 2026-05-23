@@ -4,7 +4,8 @@ import { resolveMarketPreview } from '../../../lib/market-images'
 export const dynamic = 'force-dynamic'
 
 export async function GET(request: Request) {
-  const rawUrl = new URL(request.url).searchParams.get('url')
+  const params = new URL(request.url).searchParams
+  const rawUrl = params.get('url')
   if (!rawUrl) return NextResponse.json({ error: 'url is required' }, { status: 400 })
 
   let target: URL
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const marketPreview = await resolveMarketPreview([target.toString()])
+    const marketPreview = await resolveMarketPreview([target.toString()], params.get('title') ?? undefined)
     if (marketPreview?.image || marketPreview?.title) {
       return NextResponse.json({
         url: target.toString(),

@@ -96,6 +96,37 @@
   pointer-events: none;
 }
 
+.docket-case-card.skeleton-card,
+.docket-case-card.skeleton-card:hover {
+  transform: none;
+  border-color: rgba(241, 211, 170, 0.12);
+  background: var(--ag-inner-surface) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.docket-case-card.skeleton-card .docket-case-card-banner {
+  border-color: rgba(241, 211, 170, 0.1);
+  background: rgba(241, 211, 170, 0.05) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+.docket-case-card.skeleton-card .docket-case-card-banner::before,
+.docket-case-card.skeleton-card .docket-case-card-banner::after {
+  display: none !important;
+  content: none !important;
+}
+
+.docket-case-card.skeleton-card .docket-case-card-banner > div,
+.docket-case-card.skeleton-card .docket-case-card-banner > strong {
+  border: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
 .docket-case-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
@@ -142,8 +173,8 @@
   border: 1px solid rgba(241, 211, 170, 0.16);
   border-radius: var(--radius-md);
   background:
-    radial-gradient(circle at 18% 28%, rgba(241, 211, 170, 0.3), transparent 24%),
-    radial-gradient(circle at 82% 18%, rgba(92, 165, 128, 0.28), transparent 28%),
+    linear-gradient(145deg, rgba(241, 211, 170, 0.12), transparent 36%),
+    linear-gradient(315deg, rgba(92, 165, 128, 0.16), transparent 44%),
     linear-gradient(135deg, rgba(71, 99, 82, 0.52), rgba(20, 19, 15, 0.92)),
     var(--ag-inner-surface-strong);
 }
@@ -165,19 +196,6 @@
   background:
     linear-gradient(180deg, rgba(13, 12, 9, 0.18), rgba(13, 12, 9, 0.54)),
     linear-gradient(90deg, rgba(13, 12, 9, 0.42), transparent 58%);
-}
-
-.docket-case-card-banner::after {
-  position: absolute;
-  right: -24px;
-  bottom: -32px;
-  width: 142px;
-  height: 142px;
-  border: 1px solid rgba(241, 211, 170, 0.18);
-  border-radius: 50%;
-  pointer-events: none;
-  content: "";
-  background: rgba(255, 250, 242, 0.035);
 }
 
 .docket-case-card-banner > div,

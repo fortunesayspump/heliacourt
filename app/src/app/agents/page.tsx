@@ -66,7 +66,9 @@ async function AgentsData() {
               <Link className="registry-row" href={`/agents/${agent.id}`} key={agent.id} role="row">
                 <span className="registry-rank">{String(index + 1).padStart(2, '0')}</span>
                 <div className="registry-agent">
-                  <span className="registry-avatar" aria-hidden="true">{agent.name.slice(0, 1)}</span>
+                  <span className="registry-avatar" aria-hidden="true">
+                    {agent.avatarUrl ? <img alt="" src={agent.avatarUrl} /> : agent.name.slice(0, 1)}
+                  </span>
                   <div>
                     <h3>{agent.name}</h3>
                     <p>{agent.description}</p>

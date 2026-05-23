@@ -22,7 +22,6 @@ import './page.css'
 
 const dashboardTitleImages = [
   { src: '/assets/ancient-athenian-juries.jpg', position: 'center 29%' },
-  { src: '/assets/Artist-impression-of-a-meeting-of-the-Athenian-Assembly-on-the-Pnyx.png', position: 'center 42%' },
   { src: '/assets/Tashko-Athenian-Democracy-169-e1746471436925.png', position: 'center 36%' },
   { src: '/assets/athenian-women-attack-a-messenger-12726.jpg', position: 'center 34%' },
   { src: '/assets/socrates-address-louis-joseph-lebrun-1867-credit-public-domain-wikimedia-commons.jpeg', position: 'center 30%' },
@@ -224,9 +223,14 @@ async function DashboardData() {
                 {benchAgents.length ? (
                   benchAgents.map((agent) => (
                     <article className="roster-row" key={agent.id}>
-                      <div>
-                        <h3>{agent.name}</h3>
-                        <p>{formatAgentRole(agent.description)}</p>
+                      <div className="roster-agent-copy">
+                        <span className="registry-avatar" aria-hidden="true">
+                          {agent.avatarUrl ? <img alt="" src={agent.avatarUrl} /> : agent.name.slice(0, 1)}
+                        </span>
+                        <div>
+                          <h3>{agent.name}</h3>
+                          <p>{formatAgentRole(agent.description)}</p>
+                        </div>
                       </div>
                       <div className="roster-meta">
                         <span className="state-dot ready">{agent.runMode}</span>

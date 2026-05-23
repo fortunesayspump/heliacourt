@@ -1235,22 +1235,9 @@ button {
   border: 1px solid rgba(241, 211, 170, 0.16);
   border-radius: var(--radius-sm);
   background:
-    radial-gradient(circle at 22% 26%, rgba(241, 211, 170, 0.26), transparent 28%),
-    radial-gradient(circle at 82% 18%, rgba(92, 165, 128, 0.28), transparent 30%),
+    linear-gradient(145deg, rgba(241, 211, 170, 0.1), transparent 34%),
+    linear-gradient(315deg, rgba(92, 165, 128, 0.16), transparent 42%),
     linear-gradient(135deg, rgba(71, 99, 82, 0.54), rgba(20, 19, 15, 0.95));
-}
-
-.market-row-image::after {
-  z-index: 1;
-  position: absolute;
-  right: -18px;
-  bottom: -26px;
-  width: 68px;
-  height: 68px;
-  border: 1px solid rgba(241, 211, 170, 0.16);
-  border-radius: 50%;
-  content: "";
-  background: rgba(255, 250, 242, 0.035);
 }
 
 .market-row-image > img,
@@ -1282,13 +1269,13 @@ button {
   position: relative;
   z-index: 2;
   display: grid;
-  width: 30px;
-  height: 30px;
+  width: auto;
+  height: auto;
   place-items: center;
-  border: 1px solid rgba(255, 250, 242, 0.18);
-  border-radius: 50%;
+  border: 0;
+  border-radius: 0;
   color: var(--ag-cream);
-  background: rgba(13, 12, 9, 0.38);
+  background: transparent;
   font-family: var(--font-title);
   font-size: 16px;
   font-weight: 760;
@@ -1494,7 +1481,7 @@ button {
   border-radius: var(--radius-sm);
   overflow: hidden;
   background:
-    radial-gradient(circle at 28% 22%, rgba(241, 211, 170, 0.22), transparent 32%),
+    linear-gradient(145deg, rgba(241, 211, 170, 0.12), transparent 44%),
     rgba(241, 211, 170, 0.05);
 }
 
@@ -1502,12 +1489,12 @@ button {
   position: relative;
   z-index: 2;
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: auto;
+  height: auto;
   place-items: center;
-  border-radius: 50%;
+  border-radius: 0;
   color: var(--ag-cream);
-  background: var(--ag-green);
+  background: transparent;
   font-family: var(--font-title);
   font-weight: 760;
 }
@@ -1522,16 +1509,15 @@ button {
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-sm);
-  background: rgba(241, 211, 170, 0.09);
+  background: rgba(241, 211, 170, 0.1) !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  filter: none !important;
 }
 
 .skeleton::after {
-  position: absolute;
-  inset: 0;
-  content: "";
-  background: linear-gradient(90deg, transparent, rgba(255, 250, 242, 0.1), transparent);
-  animation: skeleton-sweep 1.2s ease-in-out infinite;
-  transform: translateX(-100%);
+  display: none !important;
+  content: none !important;
 }
 
 .skeleton-hero {
@@ -1546,7 +1532,7 @@ button {
 .skeleton-icon {
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-line {
@@ -1629,8 +1615,9 @@ button {
 }
 
 .skeleton-registry-row .registry-avatar {
-  border-radius: 50%;
-  background: rgba(241, 211, 170, 0.09);
+  border-radius: var(--radius-sm) !important;
+  background: rgba(241, 211, 170, 0.1) !important;
+  background-image: none !important;
 }
 
 .skeleton-registry-row .registry-rank {
@@ -1669,7 +1656,7 @@ button {
 .skeleton-pill {
   width: 74px;
   height: 28px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-icon.small {
@@ -1681,7 +1668,7 @@ button {
   display: block;
   width: 34px;
   height: 34px;
-  border-radius: 50%;
+  border-radius: var(--radius-sm);
 }
 
 .skeleton-button {
@@ -1710,7 +1697,8 @@ button {
   width: 76px;
   height: 58px;
   border: 0;
-  background: rgba(241, 211, 170, 0.09);
+  background: rgba(241, 211, 170, 0.1) !important;
+  background-image: none !important;
 }
 
 .skeleton-receipt-card strong,
@@ -1763,12 +1751,6 @@ button {
 
 .skeleton-detail-hero .case-hero-stats article {
   min-height: 82px;
-}
-
-@keyframes skeleton-sweep {
-  to {
-    transform: translateX(100%);
-  }
 }
 
 .receipt-ledger-row > div:nth-child(2) {
@@ -1854,6 +1836,13 @@ button {
 
 .agent-market-list .roster-row > div:first-child {
   min-width: 0;
+}
+
+.roster-agent-copy {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
 }
 
 .agent-market-list .roster-row h3,
@@ -2155,22 +2144,9 @@ button {
   border: 1px solid rgba(241, 211, 170, 0.16);
   border-radius: var(--radius-md);
   background:
-    radial-gradient(circle at 18% 28%, rgba(241, 211, 170, 0.28), transparent 25%),
-    radial-gradient(circle at 80% 14%, rgba(92, 165, 128, 0.25), transparent 28%),
+    linear-gradient(145deg, rgba(241, 211, 170, 0.11), transparent 36%),
+    linear-gradient(315deg, rgba(92, 165, 128, 0.15), transparent 42%),
     linear-gradient(135deg, rgba(71, 99, 82, 0.52), rgba(20, 19, 15, 0.94));
-}
-
-.petition-card-visual::after {
-  z-index: 1;
-  position: absolute;
-  right: -32px;
-  bottom: -44px;
-  width: 128px;
-  height: 128px;
-  border: 1px solid rgba(241, 211, 170, 0.18);
-  border-radius: 50%;
-  content: "";
-  background: rgba(255, 250, 242, 0.035);
 }
 
 .petition-card-visual > span {
@@ -2958,6 +2934,23 @@ a.registry-row:hover {
     var(--ag-green);
   font-size: 12px;
   font-weight: 780;
+  overflow: hidden;
+}
+
+.registry-avatar img,
+.profile-avatar.agent-profile-avatar img,
+.transcript-avatar img,
+.bench-agent-avatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  border-radius: inherit;
+  filter:
+    brightness(1.18)
+    saturate(0.62)
+    contrast(0.92)
+    drop-shadow(0 10px 18px rgba(34, 33, 29, 0.18));
 }
 
 .registry-agent h3,
@@ -4901,6 +4894,7 @@ a.registry-row:hover {
   color: var(--ag-on-dark);
   box-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
   font-size: 28px;
+  overflow: hidden;
 }
 
 .agent-profile-copy h2 {
@@ -4967,7 +4961,7 @@ a.registry-row:hover {
   border: 1px solid var(--ag-border);
   border-radius: var(--radius-sm);
   background:
-    radial-gradient(circle at 22% 24%, rgba(241, 211, 170, 0.24), transparent 28%),
+    linear-gradient(145deg, rgba(241, 211, 170, 0.12), transparent 38%),
     linear-gradient(135deg, rgba(71, 99, 82, 0.5), rgba(18, 17, 14, 0.94));
 }
 
@@ -5396,6 +5390,7 @@ textarea::placeholder {
   background: var(--ag-inner-surface);
   font-size: 13px;
   font-weight: 750;
+  overflow: hidden;
 }
 
 .transcript-message {
@@ -6066,7 +6061,7 @@ select {
   place-items: center;
   color: var(--ag-green);
   background:
-    radial-gradient(circle at 35% 20%, rgba(132, 177, 120, 0.26), transparent 38%),
+    linear-gradient(145deg, rgba(132, 177, 120, 0.16), transparent 44%),
     rgba(255, 250, 242, 0.05);
 }
 
@@ -8479,7 +8474,7 @@ a:focus-visible,
 
 .case-hero-media .market-preview-fallback {
   background:
-    radial-gradient(circle at 35% 24%, rgba(132, 177, 120, 0.26), transparent 34%),
+    linear-gradient(145deg, rgba(132, 177, 120, 0.16), transparent 44%),
     linear-gradient(135deg, rgba(241, 211, 170, 0.08), rgba(132, 177, 120, 0.09));
 }
 
@@ -9134,6 +9129,7 @@ a:focus-visible,
   font-size: 12px !important;
   font-weight: 760 !important;
   line-height: 1 !important;
+  overflow: hidden !important;
 }
 
 .case-detail-right .bench-agent-copy {
@@ -9168,4 +9164,70 @@ a:focus-visible,
   font-size: 12px !important;
   font-weight: 600 !important;
   line-height: 1.25 !important;
+}
+
+/* Agent portraits use the same asset set across roster, profiles, transcript, and bench. */
+.registry-agent,
+.roster-agent-copy {
+  grid-template-columns: 44px minmax(0, 1fr) !important;
+}
+
+.registry-avatar {
+  width: 44px !important;
+  height: 44px !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.registry-agent-head {
+  padding-left: 56px !important;
+}
+
+.profile-avatar.agent-profile-avatar {
+  width: 104px !important;
+  height: 104px !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+.transcript-entry {
+  grid-template-columns: 40px minmax(0, 1fr) !important;
+}
+
+.transcript-avatar {
+  width: 40px !important;
+  height: 40px !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.case-detail-right .bench-agent-avatar {
+  width: 38px !important;
+  height: 38px !important;
+  flex-basis: 38px !important;
+  border-color: transparent !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  overflow: visible !important;
+}
+
+.skeleton,
+.skeleton::after,
+.skeleton *,
+.skeleton-icon,
+.skeleton-action,
+.skeleton-registry-row .registry-avatar,
+.bench-agent-avatar.skeleton,
+.transcript-avatar.skeleton,
+.profile-avatar.skeleton {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
 }

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { AfterHeroNav } from './components/AfterHeroNav'
+import { AgentStickerStage } from './components/AgentStickerStage'
 import { FadeImageLayer } from './components/FadeImageLayer'
 import { APP_URL, HeaderNav } from './components/Nav'
 import { ScrollReveal } from './components/ScrollReveal'
@@ -8,6 +9,30 @@ const supportedMarkets = [
   { name: 'Polymarket', domain: 'polymarket.com' },
   { name: 'Kalshi', domain: 'kalshi.com' },
   { name: 'Manifold', domain: 'manifold.markets' },
+] as const
+
+const featuredAgents = [
+  { name: 'Mnemon', role: 'Clerk', image: '/assets/agents/stickers/mnemon.png' },
+  { name: 'Kleio', role: 'Evidence', image: '/assets/agents/stickers/kleio.png' },
+  { name: 'Nomisma', role: 'Settlement', image: '/assets/agents/stickers/nomisma.png' },
+  { name: 'Aletheia', role: 'Sources', image: '/assets/agents/stickers/aletheia.png' },
+  { name: 'Eikon', role: 'Visuals', image: '/assets/agents/stickers/eikon.png' },
+  { name: 'Notus', role: 'Data', image: '/assets/agents/stickers/notus.png' },
+  { name: 'Pythia', role: 'Prediction', image: '/assets/agents/stickers/pythia.png' },
+  { name: 'Numeros', role: 'Quant', image: '/assets/agents/stickers/numeros.png' },
+  { name: 'Sophia', role: 'Research', image: '/assets/agents/stickers/sophia.png' },
+  { name: 'Solon', role: 'Bull counsel', image: '/assets/agents/stickers/solon.png' },
+  { name: 'Archon', role: 'Magistrate', image: '/assets/agents/stickers/archon.png' },
+  { name: 'Draco', role: 'Bear counsel', image: '/assets/agents/stickers/draco.png' },
+  { name: 'Skepsis', role: 'Source risk', image: '/assets/agents/stickers/skepsis.png' },
+  { name: 'Chronos', role: 'Timeline', image: '/assets/agents/stickers/chronos.png' },
+  { name: 'Hermes', role: 'News', image: '/assets/agents/stickers/hermes.png' },
+  { name: 'Argos', role: 'Onchain', image: '/assets/agents/stickers/argos.png' },
+  { name: 'Thales', role: 'Social', image: '/assets/agents/stickers/thales.png' },
+  { name: 'Phylax', role: 'Risk', image: '/assets/agents/stickers/phylax.png' },
+  { name: 'Kallias', role: 'Momentum', image: '/assets/agents/stickers/kallias.png' },
+  { name: 'Thraso', role: 'Skeptic', image: '/assets/agents/stickers/thraso.png' },
+  { name: 'Sophon', role: 'Risk juror', image: '/assets/agents/stickers/sophon.png' },
 ] as const
 
 export default function MarketingHome() {
@@ -111,16 +136,7 @@ export default function MarketingHome() {
               </p>
             </div>
           </div>
-          <div className="agent-grid">
-            <article className="reveal reveal-row"><strong>Mnemon</strong><span>Court Clerk</span></article>
-            <article className="reveal reveal-row"><strong>Kleio</strong><span>Evidence Clerk</span></article>
-            <article className="reveal reveal-row"><strong>Pythia</strong><span>Prediction Witness</span></article>
-            <article className="reveal reveal-row"><strong>Hermes</strong><span>News Witness</span></article>
-            <article className="reveal reveal-row"><strong>Argos</strong><span>Onchain Witness</span></article>
-            <article className="reveal reveal-row"><strong>Solon / Draco</strong><span>Bull and Bear Counsel</span></article>
-            <article className="reveal reveal-row"><strong>Dikasts</strong><span>Human or Agent Jurors</span></article>
-            <article className="reveal reveal-row"><strong>Archon</strong><span>Presiding Magistrate</span></article>
-          </div>
+          <AgentStickerStage agents={featuredAgents} />
         </section>
 
         <section className="section arc" id="arc">

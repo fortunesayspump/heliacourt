@@ -13,6 +13,7 @@ import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
 import { SourceEmbedCard } from '../../components/SourceEmbedCard'
 import { TranscriptLiveMotion } from '../../components/TranscriptLiveMotion'
 import { formatConfidence, getBackendCaseDetail, type ApiCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
+import { getAgentAvatarUrl } from '../../../lib/agent-images'
 import '../../page.css'
 
 const tabs = [
@@ -188,6 +189,7 @@ async function CaseRecordData({
                     const artifact = turn.artifactId ? artifactById.get(turn.artifactId) : undefined
                     const sourceCards = getTurnSourceCards(turn, artifact)
                     const hasContext = Boolean(replyTurn)
+                    const avatarUrl = getAgentAvatarUrl(turn.agentId, turn.agentName)
 
                     return (
                       <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
@@ -199,7 +201,9 @@ async function CaseRecordData({
                             </a>
                           </div>
                         ) : null}
-                        <div className="transcript-avatar">{turn.agentName.slice(0, 1)}</div>
+                        <div className="transcript-avatar">
+                          {avatarUrl ? <img alt="" src={avatarUrl} /> : turn.agentName.slice(0, 1)}
+                        </div>
                         <div className="transcript-message">
                           <div className="transcript-meta">
                             <div>
@@ -413,7 +417,7 @@ async function CaseRecordData({
                       </div>
                       <div className="receipt-ledger-list">
                         {onchainReceipts.map((receipt, index) => (
-                          <a className="case-receipt-row" href={`https://explorer.testnet.arc.network/tx/${receipt.txHash}`} key={`${receipt.type}-${receipt.txHash}`} target="_blank" rel="noreferrer">
+                          <a className="case-receipt-row" href={`https://explorer.testnet.arc.network/tx/${receipt.txHash}`} key={`${receipt.type}-${receipt.txHash}-${receipt.agentId ?? 'case'}-${receipt.amountUsdc ?? 'record'}-${index}`} target="_blank" rel="noreferrer">
                             <div className="receipt-index">{String(index + 1).padStart(2, '0')}</div>
                             <div>
                               <span>{formatReceiptType(receipt.type)}</span>
@@ -518,7 +522,9 @@ async function CaseRecordData({
               <div className="bench-agent-list">
                 {seatedAgents.length ? seatedAgents.map((agent) => (
                   <article className="bench-agent-row" key={agent.id}>
-                    <span className="bench-agent-avatar" aria-hidden="true">{agent.name.slice(0, 1).toUpperCase()}</span>
+                    <span className="bench-agent-avatar" aria-hidden="true">
+                      {agent.avatarUrl ? <img alt="" src={agent.avatarUrl} /> : agent.name.slice(0, 1).toUpperCase()}
+                    </span>
                     <div className="bench-agent-copy">
                       <h3>{agent.name}</h3>
                       <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
@@ -1013,7 +1019,7 @@ function shortReceiptHash(value?: string) {
 }
 
 function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {
-  const byAgent = new Map<string, { id: string; name: string; seat: string; turns: number }>()
+  const byAgent = new Map<string, { id: string; name: string; seat: string; turns: number; avatarUrl?: string }>()
 
   for (const turn of transcript) {
     const current = byAgent.get(turn.agentId)
@@ -1025,6 +1031,7 @@ function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {
         name: turn.agentName,
         seat: turn.seat,
         turns: 1,
+        avatarUrl: getAgentAvatarUrl(turn.agentId, turn.agentName),
       })
     }
   }

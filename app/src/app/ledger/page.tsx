@@ -93,8 +93,8 @@ async function LedgerData() {
                   <span className="state-dot ready">{formatGroupStatus(group.rows)}</span>
                 </summary>
                 <div className="receipt-ledger-group-rows">
-                  {group.rows.map(({ caseId, title, imageUrl, item, amount, status, hash, txHash, receiptType }) => (
-                    <Link className="receipt-ledger-row receipt-ledger-child-row" href={`/cases/${caseId}?tab=receipts`} key={`${caseId}-${item}-${hash ?? txHash ?? receiptType}`}>
+                  {group.rows.map(({ caseId, title, imageUrl, item, amount, status, hash, txHash, receiptType, agentId }, index) => (
+                    <Link className="receipt-ledger-row receipt-ledger-child-row" href={`/cases/${caseId}?tab=receipts`} key={`${caseId}-${receiptType}-${hash ?? txHash ?? 'record'}-${agentId ?? item}-${amount}-${index}`}>
                       <div className="receipt-mark">
                         {imageUrl ? <img alt="" src={imageUrl} /> : <span>{formatReceiptType(receiptType).slice(0, 1)}</span>}
                       </div>

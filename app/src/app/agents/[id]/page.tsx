@@ -64,7 +64,9 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
   return (
         <section className="profile-dashboard agent-profile-dashboard">
           <section className="panel profile-identity-panel agent-profile-identity">
-            <div className="profile-avatar agent-profile-avatar" aria-hidden="true">{agent.name.slice(0, 1)}</div>
+            <div className="profile-avatar agent-profile-avatar" aria-hidden="true">
+              {agent.avatarUrl ? <img alt="" src={agent.avatarUrl} /> : agent.name.slice(0, 1)}
+            </div>
             <div className="profile-identity-copy agent-profile-copy">
               <p className="eyebrow">Court agent</p>
               <h2>{agent.name}</h2>

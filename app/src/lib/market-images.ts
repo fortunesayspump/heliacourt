@@ -4,7 +4,8 @@ type MarketPreview = {
   image?: string
 }
 
-const marketImageTimeoutMs = Number(process.env.MARKET_IMAGE_TIMEOUT_MS ?? 2500)
+const marketImageTimeoutMs = Number(process.env.MARKET_IMAGE_TIMEOUT_MS ?? 8000)
+const marketImageRetries = Number(process.env.MARKET_IMAGE_RETRIES ?? 2)
 const imageCache = new Map<string, Promise<string | undefined>>()
 const previewCache = new Map<string, Promise<MarketPreview | undefined>>()
 
@@ -99,12 +100,11 @@ async function resolveManifoldPreview(target: URL, title?: string) {
 
 async function fetchJson(url: string) {
   try {
-    const response = await fetch(url, {
+    const response = await fetchWithRetry(url, {
       headers: {
         accept: 'application/json',
         'user-agent': 'HeliaCourtBot/1.0 (+https://heliacourt.xyz)',
       },
-      signal: AbortSignal.timeout(marketImageTimeoutMs),
     })
     if (!response.ok) return undefined
     return await response.json() as unknown
@@ -115,12 +115,11 @@ async function fetchJson(url: string) {
 
 async function readPageImage(target: URL) {
   try {
-    const response = await fetch(target, {
+    const response = await fetchWithRetry(target, {
       headers: {
         accept: 'text/html,application/xhtml+xml',
         'user-agent': 'HeliaCourtBot/1.0 (+https://heliacourt.xyz)',
       },
-      signal: AbortSignal.timeout(marketImageTimeoutMs),
     })
     const contentType = response.headers.get('content-type') ?? ''
     if (!response.ok || !contentType.includes('text/html')) return undefined
@@ -129,6 +128,31 @@ async function readPageImage(target: URL) {
   } catch {
     return undefined
   }
+}
+
+async function fetchWithRetry(input: string | URL, init: RequestInit) {
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= marketImageRetries; attempt += 1) {
+    try {
+      const response = await fetch(input, {
+        ...init,
+        signal: AbortSignal.timeout(marketImageTimeoutMs),
+      })
+      if (response.ok || response.status < 500 || attempt === marketImageRetries) return response
+    } catch (error) {
+      lastError = error
+      if (attempt === marketImageRetries) throw error
+    }
+
+    await wait(180 * (attempt + 1))
+  }
+
+  throw lastError
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 function findImageUrl(value: unknown, base: URL, depth = 0): string | undefined {

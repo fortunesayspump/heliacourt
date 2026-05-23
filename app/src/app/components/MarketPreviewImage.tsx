@@ -29,7 +29,7 @@ export function MarketPreviewImage({
     let cancelled = false
 
     const params = new URLSearchParams({ url })
-    if (fallbackTitle && !preferOgImage) params.set('title', fallbackTitle)
+    if (fallbackTitle) params.set('title', fallbackTitle)
     fetch(`${preferOgImage ? '/api/link-preview' : '/api/market-image'}?${params.toString()}`)
       .then((response) => response.ok ? response.json() as Promise<Preview> : undefined)
       .then((payload) => {
