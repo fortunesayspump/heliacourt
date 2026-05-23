@@ -474,8 +474,9 @@ export async function caseRoutes(app: FastifyInstance) {
     }))
     if (!opened.ok) return reply.status(400).send({ error: opened.error })
 
+    const caseId = createCaseId(data.question, data.onchain.caseId, data.onchain.txHash)
     const marketCase: MarketCase = {
-      id: data.id ?? createCaseId(data.question, data.onchain?.caseId, data.onchain?.txHash),
+      id: caseId,
       question: data.question,
       context: [
         data.context || undefined,
