@@ -11,19 +11,25 @@ const optionalHex = (bytes: number) => z.preprocess((value) => {
   return normalized || undefined
 }, z.string().regex(new RegExp(`^0x[a-fA-F0-9]{${bytes * 2}}$`)).optional())
 
+const optionalUrl = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const normalized = value.trim().replace(/^['"]|['"]$/g, '')
+  return normalized || undefined
+}, z.string().url().optional())
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   APP_ORIGIN: z.string().url().default('http://localhost:3000'),
   CIRCLE_API_KEY: z.string().optional(),
   CIRCLE_API_BASE_URL: z.string().url().default('https://api.circle.com'),
-  DATABASE_URL: z.string().url().optional(),
+  DATABASE_URL: optionalUrl,
   HELIA_HEARING_MAX_CONCURRENT: z.coerce.number().int().positive().default(1),
   HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().min(0).default(0),
   HELIA_HEARING_STALE_RUNNING_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
   HELIA_HEARING_JOB_RETENTION_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   HELIA_HEARING_MAX_RETAINED_JOBS: z.coerce.number().int().positive().default(100),
   HELIA_HEARING_QUEUE_POLL_MS: z.coerce.number().int().positive().default(2_000),
-  REDIS_URL: z.string().url().optional(),
+  REDIS_URL: optionalUrl,
   HELIA_REDIS_PREFIX: z.string().min(1).default('helia-court'),
   HELIA_ADMIN_KEY: z.string().min(24).optional(),
   ARC_RPC_URL: z.string().url().default('https://rpc.testnet.arc.network'),
@@ -33,9 +39,15 @@ const envSchema = z.object({
   CASE_ESCROW_ADDRESS: optionalHex(20),
   COURT_RECEIPTS_ADDRESS: optionalHex(20),
   PROTOCOL_FEE_BPS: z.coerce.number().int().min(0).max(1_000).default(500),
+  HELIA_PROTOCOL_AGENT_PAYOUT_WALLET: optionalHex(20),
+  TREASURY_ADDRESS: optionalHex(20),
   HELIA_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_ALERT_CHAT_IDS: z.string().optional(),
+  HELIA_X402_RECEIVER_ADDRESS: optionalHex(20),
+  HELIA_X402_FACILITATOR_URL: optionalUrl,
+  HELIA_X402_SIGNING_SECRET: z.string().min(24).optional(),
+  HELIA_X402_PRICE_MICRO_USDC: z.coerce.number().int().positive().default(10_000),
 })
 
 export const env = envSchema.parse(process.env)

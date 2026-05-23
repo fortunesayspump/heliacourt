@@ -407,6 +407,9 @@ async function CaseRecordData({
                         View funding tx
                       </a>
                     ) : null}
+                    <Link className="secondary-button compact-back" href={`/proof/${encodeURIComponent(courtCase.id)}`}>
+                      Proof page
+                    </Link>
                   </section>
 
                   {onchainReceipts.length ? (

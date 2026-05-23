@@ -1,9 +1,9 @@
 import { Briefcase, Clock, Gavel, SealCheck } from '@phosphor-icons/react/ssr'
-import { Suspense } from 'react'
+import { Suspense, type CSSProperties } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
 import { CaseSearchList } from '../components/CaseSearchList'
-import { getBackendCases } from '../../lib/backend-data'
+import { getBackendCases, type ApiCase } from '../../lib/backend-data'
 import '../page.css'
 import './cases.css'
 
@@ -25,6 +25,7 @@ export default function CasesPage() {
 async function CasesData() {
   const backendCases = await getBackendCases()
   const initialNow = Date.now()
+  const caseStats = buildCaseStats(backendCases)
 
   return (
     <>
@@ -37,6 +38,7 @@ async function CasesData() {
               <span>Queued</span>
               <strong>{backendCases.filter((item) => item.status === 'Queued').length} cases</strong>
             </div>
+            <MiniBars values={caseStats.statusBars} />
           </div>
           <div className="metric">
             <Gavel size={19} />
@@ -44,6 +46,7 @@ async function CasesData() {
               <span>In hearing</span>
               <strong>{backendCases.filter((item) => item.status === 'Hearing').length} cases</strong>
             </div>
+            <MiniSparkline values={caseStats.hearingTrend} />
           </div>
           <div className="metric">
             <Clock size={19} />
@@ -51,6 +54,7 @@ async function CasesData() {
               <span>Awaiting vote</span>
               <strong>{backendCases.filter((item) => item.status === 'Queued' || item.status === 'Hearing').length} cases</strong>
             </div>
+            <MiniBars values={caseStats.visibilityBars} />
           </div>
           <div className="metric">
             <SealCheck size={19} />
@@ -58,10 +62,74 @@ async function CasesData() {
               <span>Settled today</span>
               <strong>{backendCases.filter((item) => item.status === 'Verdict').length} receipts</strong>
             </div>
+            <MiniSparkline values={caseStats.verdictTrend} />
           </div>
         </section>
     </>
   )
+}
+
+function MiniBars({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  return (
+    <span className="metric-mini-bars" aria-hidden="true">
+      {values.map((value, index) => (
+        <i key={index} style={{ '--bar-height': `${Math.max(14, Math.round((value / max) * 100))}%` } as CSSProperties} />
+      ))}
+    </span>
+  )
+}
+
+function MiniSparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  const hasValue = values.some((value) => value > 0)
+  const points = hasValue && values.length > 1
+    ? values.map((value, index) => {
+        const x = (index / (values.length - 1)) * 100
+        const y = 100 - ((value / max) * 78 + 11)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    : '0,50 100,50'
+
+  return (
+    <svg className={`metric-sparkline${hasValue ? '' : ' is-empty'}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
+function buildCaseStats(cases: ApiCase[]) {
+  return {
+    statusBars: [
+      cases.filter((item) => item.status === 'Queued').length,
+      cases.filter((item) => item.status === 'Hearing').length,
+      cases.filter((item) => item.status === 'Verdict').length,
+    ],
+    visibilityBars: [
+      cases.filter((item) => item.visibility === 'public' || !item.visibility).length,
+      cases.filter((item) => item.visibility === 'unlisted').length,
+      cases.filter((item) => item.visibility === 'private').length,
+    ],
+    hearingTrend: countRecentDays(cases.filter((item) => item.status === 'Hearing').map((item) => item.updated ?? item.createdAt)),
+    verdictTrend: countRecentDays(cases.filter((item) => item.status === 'Verdict').map((item) => item.updated ?? item.createdAt)),
+  }
+}
+
+function countRecentDays(values: Array<string | undefined>) {
+  const counts = Array.from({ length: 7 }, () => 0)
+  const today = startOfDay(Date.now())
+  for (const value of values) {
+    if (!value) continue
+    const age = Math.floor((today - startOfDay(Date.parse(value))) / 86_400_000)
+    if (age >= 0 && age < counts.length) counts[counts.length - 1 - age] += 1
+  }
+  return counts
+}
+
+function startOfDay(value: number) {
+  const date = new Date(value)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime()
 }
 
 function CasesSkeleton() {

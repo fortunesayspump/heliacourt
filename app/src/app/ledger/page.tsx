@@ -1,5 +1,5 @@
-import { CurrencyCircleDollar, GitBranch, Bank, Wallet } from '@phosphor-icons/react/ssr'
-import { Suspense } from 'react'
+import { CurrencyCircleDollar, GitBranch, Bank, Wallet, ShieldCheck, ChartLineUp } from '@phosphor-icons/react/ssr'
+import { Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
@@ -22,7 +22,10 @@ export default function LedgerPage() {
 }
 
 async function LedgerData() {
-  const ledgerRows = await getBackendLedgerRows()
+  const [ledgerRows, x402Status] = await Promise.all([
+    getBackendLedgerRows(),
+    getX402Status(),
+  ])
   const ledgerGroups = groupLedgerRows(ledgerRows)
   const anchored = ledgerRows.filter((row) => row.status === 'Anchored')
   const recorded = ledgerRows.filter((row) => row.status === 'Recorded')
@@ -35,6 +38,7 @@ async function LedgerData() {
     .reduce((total, row) => total + parseAmount(row.amount), 0)
   const paid = [...payouts, ...payoutSummaries].reduce((total, row) => total + parseAmount(row.amount), 0)
   const protocolFeeTotal = protocolFees.reduce((total, row) => total + parseAmount(row.amount), 0)
+  const stats = buildLedgerStats(ledgerRows, ledgerGroups)
 
   return (
     <>
@@ -66,6 +70,130 @@ async function LedgerData() {
               <span>Decision records</span>
               <strong>{anchored.length} anchored · {recorded.length} recorded</strong>
             </div>
+          </div>
+        </section>
+
+        <section className="panel ledger-stats-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Stats</p>
+              <h2>Proof and settlement overview</h2>
+            </div>
+            <ShieldCheck size={19} />
+          </div>
+
+          <div className="ledger-proof-grid">
+            <article>
+              <Wallet size={18} />
+              <span>USDC moved</span>
+              <strong>{stats.totalAmount ? `${formatAmount(stats.totalAmount)} USDC` : '0 USDC'}</strong>
+              <MiniLedgerBars values={stats.amountBars} />
+            </article>
+            <article>
+              <GitBranch size={18} />
+              <span>Receipt groups</span>
+              <strong>{stats.groupCount} cases</strong>
+              <MiniLedgerSparkline values={stats.caseBars} />
+            </article>
+            <article>
+              <ShieldCheck size={18} />
+              <span>Anchored coverage</span>
+              <strong>{stats.anchoredCoverage}%</strong>
+              <LedgerRing value={stats.anchoredCoverage} label="Anchored" />
+            </article>
+            <article>
+              <ChartLineUp size={18} />
+              <span>Record hashes</span>
+              <strong>{stats.hashRows} rows</strong>
+              <LedgerRing value={stats.hashCoverage} label="Hashed" />
+            </article>
+          </div>
+
+          <div className="ledger-chart-grid">
+            <section className="ledger-stat-block ledger-chart-block wide">
+              <div className="ledger-stat-block-head">
+                <span>Settlement timeline</span>
+                <strong>{stats.latestActivity}</strong>
+              </div>
+              <div className="ledger-timeline-chart">
+                {stats.dailyActivity.map((item) => (
+                  <div key={item.label}>
+                    <i style={{ '--bar-height': `${item.percent}%` } as CSSProperties} />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="ledger-stat-block ledger-chart-block">
+              <div className="ledger-stat-block-head">
+                <span>Status split</span>
+                <strong>{ledgerRows.length} rows</strong>
+              </div>
+              <div className="ledger-stack-chart" aria-label="Receipt status split">
+                {stats.statusSplit.map((item) => (
+                  <i key={item.label} className={item.tone} title={`${item.label}: ${item.count}`} style={{ '--stack-width': `${item.percent}%` } as CSSProperties} />
+                ))}
+              </div>
+              <div className="ledger-chart-legend">
+                {stats.statusSplit.map((item) => (
+                  <span key={item.label}><i className={item.tone} />{item.label} {item.count}</span>
+                ))}
+              </div>
+            </section>
+
+            <section className="ledger-stat-block ledger-chart-block">
+              <div className="ledger-stat-block-head">
+                <span>Receipt mix</span>
+                <strong>{ledgerRows.length} rows</strong>
+              </div>
+              <div className="ledger-mix-list">
+                {stats.receiptMix.length ? stats.receiptMix.map((item) => (
+                  <div key={item.label}>
+                    <span>
+                      <i style={{ '--mix-width': `${item.percent}%` } as CSSProperties} />
+                      {item.label}
+                    </span>
+                    <strong>{item.count}</strong>
+                  </div>
+                )) : (
+                  <p>No receipt mix yet.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="ledger-stat-block ledger-chart-block">
+              <div className="ledger-stat-block-head">
+                <span>Audit lanes</span>
+                <strong>{stats.txRows} txs</strong>
+              </div>
+              <div className="ledger-lane-chart">
+                {stats.auditLanes.map((item) => (
+                  <div key={item.label}>
+                    <span>{item.label}</span>
+                    <i style={{ '--lane-width': `${item.percent}%` } as CSSProperties} />
+                    <strong>{item.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="ledger-stat-block ledger-chart-block ledger-x402-block">
+              <div className="ledger-stat-block-head">
+                <span>x402 route</span>
+                <strong>{formatX402Status(x402Status.settlement)}</strong>
+              </div>
+              <div className="ledger-flow-chart">
+                <span>Request</span>
+                <i />
+                <span>Pay</span>
+                <i />
+                <span>Verify</span>
+                <i />
+                <span>Receipt</span>
+              </div>
+              <p>{x402Status.enabled ? 'Paywalled calls are discoverable for price, transcript, receipt, and proof lookups.' : 'Configure the x402 receiver to enable paid proof calls.'}</p>
+            </section>
           </div>
         </section>
 
@@ -143,6 +271,41 @@ function LedgerSkeleton() {
           </div>
         ))}
       </section>
+      <section className="panel ledger-stats-panel skeleton-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Stats</p>
+            <h2>Proof and settlement overview</h2>
+          </div>
+        </div>
+        <div className="ledger-proof-grid">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article key={index}>
+              <span className="skeleton skeleton-icon small" />
+              <span className="skeleton skeleton-line tiny" />
+              <strong className="skeleton skeleton-line short" />
+            </article>
+          ))}
+        </div>
+        <div className="ledger-stats-columns">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <section className="ledger-stat-block" key={index}>
+              <div className="ledger-stat-block-head">
+                <span className="skeleton skeleton-line tiny" />
+                <strong className="skeleton skeleton-line tiny" />
+              </div>
+              <div className="ledger-audit-list">
+                {Array.from({ length: 4 }).map((__, rowIndex) => (
+                  <div key={rowIndex}>
+                    <span className="skeleton skeleton-line short" />
+                    <strong className="skeleton skeleton-line tiny" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      </section>
       <section className="panel ledger-panel">
         <div className="panel-heading">
           <div>
@@ -177,6 +340,175 @@ function parseAmount(value: string) {
 
 function formatAmount(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+async function getX402Status(): Promise<{ enabled: boolean; settlement: string }> {
+  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+  try {
+    const response = await fetch(`${backendUrl}/x402/status`, { cache: 'no-store' })
+    if (!response.ok) return { enabled: false, settlement: 'unavailable' }
+    const payload = await response.json() as { enabled?: boolean; settlement?: string }
+    return {
+      enabled: Boolean(payload.enabled),
+      settlement: payload.settlement ?? 'unavailable',
+    }
+  } catch {
+    return { enabled: false, settlement: 'unavailable' }
+  }
+}
+
+function formatX402Status(value: string) {
+  if (value === 'facilitator-configured') return 'Ready'
+  if (value === 'challenge-only') return 'Challenge'
+  return 'Offline'
+}
+
+function MiniLedgerBars({ values }: { values: number[] }) {
+  const hasValue = values.some((value) => value > 0)
+  const max = Math.max(1, ...values)
+  return (
+    <span className={`ledger-mini-bars${hasValue ? '' : ' is-empty'}`} aria-hidden="true">
+      {values.map((value, index) => (
+        <i key={index} style={{ '--bar-height': `${hasValue ? Math.max(12, Math.round((value / max) * 100)) : 0}%` } as CSSProperties} />
+      ))}
+    </span>
+  )
+}
+
+function MiniLedgerSparkline({ values }: { values: number[] }) {
+  const hasValue = values.some((value) => value > 0)
+  const max = Math.max(1, ...values)
+  const points = hasValue && values.length > 1
+    ? values.map((value, index) => {
+        const x = (index / (values.length - 1)) * 100
+        const y = 100 - ((value / max) * 76 + 12)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    : '0,50 100,50'
+
+  return (
+    <svg className={`ledger-mini-line${hasValue ? '' : ' is-empty'}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
+function LedgerRing({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="ledger-ring" style={{ '--ring-value': `${Math.max(0, Math.min(100, value))}%` } as CSSProperties} aria-label={`${label} ${value}%`}>
+      <b>{value}%</b>
+    </span>
+  )
+}
+
+function buildLedgerStats(rows: ApiLedgerRow[], groups: ReturnType<typeof groupLedgerRows>) {
+  const totalAmount = rows.reduce((total, row) => total + parseAmount(row.amount), 0)
+  const anchoredRows = rows.filter((row) => row.status === 'Anchored').length
+  const recordedRows = rows.filter((row) => row.status === 'Recorded').length
+  const pendingRows = Math.max(0, rows.length - anchoredRows - recordedRows)
+  const txRows = rows.filter((row) => row.txHash).length
+  const hashRows = rows.filter((row) => row.hash).length
+  const walletCount = new Set(rows.map((row) => row.wallet).filter(Boolean)).size
+  const chainIds = [...new Set(rows.map((row) => row.chainId).filter(Boolean))]
+  const latest = rows
+    .map((row) => row.updated ? Date.parse(row.updated) : 0)
+    .filter(Boolean)
+    .sort((a, b) => b - a)[0]
+
+  const counts = new Map<string, number>()
+  for (const row of rows) {
+    const label = formatReceiptType(row.receiptType)
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  }
+
+  const receiptMix = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([label, count]) => ({
+      label,
+      count,
+      percent: rows.length ? Math.max(8, Math.round((count / rows.length) * 100)) : 0,
+    }))
+
+  const dailyActivity = countLedgerDays(rows)
+  const amountBars = buildAmountBars(groups)
+  const caseBars = countLedgerDays(groups.map((group) => group.rows[0]).filter(Boolean) as ApiLedgerRow[]).map((item) => item.count)
+  const statusSplit = [
+    { label: 'Anchored', count: anchoredRows, tone: 'anchored' },
+    { label: 'Recorded', count: recordedRows, tone: 'recorded' },
+    { label: 'Pending', count: pendingRows, tone: 'pending' },
+  ].map((item) => ({
+    ...item,
+    percent: rows.length ? Math.max(item.count ? 6 : 0, Math.round((item.count / rows.length) * 100)) : 0,
+  }))
+  const maxLane = Math.max(1, rows.length, txRows, hashRows, walletCount)
+  const auditLanes = [
+    { label: 'Rows', value: rows.length, percent: Math.round((rows.length / maxLane) * 100) },
+    { label: 'Tx hashes', value: txRows, percent: Math.round((txRows / maxLane) * 100) },
+    { label: 'Record hashes', value: hashRows, percent: Math.round((hashRows / maxLane) * 100) },
+    { label: 'Wallets', value: walletCount, percent: Math.round((walletCount / maxLane) * 100) },
+  ]
+
+  return {
+    totalAmount,
+    groupCount: groups.length,
+    anchoredCoverage: rows.length ? Math.round((anchoredRows / rows.length) * 100) : 0,
+    hashCoverage: rows.length ? Math.round((hashRows / rows.length) * 100) : 0,
+    txRows,
+    hashRows,
+    walletCount,
+    receiptMix,
+    chainLabel: chainIds.length ? chainIds.join(', ') : 'No chain',
+    latestActivity: latest ? formatLedgerDate(latest) : 'No activity',
+    dailyActivity,
+    amountBars,
+    caseBars,
+    statusSplit,
+    auditLanes,
+  }
+}
+
+function countLedgerDays(rows: ApiLedgerRow[]) {
+  const today = startOfLocalDay(Date.now())
+  const counts = Array.from({ length: 7 }, (_, index) => {
+    const day = today - ((6 - index) * 86_400_000)
+    return {
+      label: new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date(day)),
+      count: 0,
+      percent: 0,
+    }
+  })
+
+  for (const row of rows) {
+    if (!row.updated) continue
+    const age = Math.floor((today - startOfLocalDay(Date.parse(row.updated))) / 86_400_000)
+    if (age >= 0 && age < counts.length) counts[counts.length - 1 - age].count += 1
+  }
+
+  const max = Math.max(1, ...counts.map((item) => item.count))
+  return counts.map((item) => ({
+    ...item,
+    percent: Math.max(item.count ? 10 : 4, Math.round((item.count / max) * 100)),
+  }))
+}
+
+function buildAmountBars(groups: ReturnType<typeof groupLedgerRows>) {
+  const values = groups
+    .slice()
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 7)
+    .map((group) => group.total)
+  return values.length ? values : [0]
+}
+
+function startOfLocalDay(value: number) {
+  const date = new Date(value)
+  date.setHours(0, 0, 0, 0)
+  return date.getTime()
+}
+
+function formatLedgerDate(value: number) {
+  return new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value))
 }
 
 function formatReceiptType(value?: string) {

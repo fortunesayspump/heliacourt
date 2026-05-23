@@ -1,7 +1,8 @@
-import { Suspense } from 'react'
+import { CurrencyCircleDollar, Robot, ShieldCheck, UsersThree } from '@phosphor-icons/react/ssr'
+import { Suspense, type CSSProperties } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
-import { getBackendAgents, getBackendLedgerRows } from '../../lib/backend-data'
+import { getBackendAgents, getBackendLedgerRows, type ApiAgent } from '../../lib/backend-data'
 import Link from 'next/link'
 import '../page.css'
 
@@ -39,8 +40,46 @@ async function AgentsData() {
     getBackendLedgerRows(),
   ])
   const payoutStats = summarizeAgentPayouts(ledgerRows)
+  const totalPayout = [...payoutStats.values()].reduce((total, item) => total + item.total, 0)
+  const agentStats = buildAgentStats(agents, payoutStats)
 
   return (
+    <>
+        <section className="metrics-grid">
+          <div className="metric">
+            <Robot size={19} />
+            <div>
+              <span>Registered seats</span>
+              <strong>{agents.length} agents</strong>
+            </div>
+            <MiniBars values={agentStats.seatBars} />
+          </div>
+          <div className="metric">
+            <ShieldCheck size={19} />
+            <div>
+              <span>Enabled bench</span>
+              <strong>{agents.filter((agent) => agent.enabled).length} active</strong>
+            </div>
+            <MiniSparkline values={agentStats.enabledTrend} />
+          </div>
+          <div className="metric">
+            <CurrencyCircleDollar size={19} />
+            <div>
+              <span>Payout flow</span>
+              <strong>{totalPayout ? `${formatAmount(totalPayout)} USDC` : '0 USDC'}</strong>
+            </div>
+            <MiniBars values={agentStats.payoutBars} />
+          </div>
+          <div className="metric">
+            <UsersThree size={19} />
+            <div>
+              <span>Run modes</span>
+              <strong>{new Set(agents.map((agent) => agent.runMode)).size} modes</strong>
+            </div>
+            <MiniSparkline values={agentStats.modeBars} />
+          </div>
+        </section>
+
         <section className="panel app-roster-page">
           <div className="registry-heading">
             <div>
@@ -87,6 +126,7 @@ async function AgentsData() {
             )}
           </div>
         </section>
+    </>
   )
 }
 
@@ -151,4 +191,53 @@ function parseAmount(value: string) {
 
 function formatAmount(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
+}
+
+function MiniBars({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  return (
+    <span className="metric-mini-bars" aria-hidden="true">
+      {values.map((value, index) => (
+        <i key={index} style={{ '--bar-height': `${Math.max(14, Math.round((value / max) * 100))}%` } as CSSProperties} />
+      ))}
+    </span>
+  )
+}
+
+function MiniSparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values)
+  const hasValue = values.some((value) => value > 0)
+  const points = hasValue && values.length > 1
+    ? values.map((value, index) => {
+        const x = (index / (values.length - 1)) * 100
+        const y = 100 - ((value / max) * 78 + 11)
+        return `${x.toFixed(1)},${y.toFixed(1)}`
+      }).join(' ')
+    : '0,50 100,50'
+
+  return (
+    <svg className={`metric-sparkline${hasValue ? '' : ' is-empty'}`} viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points={points} />
+    </svg>
+  )
+}
+
+function buildAgentStats(agents: ApiAgent[], payoutStats: Map<string, { total: number; count: number }>) {
+  const seats = new Map<string, number>()
+  const modes = new Map<string, number>()
+  for (const agent of agents) {
+    seats.set(agent.seat, (seats.get(agent.seat) ?? 0) + 1)
+    modes.set(agent.runMode, (modes.get(agent.runMode) ?? 0) + 1)
+  }
+
+  return {
+    seatBars: [...seats.values()].slice(0, 7),
+    enabledTrend: [
+      agents.filter((agent) => agent.enabled && agent.runMode === 'model').length,
+      agents.filter((agent) => agent.enabled && agent.runMode === 'tool-backed-model').length,
+      agents.filter((agent) => agent.enabled).length,
+    ],
+    payoutBars: [...payoutStats.values()].map((item) => item.total).sort((a, b) => b - a).slice(0, 7),
+    modeBars: [...modes.values()].slice(0, 7),
+  }
 }
