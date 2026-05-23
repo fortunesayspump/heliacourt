@@ -1042,6 +1042,100 @@ button {
   margin-top: 44px;
 }
 
+.live-court-feed-panel {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.live-court-feed {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.live-court-feed-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  min-height: 72px;
+  padding: 10px;
+  border: 1px solid var(--surface-row-border);
+  border-radius: var(--surface-radius-inner);
+  color: var(--ag-ink);
+  background: var(--surface-inner);
+  text-decoration: none;
+  transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.live-court-feed-row:hover {
+  border-color: rgba(241, 211, 170, 0.34);
+  background: var(--ag-inner-surface-strong);
+  transform: translateY(-1px);
+}
+
+.live-feed-mark {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 1px solid rgba(241, 211, 170, 0.14);
+  border-radius: var(--radius-sm);
+  color: var(--ag-on-dark);
+  background: var(--ag-green);
+  font-family: var(--font-title);
+  font-size: 13px;
+  font-weight: 780;
+  text-transform: uppercase;
+}
+
+.live-feed-mark.hearing {
+  background: #476352;
+}
+
+.live-feed-mark.queued {
+  background: #6f6040;
+}
+
+.live-feed-mark.sealed,
+.live-feed-mark.anchored {
+  background: #7d5f33;
+}
+
+.live-feed-mark.recorded {
+  background: #3d5648;
+}
+
+.live-court-feed-row span:nth-child(2) {
+  min-width: 0;
+}
+
+.live-court-feed-row strong,
+.live-court-feed-row small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.live-court-feed-row strong {
+  color: var(--ag-ink);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.live-court-feed-row small,
+.live-court-feed-row time {
+  color: var(--ag-muted);
+  font-size: 12px;
+}
+
+.live-court-feed-row time {
+  justify-self: end;
+  font-weight: 760;
+}
+
 .dashboard-grid > .panel {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -3453,6 +3547,10 @@ a.registry-row:hover {
 }
 
 @media (max-width: 820px) {
+  .live-court-feed {
+    grid-template-columns: 1fr;
+  }
+
   .app-shell {
     grid-template-columns: 1fr;
     padding: 0;

@@ -17,7 +17,7 @@ import { PageTitle } from './components/PageTitle'
 import { MarketUrlPetitionForm } from './components/MarketUrlPetitionForm'
 import { getPredictionMarketLink, MarketLogo } from './components/MarketLogo'
 import { WalletNotice } from './components/WalletNotice'
-import { formatConfidence, getBackendAgents, getBackendCases, getBackendLedgerRows } from '../lib/backend-data'
+import { formatConfidence, getBackendAgents, getBackendCases, getBackendLedgerRows, type ApiCase, type ApiLedgerRow } from '../lib/backend-data'
 import './page.css'
 
 const dashboardTitleImages = [
@@ -80,6 +80,7 @@ async function DashboardData() {
   ])
   const activeCases = backendCases.filter((item) => item.status !== 'Verdict')
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
+  const liveFeed = buildLiveFeed(backendCases, ledgerRows).slice(0, 8)
   const benchAgents = registryAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
 
@@ -114,6 +115,33 @@ async function DashboardData() {
                 <strong>{backendCases.filter((item) => item.status === 'Verdict').length} sealed</strong>
               </div>
             </div>
+        </section>
+
+        <section className="panel live-court-feed-panel" aria-label="Live court activity">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Live court feed</p>
+              <h2>Latest filings, hearings, and receipts</h2>
+            </div>
+            <Stamp size={19} />
+          </div>
+          <div className="live-court-feed">
+            {liveFeed.length ? liveFeed.map((item) => (
+              <Link className="live-court-feed-row" href={item.href} key={item.id}>
+                <span className={`live-feed-mark ${item.tone}`}>{item.kind.slice(0, 1)}</span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.title}</small>
+                </span>
+                <time>{formatRelativeTime(item.timestamp)}</time>
+              </Link>
+            )) : (
+              <div className="empty-state">
+                <strong>No activity yet</strong>
+                <p>Case filings and receipts will appear here.</p>
+              </div>
+            )}
+          </div>
         </section>
 
         <section className="dashboard-grid">
@@ -265,6 +293,27 @@ function DashboardDataSkeleton() {
           </div>
         ))}
       </section>
+      <section className="panel live-court-feed-panel skeleton-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Live court feed</p>
+            <h2>Latest filings, hearings, and receipts</h2>
+          </div>
+          <Stamp size={19} />
+        </div>
+        <div className="live-court-feed">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <article className="live-court-feed-row" key={index}>
+              <span className="skeleton skeleton-icon small" />
+              <span>
+                <strong className="skeleton skeleton-line short" />
+                <small className="skeleton skeleton-line title" />
+              </span>
+              <time className="skeleton skeleton-line tiny" />
+            </article>
+          ))}
+        </div>
+      </section>
       <section className="dashboard-grid">
         <section className="panel primary-work-panel skeleton-panel">
           <div className="panel-heading">
@@ -370,4 +419,43 @@ function formatReceiptType(value?: string) {
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
     .join(' ')
+}
+
+function buildLiveFeed(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
+  const caseItems = cases.map((item) => ({
+    id: `case-${item.id}-${item.updated ?? item.createdAt ?? ''}`,
+    kind: 'Case',
+    tone: item.status === 'Verdict' ? 'sealed' : item.status === 'Hearing' ? 'hearing' : 'queued',
+    label: item.status === 'Verdict' ? 'Verdict sealed' : item.status === 'Hearing' ? 'Hearing active' : 'Case filed',
+    title: item.title,
+    timestamp: item.updated ?? item.createdAt,
+    href: `/cases/${item.id}`,
+  }))
+
+  const receiptItems = ledgerRows.filter((row) => row.hash || row.txHash).map((row) => ({
+    id: `receipt-${row.caseId}-${row.receiptType ?? row.item}-${row.hash ?? row.txHash}`,
+    kind: 'Receipt',
+    tone: row.status === 'Anchored' ? 'anchored' : 'recorded',
+    label: `${formatReceiptType(row.receiptType)} ${row.status.toLowerCase()}`,
+    title: row.title,
+    timestamp: row.updated,
+    href: `/cases/${row.caseId}?tab=receipts`,
+  }))
+
+  return [...caseItems, ...receiptItems]
+    .filter((item): item is typeof item & { timestamp: string } => Boolean(item.timestamp))
+    .sort((left, right) => Date.parse(right.timestamp) - Date.parse(left.timestamp))
+}
+
+function formatRelativeTime(value?: string) {
+  if (!value) return 'Pending'
+  const deltaMs = Date.now() - Date.parse(value)
+  if (!Number.isFinite(deltaMs) || deltaMs < 0) return 'Now'
+  const minutes = Math.floor(deltaMs / 60_000)
+  if (minutes < 1) return 'Now'
+  if (minutes < 60) return `${minutes}m`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h`
+  const days = Math.floor(hours / 24)
+  return `${days}d`
 }

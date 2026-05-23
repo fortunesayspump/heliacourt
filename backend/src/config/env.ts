@@ -33,6 +33,9 @@ const envSchema = z.object({
   CASE_ESCROW_ADDRESS: optionalHex(20),
   COURT_RECEIPTS_ADDRESS: optionalHex(20),
   PROTOCOL_FEE_BPS: z.coerce.number().int().min(0).max(1_000).default(500),
+  HELIA_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
+  TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
+  TELEGRAM_ALERT_CHAT_IDS: z.string().optional(),
 })
 
 export const env = envSchema.parse(process.env)

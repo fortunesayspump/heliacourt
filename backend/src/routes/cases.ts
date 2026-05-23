@@ -9,6 +9,7 @@ import { env } from '../config/env.js'
 import type { CaseType, CourtArtifact, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { authChallenges, caseFollows, caseParticipants, onchainReceipts, users } from '../db/schema.js'
+import { notifyCaseFiled, notifyCaseFunded } from '../integrations/telegram.js'
 
 const createCaseSchema = z.object({
   id: z.string().trim().min(1).optional(),
@@ -382,6 +383,13 @@ export async function caseRoutes(app: FastifyInstance) {
         set: { payload },
       })
 
+    void notifyCaseFunded({
+      caseId: job.marketCase.id,
+      title: job.marketCase.question,
+      amountUsdc: verified.amountUsdc,
+      txHash: parsed.data.txHash,
+    })
+
     return {
       caseId: job.marketCase.id,
       wallet,
@@ -507,6 +515,13 @@ export async function caseRoutes(app: FastifyInstance) {
         })
         .onConflictDoNothing()
     }
+
+    void notifyCaseFiled({
+      caseId: marketCase.id,
+      title: marketCase.question,
+      budgetUsdc: data.onchain.budgetUsdc,
+      status: job.status,
+    })
 
     return reply.status(202).send({
       status: 'queued',

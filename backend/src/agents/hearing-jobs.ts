@@ -7,6 +7,7 @@ import { runHeliaiaConfiguredHearing } from '../court/heliaia-ai.js'
 import type { CourtArtifact, CourtTranscriptTurn, MarketCase, ToolEvidence } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { caseParticipants, cases, courtArtifacts, hearingJobs, onchainReceipts, settlementRows, toolEvidence, transcriptTurns, users, verdicts } from '../db/schema.js'
+import { notifyCaseCompleted } from '../integrations/telegram.js'
 
 type HearingJobStatus = 'queued' | 'running' | 'completed' | 'failed'
 
@@ -270,7 +271,14 @@ async function processQueue() {
         }
         job.completedAt = new Date().toISOString()
         job.updatedAt = job.completedAt
-        return saveJob(job)
+        await saveJob(job)
+        void notifyCaseCompleted({
+          caseId: job.marketCase.id,
+          title: job.marketCase.question,
+          verdict: findVerdictSummary(result.artifacts),
+          confidence: findVerdictConfidence(result.artifacts),
+          receiptCount: onchainSettlement.receipts?.length,
+        })
       })
       .catch((error) => {
         job.status = 'failed'
@@ -788,4 +796,19 @@ function serializeJob(job: HearingJob) {
 
 export class HearingBusyError extends Error {
   name = 'HearingBusyError'
+}
+
+function findVerdictSummary(artifacts: CourtArtifact[]) {
+  return findLastArtifact(artifacts, (artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')?.summary
+}
+
+function findVerdictConfidence(artifacts: CourtArtifact[]) {
+  return findLastArtifact(artifacts, (artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')?.confidence
+}
+
+function findLastArtifact(artifacts: CourtArtifact[], predicate: (artifact: CourtArtifact) => boolean) {
+  for (let index = artifacts.length - 1; index >= 0; index -= 1) {
+    if (predicate(artifacts[index])) return artifacts[index]
+  }
+  return undefined
 }
