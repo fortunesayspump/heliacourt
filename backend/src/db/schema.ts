@@ -67,6 +67,34 @@ export const authChallenges = pgTable('auth_challenges', {
   uniqueIndex('auth_challenges_nonce_idx').on(table.nonce),
 ])
 
+export const telegramLinkRequests = pgTable('telegram_link_requests', {
+  id: text('id').primaryKey(),
+  token: text('token').notNull(),
+  telegramUserId: text('telegram_user_id').notNull(),
+  chatId: text('chat_id').notNull(),
+  username: text('username'),
+  firstName: text('first_name'),
+  wallet: text('wallet').references(() => users.wallet, { onDelete: 'cascade' }),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  consumedAt: timestamp('consumed_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  uniqueIndex('telegram_link_requests_token_idx').on(table.token),
+  index('telegram_link_requests_user_idx').on(table.telegramUserId),
+])
+
+export const telegramAccounts = pgTable('telegram_accounts', {
+  telegramUserId: text('telegram_user_id').primaryKey(),
+  chatId: text('chat_id').notNull(),
+  wallet: text('wallet').notNull().references(() => users.wallet, { onDelete: 'cascade' }),
+  username: text('username'),
+  firstName: text('first_name'),
+  linkedAt: timestamp('linked_at', { withTimezone: true }).notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  index('telegram_accounts_wallet_idx').on(table.wallet),
+])
+
 export const hearingJobs = pgTable('hearing_jobs', {
   id: text('id').primaryKey(),
   caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),

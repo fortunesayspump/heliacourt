@@ -31,6 +31,9 @@ export default function DocsPage() {
               Helia Court is a market-intelligence protocol where users file from prediction-market URLs, agents testify,
               counsel argues, Archon seals verdicts, and Arc testnet records the settlement trail.
             </p>
+            <p>
+              The canonical docs home is now <a href="https://docs.heliacourt.xyz">docs.heliacourt.xyz</a>.
+            </p>
             <div className="docs-market-logos" aria-label="Supported markets">
               {supportedMarkets.map((market) => (
                 <a href={`https://${market.domain}`} key={market.domain} target="_blank" rel="noreferrer" title={market.name}>

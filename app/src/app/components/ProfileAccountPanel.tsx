@@ -33,7 +33,9 @@ export function ProfileAccountPanel() {
   const [loading, setLoading] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [telegramLinking, setTelegramLinking] = useState(false)
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
+  const telegramLinkToken = searchParams.get('telegramLink')
   const requestedWallet = normalizeWalletParam(
     searchParams.get('wallet')
       ?? searchParams.get('address')
@@ -164,6 +166,53 @@ export function ProfileAccountPanel() {
     }
   }
 
+  const linkTelegram = async () => {
+    if (!address || !telegramLinkToken || telegramLinking) return
+
+    setTelegramLinking(true)
+    setStatus('Preparing Telegram link signature...')
+    try {
+      const challengeResponse = await fetch('/api/telegram/link-challenge', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ token: telegramLinkToken, wallet: address }),
+      })
+      const challenge = await challengeResponse.json().catch(() => ({ error: 'Telegram link challenge returned a non-json response' }))
+      if (!challengeResponse.ok || !challenge.message) {
+        setStatus(challenge.error ?? 'Telegram link challenge failed')
+        return
+      }
+
+      setStatus('Sign the Telegram link in your wallet...')
+      const signature = await signMessageAsync({ message: challenge.message })
+      setStatus('Linking Telegram...')
+
+      const response = await fetch('/api/telegram/link', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token: telegramLinkToken,
+          wallet: address,
+          auth: {
+            message: challenge.message,
+            signature,
+          },
+        }),
+      })
+      const payload = await response.json().catch(() => ({ error: 'Telegram link returned a non-json response' }))
+      if (!response.ok) {
+        setStatus(payload.error ?? 'Telegram link failed')
+        return
+      }
+
+      setStatus('Telegram linked. You can return to the bot.')
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Telegram link failed')
+    } finally {
+      setTelegramLinking(false)
+    }
+  }
+
   if (!targetWallet) {
     return (
       <section className="profile-empty-shell">
@@ -174,7 +223,7 @@ export function ProfileAccountPanel() {
           <div>
             <p className="eyebrow">Wallet needed</p>
             <h2>Connect to open your account desk</h2>
-            <p>Profiles are scoped to the wallet that files cases, follows hearings, unlocks private records, and receives payout receipts.</p>
+            <p>{telegramLinkToken ? 'Connect the wallet you want to use with Telegram, then sign the link request.' : 'Profiles are scoped to the wallet that files cases, follows hearings, unlocks private records, and receives payout receipts.'}</p>
           </div>
           <WalletButton className="secondary-button compact-back" label="Connect wallet" />
         </article>
@@ -220,6 +269,11 @@ export function ProfileAccountPanel() {
         {isOwnProfile ? (
           <button className="secondary-button compact-back profile-edit-trigger" type="button" onClick={() => setEditOpen(true)}>
             Edit profile
+          </button>
+        ) : null}
+        {isOwnProfile && telegramLinkToken ? (
+          <button className="primary-button compact-back profile-edit-trigger" type="button" onClick={linkTelegram} disabled={telegramLinking}>
+            {telegramLinking ? 'Linking Telegram' : 'Link Telegram'}
           </button>
         ) : null}
       </section>

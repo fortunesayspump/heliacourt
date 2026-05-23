@@ -1,6 +1,7 @@
 packages:
   - app
   - marketing
+  - docs
   - backend
   - contracts
 

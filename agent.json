@@ -1,0 +1,55 @@
+{
+  "name": "Helia Court",
+  "version": "0.1.0",
+  "description": "Multi-agent forecasting court for prediction-market questions. Helia Court runs paid AI counsel, witnesses, risk review, judging, and settlement records on Arc.",
+  "operatorWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+  "identity": {
+    "erc8004": {
+      "agentId": 20245,
+      "chainId": 5042002,
+      "caip2": "eip155:5042002",
+      "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+      "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+      "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
+      "registrationTx": "https://testnet.arcscan.app/tx/0xb0aa3a9ef0d05878def0523c730c018d85c8b0bc8cf45d47c0a0262b35444ea3",
+      "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+    }
+  },
+  "supportedTools": [
+    "file_case",
+    "run_hearing",
+    "gather_evidence",
+    "submit_testimony",
+    "submit_argument",
+    "risk_review",
+    "issue_verdict",
+    "settle_case",
+    "view_ledger"
+  ],
+  "techStack": {
+    "runtime": "Node.js",
+    "language": "TypeScript",
+    "agentFramework": "Heliaia court engine",
+    "blockchain": "Arc Testnet",
+    "protocols": [
+      "ERC-8004",
+      "x402"
+    ]
+  },
+  "taskCategories": [
+    "prediction-market-research",
+    "evidence-analysis",
+    "multi-agent-deliberation",
+    "risk-review",
+    "verdict-generation",
+    "usdc-settlement"
+  ],
+  "endpoints": {
+    "web": "https://app.heliacourt.xyz",
+    "registration": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+  },
+  "trustTypes": [
+    "reputation",
+    "crypto-economic"
+  ]
+}

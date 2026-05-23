@@ -7,12 +7,14 @@
   "scripts": {
     "dev:app": "pnpm --dir app dev",
     "dev:marketing": "pnpm --dir marketing dev",
+    "dev:docs": "pnpm --dir docs dev",
     "dev:backend": "pnpm --dir backend dev",
     "build:app": "pnpm --dir app build",
     "build:marketing": "pnpm --dir marketing build",
+    "build:docs": "pnpm --dir docs build",
     "build:backend": "pnpm --dir backend build",
     "build:contracts": "pnpm --dir contracts build",
     "test:contracts": "pnpm --dir contracts test",
-    "build": "pnpm build:app && pnpm build:marketing && pnpm build:backend && pnpm build:contracts"
+    "build": "pnpm build:app && pnpm build:marketing && pnpm build:docs && pnpm build:backend && pnpm build:contracts"
   }
 }

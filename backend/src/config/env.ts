@@ -44,6 +44,7 @@ const envSchema = z.object({
   HELIA_PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
   TELEGRAM_BOT_TOKEN: z.string().min(1).optional(),
   TELEGRAM_ALERT_CHAT_IDS: z.string().optional(),
+  TELEGRAM_WEBHOOK_SECRET: z.string().min(16).optional(),
   HELIA_X402_RECEIVER_ADDRESS: optionalHex(20),
   HELIA_X402_FACILITATOR_URL: optionalUrl,
   HELIA_X402_SIGNING_SECRET: z.string().min(24).optional(),

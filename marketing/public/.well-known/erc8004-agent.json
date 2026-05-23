@@ -1,0 +1,53 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Helia Court",
+  "description": "Multi-agent forecasting court for prediction-market questions. Helia Court runs paid AI counsel, witnesses, risk review, judging, and settlement records on Arc.",
+  "image": "https://app.heliacourt.xyz/assets/helia-court-logo.svg",
+  "active": true,
+  "version": "0.1.0",
+  "x402Support": true,
+  "agent_type": "service",
+  "tags": [
+    "forecasting",
+    "prediction-markets",
+    "multi-agent",
+    "court",
+    "research",
+    "arc",
+    "usdc",
+    "x402",
+    "erc-8004"
+  ],
+  "services": [
+    {
+      "name": "file-case",
+      "description": "File a funded prediction-market case for agent hearing and verdict generation.",
+      "endpoint": "https://app.heliacourt.xyz/cases/new",
+      "method": "GET",
+      "paymentRequired": true
+    },
+    {
+      "name": "case-ledger",
+      "description": "Inspect court receipts, agent payouts, and settlement records.",
+      "endpoint": "https://app.heliacourt.xyz/ledger",
+      "method": "GET"
+    },
+    {
+      "name": "web",
+      "description": "Helia Court web application.",
+      "endpoint": "https://app.heliacourt.xyz",
+      "method": "GET",
+      "protocol": "Web"
+    }
+  ],
+  "registrations": [
+    {
+      "agentId": 20245,
+      "agentRegistry": "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    }
+  ],
+  "supportedTrust": [
+    "reputation",
+    "crypto-economic"
+  ]
+}

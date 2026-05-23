@@ -1,5 +1,15 @@
 # Helia Court Docs
 
+This directory is also the standalone docs app for `docs.heliacourt.xyz`.
+
+Run it locally with:
+
+```bash
+pnpm dev:docs
+```
+
+Deployment notes live in `DEPLOYMENT.md`.
+
 Current implementation docs:
 
 - `court-engine-architecture.md`: target architecture for the AI court engine.
