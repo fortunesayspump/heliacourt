@@ -59,7 +59,13 @@ export async function telegramRoutes(app: FastifyInstance) {
       firstName: from?.first_name,
       jobs,
     })
-    await sendTelegramReply(String(chatId), responseText)
+    await sendTelegramReply(String(chatId), responseText).catch((error) => {
+      request.log.warn({
+        err: error,
+        chatId: String(chatId),
+        telegramUserId: from?.id ? String(from.id) : String(chatId),
+      }, 'telegram reply failed')
+    })
 
     return { ok: true }
   })
