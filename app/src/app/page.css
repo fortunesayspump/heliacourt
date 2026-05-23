@@ -2945,7 +2945,7 @@ a.registry-row:hover {
   height: 100%;
   display: block;
   object-fit: contain;
-  border-radius: inherit;
+  border-radius: var(--radius-sm);
   filter:
     brightness(1.18)
     saturate(0.62)
