@@ -289,6 +289,7 @@ export async function cancelHearingOnchain(input: {
     chain: arcTestnet,
     transport: http(env.ARC_RPC_URL),
   })
+
   const caseId = BigInt(onchainCase.caseId)
   const escrowState = await publicClient.readContract({
     address: env.CASE_ESCROW_ADDRESS as Address,
@@ -296,9 +297,30 @@ export async function cancelHearingOnchain(input: {
     functionName: 'cases',
     args: [caseId],
   })
+  const petitioner = escrowState[0]
+  const escrowBudget = escrowState[1]
+  const alreadyPaidOut = escrowState[2]
   const escrowStatus = Number(escrowState[3])
+  const refundableAmount = escrowBudget > alreadyPaidOut ? escrowBudget - alreadyPaidOut : 0n
+
+  if (escrowStatus === 3) {
+    return {
+      status: 'refunded',
+      reason: 'case was already cancelled onchain',
+      receipts: [],
+      totalBudgetUsdc: formatUsdc(escrowBudget),
+      totalPayoutUsdc: formatUsdc(alreadyPaidOut),
+    }
+  }
+
   if (escrowStatus !== 1) {
-    return { status: 'skipped', reason: `case escrow status is ${escrowStatus}; only open cases can be cancelled`, receipts: [] }
+    return {
+      status: 'skipped',
+      reason: `case status ${escrowStatus} cannot be cancelled`,
+      receipts: [],
+      totalBudgetUsdc: formatUsdc(escrowBudget),
+      totalPayoutUsdc: formatUsdc(alreadyPaidOut),
+    }
   }
 
   const txHash = await writeAndWait(walletClient, publicClient, {
@@ -309,14 +331,19 @@ export async function cancelHearingOnchain(input: {
   })
 
   return {
-    status: 'recorded',
+    status: 'refunded',
     reason: input.reason,
     receipts: [{
       type: 'case-cancel',
       txHash,
       chainId: String(env.ARC_CHAIN_ID),
       caseId: onchainCase.caseId,
+      recordHash: hashStable({ caseId: input.marketCase.id, reason: input.reason, action: 'hearing-auto-refund' }),
+      amountUsdc: formatUsdc(refundableAmount),
+      wallet: petitioner,
     }],
+    totalBudgetUsdc: formatUsdc(escrowBudget),
+    totalPayoutUsdc: formatUsdc(alreadyPaidOut),
   }
 }
 

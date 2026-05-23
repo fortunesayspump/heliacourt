@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowSquareOut, Fingerprint, GitBranch, ShieldCheck, Stamp } from '@phosphor-icons/react/ssr'
+import { ArrowSquareOut } from '@phosphor-icons/react/ssr'
 import { AppFooter } from '../../components/AppFooter'
 import { AppHeader } from '../../components/AppHeader'
 import { getBackendCaseDetail, type ApiCourtArtifact } from '../../../lib/backend-data'
@@ -10,7 +10,10 @@ export const dynamic = 'force-dynamic'
 
 export default async function ProofPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const detail = await getBackendCaseDetail(id)
+  const [detail, x402Activity] = await Promise.all([
+    getBackendCaseDetail(id),
+    getX402Activity(id),
+  ])
   if (!detail) notFound()
 
   const courtCase = detail.case
@@ -37,24 +40,36 @@ export default async function ProofPage({ params }: { params: Promise<{ id: stri
 
         <section className="proof-grid">
           <article>
-            <Fingerprint size={19} />
             <span>Record hash</span>
             <strong>{shortHash(recordHash)}</strong>
           </article>
           <article>
-            <Stamp size={19} />
             <span>Receipt rows</span>
             <strong>{receipts.length}</strong>
           </article>
           <article>
-            <GitBranch size={19} />
             <span>Transcript turns</span>
             <strong>{detail.transcript.length}</strong>
           </article>
           <article>
-            <ShieldCheck size={19} />
             <span>Evidence trail</span>
             <strong>{sourceCount + evidenceCount}</strong>
+          </article>
+          <article>
+            <span>x402 paid status</span>
+            <strong>{x402Activity.latest ? 'Paid read' : 'Ready'}</strong>
+          </article>
+          <article>
+            <span>Payment transaction id</span>
+            <strong>{shortHash(x402Activity.latest?.transactionId)}</strong>
+          </article>
+          <article>
+            <span>Trace hash</span>
+            <strong>{shortHash(recordHash ?? receipts[0]?.recordHash)}</strong>
+          </article>
+          <article>
+            <span>Arc tx links</span>
+            <strong>{receipts.filter((receipt) => receipt.txHash).length}</strong>
           </article>
         </section>
 
@@ -106,11 +121,15 @@ export default async function ProofPage({ params }: { params: Promise<{ id: stri
               </div>
               <div>
                 <span>x402 access</span>
-                <strong>Planned</strong>
+                <strong>{x402Activity.totalPaidReads} paid reads</strong>
+              </div>
+              <div>
+                <span>Gateway paid</span>
+                <strong>{x402Activity.totalUsdc} USDC</strong>
               </div>
             </div>
             <p className="proof-note">
-              Next iteration can put this same proof bundle behind paid API calls for agents: price, transcript, receipt, and verification lookups.
+              Paid agent/API proof calls return the payment transaction id alongside the same case trace, transcript count, receipt list, and record hash shown here.
             </p>
           </article>
         </section>
@@ -118,6 +137,30 @@ export default async function ProofPage({ params }: { params: Promise<{ id: stri
       <AppFooter />
     </main>
   )
+}
+
+type X402CaseActivity = {
+  totalPaidReads: number
+  totalUsdc: string
+  latest?: {
+    transactionId?: string
+  } | null
+}
+
+async function getX402Activity(caseId: string): Promise<X402CaseActivity> {
+  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+  try {
+    const response = await fetch(`${backendUrl}/x402/activity?caseId=${encodeURIComponent(caseId)}`, { cache: 'no-store' })
+    if (!response.ok) return { totalPaidReads: 0, totalUsdc: '0', latest: null }
+    const payload = await response.json() as Partial<X402CaseActivity>
+    return {
+      totalPaidReads: Number(payload.totalPaidReads ?? 0),
+      totalUsdc: payload.totalUsdc ?? '0',
+      latest: payload.latest ?? null,
+    }
+  } catch {
+    return { totalPaidReads: 0, totalUsdc: '0', latest: null }
+  }
 }
 
 function shortHash(value?: string) {

@@ -78,7 +78,7 @@ async function DashboardData() {
     getBackendLedgerRows(),
     getBackendAgents(),
   ])
-  const activeCases = backendCases.filter((item) => item.status !== 'Verdict')
+  const activeCases = backendCases.filter((item) => item.status !== 'Verdict' && item.status !== 'Refunded')
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
   const liveFeed = buildLiveFeed(backendCases, ledgerRows).slice(0, 8)
   const graphStats = buildDashboardGraphs(backendCases, ledgerRows)
@@ -116,7 +116,7 @@ async function DashboardData() {
               <Eye size={19} />
               <div>
                 <span>Public verdicts</span>
-                <strong>{backendCases.filter((item) => item.status === 'Verdict').length} sealed</strong>
+                <strong>{backendCases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length} sealed</strong>
               </div>
               <MiniSparkline values={graphStats.verdictCadence} />
             </div>
@@ -445,7 +445,7 @@ function buildDashboardGraphs(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
   const statusBars = [
     cases.filter((item) => item.status === 'Queued').length,
     cases.filter((item) => item.status === 'Hearing').length,
-    cases.filter((item) => item.status === 'Verdict').length,
+    cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length,
   ]
   const receiptBars = [
     ledgerRows.filter((item) => item.receiptType?.includes('funding')).length,
@@ -458,7 +458,7 @@ function buildDashboardGraphs(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
     statusBars,
     receiptBars,
     caseCadence: countByRecentDay(cases.map((item) => item.createdAt ?? item.updated)),
-    verdictCadence: countByRecentDay(cases.filter((item) => item.status === 'Verdict').map((item) => item.updated ?? item.createdAt)),
+    verdictCadence: countByRecentDay(cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').map((item) => item.updated ?? item.createdAt)),
   }
 }
 
@@ -483,8 +483,8 @@ function buildLiveFeed(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
   const caseItems = cases.map((item) => ({
     id: `case-${item.id}-${item.updated ?? item.createdAt ?? ''}`,
     kind: 'Case',
-    tone: item.status === 'Verdict' ? 'sealed' : item.status === 'Hearing' ? 'hearing' : 'queued',
-    label: item.status === 'Verdict' ? 'Verdict sealed' : item.status === 'Hearing' ? 'Hearing active' : 'Case filed',
+    tone: item.status === 'Verdict' || item.status === 'Refunded' ? 'sealed' : item.status === 'Hearing' ? 'hearing' : 'queued',
+    label: item.status === 'Refunded' ? 'Escrow refunded' : item.status === 'Verdict' ? 'Verdict sealed' : item.status === 'Hearing' ? 'Hearing active' : 'Case filed',
     title: item.title,
     timestamp: item.updated ?? item.createdAt,
     href: `/cases/${item.id}`,

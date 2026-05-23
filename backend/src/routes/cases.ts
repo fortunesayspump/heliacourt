@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { createPublicClient, formatUnits, http, parseEventLogs, parseUnits, verifyMessage } from 'viem'
 import { z } from 'zod'
@@ -50,6 +50,12 @@ const addFundingReceiptSchema = z.object({
   txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
   amountUsdc: z.string().trim().min(1).optional(),
 })
+const cancelCaseReceiptSchema = z.object({
+  wallet: walletSchema,
+  chainId: z.string().trim().min(1),
+  txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
+  refundUsdc: z.string().trim().min(1).optional(),
+})
 const CASE_READ_PURPOSE_PREFIX = 'case:read'
 const CASE_FOLLOW_PURPOSE_PREFIX = 'case:follow'
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
@@ -79,16 +85,26 @@ const caseEscrowFundingAbi = [
       { name: 'amount', type: 'uint96', indexed: false },
     ],
   },
+  {
+    type: 'event',
+    name: 'CaseCancelled',
+    inputs: [
+      { name: 'caseId', type: 'uint256', indexed: true },
+      { name: 'refund', type: 'uint96', indexed: false },
+    ],
+  },
 ] as const
 
 export async function caseRoutes(app: FastifyInstance) {
   app.get('/cases', async () => {
     const jobs = await listHearingJobs()
+    const publicJobs = jobs.filter((job) => isPublicListCase(job))
 
     return {
-      cases: jobs
-        .filter((job) => isPublicListCase(job))
-        .map((job) => summarizeCase(job)),
+      cases: await Promise.all(publicJobs.map(async (job) => summarizeCase(
+        job,
+        job.status === 'failed' ? await getCaseRecordedReceipts(job.marketCase.id) : [],
+      ))),
     }
   })
 
@@ -399,15 +415,86 @@ export async function caseRoutes(app: FastifyInstance) {
     }
   })
 
+  app.post('/cases/:caseId/cancellation', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const { caseId } = request.params as { caseId: string }
+    const parsed = cancelCaseReceiptSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid cancellation receipt',
+        issues: parsed.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          message: issue.message,
+        })),
+      })
+    }
+
+    const jobs = await listHearingJobs()
+    const job = jobs.find((item) => item.caseId === caseId || item.marketCase.id === caseId)
+    if (!job) return reply.status(404).send({ error: 'case not found' })
+    if (!job.marketCase.onchain) return reply.status(400).send({ error: 'case has no onchain escrow record' })
+    if (String(env.ARC_CHAIN_ID) !== parsed.data.chainId || parsed.data.chainId !== job.marketCase.onchain.chainId) {
+      return reply.status(400).send({ error: 'cancellation receipt chain does not match the case chain' })
+    }
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    const verified = await verifyCaseCancellationReceipt({
+      txHash: parsed.data.txHash,
+      wallet,
+      onchainCaseId: job.marketCase.onchain.caseId,
+      escrowAddress: job.marketCase.onchain.escrowAddress,
+      expectedRefundUsdc: parsed.data.refundUsdc,
+    }).catch((error) => ({
+      ok: false as const,
+      error: error instanceof Error ? error.message : 'cancellation receipt verification failed',
+    }))
+    if (!verified.ok) return reply.status(400).send({ error: verified.error })
+
+    const now = new Date()
+    await ensureUser(wallet)
+    const payload = {
+      type: 'case-cancelled',
+      wallet,
+      refundUsdc: verified.refundUsdc,
+      onchainCaseId: job.marketCase.onchain.caseId,
+    }
+    await db!
+      .insert(onchainReceipts)
+      .values({
+        id: `${job.id}:case-cancelled:${parsed.data.txHash}`,
+        caseId: job.marketCase.id,
+        jobId: job.id,
+        chainId: parsed.data.chainId,
+        txHash: parsed.data.txHash,
+        receiptType: 'case-cancel',
+        recordHash: null,
+        payload,
+        createdAt: now,
+      })
+      .onConflictDoUpdate({
+        target: onchainReceipts.id,
+        set: { payload },
+      })
+
+    return {
+      caseId: job.marketCase.id,
+      wallet,
+      refundUsdc: verified.refundUsdc,
+      txHash: parsed.data.txHash,
+      status: 'refunded',
+    }
+  })
+
   app.get('/ledger', async () => {
     const jobs = await listHearingJobs()
     const publicJobs = jobs.filter((job) => isPublicListCase(job))
-    const fundingRows = await getAddedFundingLedgerRows(publicJobs)
+    const recordedReceiptRows = await getRecordedReceiptLedgerRows(publicJobs)
 
     return {
       rows: [
         ...publicJobs.flatMap((job) => summarizeLedgerRows(job)),
-        ...fundingRows,
+        ...recordedReceiptRows,
       ],
     }
   })
@@ -549,7 +636,7 @@ async function summarizeCaseDetail(
     : result?.onchainSettlement
 
   return {
-    case: summarizeCase(job),
+    case: summarizeCase(job, extraReceipts),
     transcript: Array.isArray(result?.transcript) ? result.transcript : [],
     artifacts: Array.isArray(result?.artifacts) ? result.artifacts : [],
     recordHash: result?.recordHash,
@@ -571,15 +658,15 @@ async function getCaseRecordedReceipts(caseId: string) {
     .where(eq(onchainReceipts.caseId, caseId))
 
   return receipts
-    .filter((receipt) => receipt.receiptType === 'case-added-funding')
+    .filter((receipt) => receipt.receiptType === 'case-added-funding' || receipt.receiptType === 'case-cancel')
     .map((receipt) => {
-      const payload = receipt.payload as { amountUsdc?: string; wallet?: string } | null
+      const payload = receipt.payload as { amountUsdc?: string; refundUsdc?: string; wallet?: string } | null
       return {
         type: receipt.receiptType,
         txHash: receipt.txHash,
         chainId: receipt.chainId,
         caseId,
-        amountUsdc: payload?.amountUsdc,
+        amountUsdc: payload?.amountUsdc ?? payload?.refundUsdc,
         wallet: payload?.wallet,
       }
     })
@@ -678,6 +765,46 @@ async function verifyCaseFundingReceipt({
   return {
     ok: true as const,
     amountUsdc: formatUnits(amount, usdcDecimals),
+  }
+}
+
+async function verifyCaseCancellationReceipt({
+  txHash,
+  wallet,
+  onchainCaseId,
+  escrowAddress,
+  expectedRefundUsdc,
+}: {
+  txHash: `0x${string}`
+  wallet: string
+  onchainCaseId: string
+  escrowAddress: `0x${string}`
+  expectedRefundUsdc?: string
+}) {
+  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
+    return { ok: false as const, error: 'cancellation escrow address does not match backend escrow configuration' }
+  }
+  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
+  if (receipt.status !== 'success') return { ok: false as const, error: 'cancellation transaction did not succeed' }
+  if (normalizeWallet(receipt.from) !== wallet) return { ok: false as const, error: 'cancellation transaction sender does not match wallet' }
+
+  const logs = parseEventLogs({
+    abi: caseEscrowFundingAbi,
+    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
+    eventName: 'CaseCancelled',
+  })
+  const event = logs.find((log) => log.args.caseId?.toString() === onchainCaseId)
+  if (!event) return { ok: false as const, error: 'CaseCancelled event was not found for this case' }
+
+  const refund = event.args.refund
+  if (expectedRefundUsdc) {
+    const expected = parseUnits(expectedRefundUsdc, usdcDecimals)
+    if (refund !== expected) return { ok: false as const, error: 'refund amount does not match the transaction event' }
+  }
+
+  return {
+    ok: true as const,
+    refundUsdc: formatUnits(refund, usdcDecimals),
   }
 }
 
@@ -888,11 +1015,17 @@ function authorizeAdminRequest(headers: Record<string, string | string[] | undef
   return { ok: true as const }
 }
 
-function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
+function summarizeCase(
+  job: Awaited<ReturnType<typeof listHearingJobs>>[number],
+  extraReceipts: Array<{ type: string }> = [],
+) {
   const result = job.result as { marketCase?: MarketCase; artifacts?: CourtArtifact[]; recordHash?: string; partial?: boolean; onchainSettlement?: { status?: string; totalPayoutUsdc?: string; capped?: boolean } } | undefined
   const marketCase = result?.marketCase ?? job.marketCase
   const verdict = findLastArtifact(result?.artifacts, (artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
-  const status = job.status === 'completed'
+  const isRefunded = result?.onchainSettlement?.status === 'refunded' || extraReceipts.some((receipt) => receipt.type === 'case-cancel')
+  const status = isRefunded
+    ? 'Refunded'
+    : job.status === 'completed'
     ? 'Verdict'
     : job.status === 'running'
       ? 'Hearing'
@@ -911,7 +1044,7 @@ function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number])
     updated: job.updatedAt,
     createdAt: job.createdAt,
     resolution: marketCase.context,
-    verdict: verdict?.summary ?? (job.status === 'failed' ? job.error : 'Hearing pending'),
+    verdict: verdict?.summary ?? (isRefunded ? 'Escrow refunded after hearing failure' : job.status === 'failed' ? job.error : 'Hearing pending'),
     confidence: verdict?.confidence,
     receipt: result?.recordHash,
     probability: extractProbability(verdict),
@@ -924,11 +1057,11 @@ function summarizeCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number])
       ? Array.from(new Set(result.artifacts.filter((artifact) => artifact.type === 'witness-testimony').map((artifact) => artifact.agentId)))
       : [],
     onchain: marketCase.onchain,
-    onchainSettlement: result?.onchainSettlement
+    onchainSettlement: result?.onchainSettlement || isRefunded
       ? {
-          status: result.onchainSettlement.status,
-          totalPayoutUsdc: result.onchainSettlement.totalPayoutUsdc,
-          capped: result.onchainSettlement.capped,
+          status: isRefunded ? 'refunded' : result?.onchainSettlement?.status,
+          totalPayoutUsdc: result?.onchainSettlement?.totalPayoutUsdc,
+          capped: result?.onchainSettlement?.capped,
         }
       : undefined,
   }
@@ -1063,26 +1196,29 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
   }]
 }
 
-async function getAddedFundingLedgerRows(publicJobs: Awaited<ReturnType<typeof listHearingJobs>>) {
+async function getRecordedReceiptLedgerRows(publicJobs: Awaited<ReturnType<typeof listHearingJobs>>) {
   if (!isDatabaseConfigured || !publicJobs.length) return []
 
   const byCase = new Map(publicJobs.map((job) => [job.marketCase.id, job]))
   const receipts = await db!
     .select()
     .from(onchainReceipts)
-    .where(eq(onchainReceipts.receiptType, 'case-added-funding'))
+    .where(inArray(onchainReceipts.receiptType, ['case-added-funding', 'case-cancel']))
 
   return receipts.flatMap((receipt) => {
     const job = byCase.get(receipt.caseId)
     if (!job) return []
 
-    const payload = receipt.payload as { amountUsdc?: string; wallet?: string } | null
+    const payload = receipt.payload as { amountUsdc?: string; refundUsdc?: string; wallet?: string } | null
+    const isCancel = receipt.receiptType === 'case-cancel'
     return [{
       caseId: job.marketCase.id,
       title: job.marketCase.question,
-      item: 'Added case funding',
-      amount: payload?.amountUsdc ? `${payload.amountUsdc} USDC` : 'Recorded',
-      status: 'Anchored',
+      item: isCancel ? 'Escrow refund' : 'Added case funding',
+      amount: isCancel
+        ? payload?.refundUsdc ? `${payload.refundUsdc} USDC` : 'Refunded'
+        : payload?.amountUsdc ? `${payload.amountUsdc} USDC` : 'Recorded',
+      status: isCancel ? 'Refunded' : 'Anchored',
       hash: receipt.txHash,
       updated: receipt.createdAt.toISOString(),
       chainId: receipt.chainId,
@@ -1102,6 +1238,7 @@ function formatProtocolFee(budgetUsdc: string) {
 function formatReceiptType(type: string, agentId?: string) {
   if (type === 'agent-payout') return agentId ? `Agent payout · ${agentId}` : 'Agent payout'
   if (type === 'case-added-funding') return 'Added case funding'
+  if (type === 'case-cancel') return 'Escrow refund'
   if (type === 'case-event') return 'Hearing record'
   if (type === 'case-close') return 'Escrow close'
   return type

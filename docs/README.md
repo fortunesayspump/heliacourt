@@ -37,6 +37,39 @@ Implemented now:
 - Funded fresh-hearing and private-fork filing. Forks open a new Arc escrow and store parent-case lineage in Postgres.
 - Existing-case funding joins. The upgraded CaseEscrow exposes `addFunding`, the frontend records wallet-funded top-ups, and the backend verifies the `CaseFunded` event before writing the backer/receipt row.
 - Circle Gateway x402 proof APIs. Public browsing stays free, app filing/funding uses normal wallet USDC, and agent-facing x402 reads use Gateway balance for tiny paid transcript, receipt, price, and proof calls.
+- Stuck-case recovery. Failed onchain hearings can cancel the escrow and record a `case-cancel` receipt so refunded cases show as `Refunded` instead of unresolved failures.
+
+## x402 Agent API
+
+Base URL:
+
+```bash
+https://helia-courtbackend-production.up.railway.app
+```
+
+Discovery and activity:
+
+```bash
+curl https://helia-courtbackend-production.up.railway.app/x402/status
+curl 'https://helia-courtbackend-production.up.railway.app/x402/activity?caseId=<caseId>'
+```
+
+Paid resources:
+
+```bash
+GET /x402/price/:caseId
+GET /x402/transcript/:caseId
+GET /x402/receipts/:caseId
+GET /x402/proof/:caseId
+```
+
+Safety model:
+
+- x402 reads never touch filing escrow funds.
+- A request without payment returns `402` with `payment-required`, `accept-payment`, and `x-payment-challenge`.
+- Invalid, expired, underpriced, or unsettled payments return `402` or `503` and do not reveal protected data.
+- Successful reads return `PAYMENT-RESPONSE` and a `paid` object containing the payer, transaction hash, amount, and network.
+- Paid read receipts are stored in `/x402/activity` when the database is configured.
 
 Still missing before the full product flow is complete:
 

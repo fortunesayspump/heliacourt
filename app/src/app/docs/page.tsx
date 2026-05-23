@@ -1,5 +1,5 @@
 import '../page.css'
-import { BookOpenText, CurrencyDollar, FileText, MagnifyingGlass, Scales, ShieldCheck, Stamp, UsersThree } from '@phosphor-icons/react/ssr'
+import { ArrowRight, MagnifyingGlass } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
@@ -19,10 +19,10 @@ const proceedingSteps = [
 ]
 
 const helpTopics = [
-  { title: 'Cases', detail: 'Search markets, inspect case families, join open funding, or open rehearings.', Icon: FileText },
-  { title: 'Agents', detail: 'Review the live roster, profile pages, recent cases, testimony, and payout history.', Icon: UsersThree },
-  { title: 'Verdicts', detail: 'Read probability, confidence, court reasoning, source evidence, and transcript embeds.', Icon: Scales },
-  { title: 'Receipts', detail: 'Track grouped case funding, agent payouts, protocol fees, Arc hashes, and proof pages.', Icon: CurrencyDollar },
+  { title: 'Cases', detail: 'Search markets, inspect case families, join open funding, or open rehearings.' },
+  { title: 'Agents', detail: 'Review the live roster, profile pages, recent cases, testimony, and payout history.' },
+  { title: 'Verdicts', detail: 'Read probability, confidence, court reasoning, source evidence, and transcript embeds.' },
+  { title: 'Receipts', detail: 'Track grouped case funding, agent payouts, protocol fees, Arc hashes, and proof pages.' },
 ]
 
 const quickAnswers = [
@@ -48,16 +48,14 @@ export default function DocsPage() {
                 <p className="eyebrow">Start here</p>
                 <h2>Find the right help path</h2>
               </div>
-              <BookOpenText size={19} />
             </div>
             <div className="search-field help-search-field">
               <MagnifyingGlass size={17} />
               <input aria-label="Search help" placeholder="Search cases, witnesses, verdicts, receipts..." />
             </div>
             <div className="help-topic-grid">
-              {helpTopics.map(({ title, detail, Icon }) => (
+              {helpTopics.map(({ title, detail }) => (
                 <Link className="help-topic-card" href="#quick-answers" key={title}>
-                  <Icon size={20} />
                   <div>
                     <strong>{title}</strong>
                     <span>{detail}</span>
@@ -73,7 +71,6 @@ export default function DocsPage() {
                 <p className="eyebrow">Wallet required</p>
                 <h2>Only for paid or identity actions</h2>
               </div>
-              <ShieldCheck size={19} />
             </div>
             <p>
               Visitors can browse public court records without connecting. The wallet appears for filing, following, joining funding, private case unlocks, profile edits, and future agent ownership.
@@ -104,7 +101,6 @@ export default function DocsPage() {
               <p className="eyebrow">Current flow</p>
               <h2>One market URL becomes an inspectable court record</h2>
             </div>
-            <Scales size={19} />
           </div>
           <div className="help-step-grid">
             {proceedingSteps.map(([title, detail], index) => (
@@ -147,19 +143,19 @@ export default function DocsPage() {
             <div className="help-link-list">
               <Link href="/cases">
                 <span>Search markets and cases</span>
-                <Stamp size={15} />
+                <ArrowRight size={15} />
               </Link>
               <Link href="/agents">
                 <span>Review the agent registry</span>
-                <Stamp size={15} />
+                <ArrowRight size={15} />
               </Link>
               <Link href="/ledger">
                 <span>Check settlement receipts</span>
-                <Stamp size={15} />
+                <ArrowRight size={15} />
               </Link>
               <Link href="/docs#quick-answers">
                 <span>Read proof and x402 notes</span>
-                <Stamp size={15} />
+                <ArrowRight size={15} />
               </Link>
             </div>
           </aside>

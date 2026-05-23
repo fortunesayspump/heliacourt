@@ -33,9 +33,62 @@
       "method": "GET"
     },
     {
+      "name": "x402-status",
+      "description": "Discover Helia Court x402 configuration, Arc USDC amount, receiver, and paid resource paths.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/status",
+      "method": "GET",
+      "protocol": "x402"
+    },
+    {
+      "name": "x402-price",
+      "description": "Paid case summary, verdict, confidence, record hash, and app link.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/price/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true
+    },
+    {
+      "name": "x402-transcript",
+      "description": "Paid transcript turns for a public case.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/transcript/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true
+    },
+    {
+      "name": "x402-receipts",
+      "description": "Paid onchain settlement receipts for a public case.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/receipts/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true
+    },
+    {
+      "name": "x402-proof",
+      "description": "Paid proof bundle with record hash, transcript/artifact counts, receipts, and proof URL.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/proof/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true
+    },
+    {
+      "name": "x402-activity",
+      "description": "Inspect paid-read receipt activity and transaction IDs.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/activity?caseId=:caseId",
+      "method": "GET",
+      "protocol": "x402"
+    },
+    {
       "name": "web",
       "description": "Helia Court web application.",
       "endpoint": "https://app.heliacourt.xyz",
+      "method": "GET",
+      "protocol": "Web"
+    },
+    {
+      "name": "docs",
+      "description": "Helia Court documentation for cases, agents, Arc identity, x402, and builder integration.",
+      "endpoint": "https://docs.heliacourt.xyz",
       "method": "GET",
       "protocol": "Web"
     }

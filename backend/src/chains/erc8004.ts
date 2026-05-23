@@ -26,11 +26,32 @@ export type RegisterErc8004AgentOptions = {
   agentURI: string
 }
 
+export type Erc8004AgentOptions = {
+  rpcUrl: string
+  agentId: bigint
+}
+
+export type UpdateErc8004AgentURIOptions = Erc8004AgentOptions & {
+  privateKey: `0x${string}`
+  agentURI: string
+}
+
+function getPublicClient(rpcUrl: string) {
+  return createPublicClient({ chain: arcTestnet, transport: http(rpcUrl) })
+}
+
+function getWalletClient(privateKey: `0x${string}`, rpcUrl: string) {
+  const account = privateKeyToAccount(privateKey)
+  return {
+    account,
+    client: createWalletClient({ account, chain: arcTestnet, transport: http(rpcUrl) }),
+  }
+}
+
 export async function registerErc8004Agent(options: RegisterErc8004AgentOptions) {
   const account = privateKeyToAccount(options.privateKey)
-  const transport = http(options.rpcUrl)
-  const publicClient = createPublicClient({ chain: arcTestnet, transport })
-  const walletClient = createWalletClient({ account, chain: arcTestnet, transport })
+  const publicClient = getPublicClient(options.rpcUrl)
+  const walletClient = createWalletClient({ account, chain: arcTestnet, transport: http(options.rpcUrl) })
 
   const { request, result } = await publicClient.simulateContract({
     address: arcErc8004.identityRegistry,
@@ -56,6 +77,69 @@ export async function registerErc8004Agent(options: RegisterErc8004AgentOptions)
     agentURI: options.agentURI,
     transactionHash: hash,
     blockNumber: receipt.blockNumber.toString(),
+    chainId: arcTestnet.id,
+    caip2: arcErc8004.caip2,
+    identityRegistry: arcErc8004.identityRegistry,
+    reputationRegistry: arcErc8004.reputationRegistry,
+    validationRegistry: arcErc8004.validationRegistry,
+  }
+}
+
+export async function updateErc8004AgentURI(options: UpdateErc8004AgentURIOptions) {
+  const publicClient = getPublicClient(options.rpcUrl)
+  const { account, client } = getWalletClient(options.privateKey, options.rpcUrl)
+
+  const { request } = await publicClient.simulateContract({
+    address: arcErc8004.identityRegistry,
+    abi: erc8004IdentityRegistryAbi,
+    functionName: 'setAgentURI',
+    args: [options.agentId, options.agentURI],
+    account,
+  })
+
+  const hash = await client.writeContract(request)
+  const receipt = await publicClient.waitForTransactionReceipt({ hash, timeout: 60_000 })
+
+  return {
+    agentId: options.agentId.toString(),
+    owner: account.address,
+    agentURI: options.agentURI,
+    transactionHash: hash,
+    blockNumber: receipt.blockNumber.toString(),
+    chainId: arcTestnet.id,
+    caip2: arcErc8004.caip2,
+    identityRegistry: arcErc8004.identityRegistry,
+  }
+}
+
+export async function getErc8004AgentDetails(options: Erc8004AgentOptions) {
+  const publicClient = getPublicClient(options.rpcUrl)
+  const [owner, agentURI, wallet] = await Promise.all([
+    publicClient.readContract({
+      address: arcErc8004.identityRegistry,
+      abi: erc8004IdentityRegistryAbi,
+      functionName: 'ownerOf',
+      args: [options.agentId],
+    }),
+    publicClient.readContract({
+      address: arcErc8004.identityRegistry,
+      abi: erc8004IdentityRegistryAbi,
+      functionName: 'tokenURI',
+      args: [options.agentId],
+    }),
+    publicClient.readContract({
+      address: arcErc8004.identityRegistry,
+      abi: erc8004IdentityRegistryAbi,
+      functionName: 'getAgentWallet',
+      args: [options.agentId],
+    }).catch(() => null),
+  ])
+
+  return {
+    agentId: options.agentId.toString(),
+    owner,
+    agentURI,
+    wallet,
     chainId: arcTestnet.id,
     caip2: arcErc8004.caip2,
     identityRegistry: arcErc8004.identityRegistry,

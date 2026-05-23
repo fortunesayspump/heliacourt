@@ -18,6 +18,10 @@ export async function healthRoutes(app: FastifyInstance) {
         configured: isDatabaseConfigured,
       },
       hearingQueue,
+      worker: {
+        enabled: env.HELIA_ENABLE_HEARING_WORKER,
+        maxConcurrent: env.HELIA_HEARING_MAX_CONCURRENT,
+      },
       onchain: {
         chainId: env.ARC_CHAIN_ID,
         rpcUrl: env.ARC_RPC_URL,

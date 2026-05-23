@@ -60,7 +60,7 @@ async function CasesData() {
             <SealCheck size={19} />
             <div>
               <span>Settled today</span>
-              <strong>{backendCases.filter((item) => item.status === 'Verdict').length} receipts</strong>
+              <strong>{backendCases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length} receipts</strong>
             </div>
             <MiniSparkline values={caseStats.verdictTrend} />
           </div>
@@ -103,7 +103,7 @@ function buildCaseStats(cases: ApiCase[]) {
     statusBars: [
       cases.filter((item) => item.status === 'Queued').length,
       cases.filter((item) => item.status === 'Hearing').length,
-      cases.filter((item) => item.status === 'Verdict').length,
+      cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length,
     ],
     visibilityBars: [
       cases.filter((item) => item.visibility === 'public' || !item.visibility).length,
@@ -111,7 +111,7 @@ function buildCaseStats(cases: ApiCase[]) {
       cases.filter((item) => item.visibility === 'private').length,
     ],
     hearingTrend: countRecentDays(cases.filter((item) => item.status === 'Hearing').map((item) => item.updated ?? item.createdAt)),
-    verdictTrend: countRecentDays(cases.filter((item) => item.status === 'Verdict').map((item) => item.updated ?? item.createdAt)),
+    verdictTrend: countRecentDays(cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').map((item) => item.updated ?? item.createdAt)),
   }
 }
 

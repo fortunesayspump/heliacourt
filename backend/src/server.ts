@@ -28,7 +28,9 @@ await app.register(userRoutes)
 await app.register(telegramRoutes)
 await app.register(x402Routes)
 
-startHearingJobWorker()
+if (env.HELIA_ENABLE_HEARING_WORKER) {
+  startHearingJobWorker()
+}
 
 await app.listen({
   host: '0.0.0.0',

@@ -22,9 +22,9 @@ export default function LedgerPage() {
 }
 
 async function LedgerData() {
-  const [ledgerRows, x402Status] = await Promise.all([
+  const [ledgerRows, x402Activity] = await Promise.all([
     getBackendLedgerRows(),
-    getX402Status(),
+    getX402Activity(),
   ])
   const ledgerGroups = groupLedgerRows(ledgerRows)
   const anchored = ledgerRows.filter((row) => row.status === 'Anchored')
@@ -85,28 +85,35 @@ async function LedgerData() {
           <div className="ledger-proof-grid">
             <article>
               <Wallet size={18} />
-              <span>USDC moved</span>
+              <span>Total USDC moved</span>
               <strong>{stats.totalAmount ? `${formatAmount(stats.totalAmount)} USDC` : '0 USDC'}</strong>
               <MiniLedgerBars values={stats.amountBars} />
             </article>
             <article>
               <GitBranch size={18} />
-              <span>Receipt groups</span>
-              <strong>{stats.groupCount} cases</strong>
+              <span>Total receipts</span>
+              <strong>{ledgerRows.length}</strong>
               <MiniLedgerSparkline values={stats.caseBars} />
             </article>
             <article>
               <ShieldCheck size={18} />
-              <span>Anchored coverage</span>
-              <strong>{stats.anchoredCoverage}%</strong>
+              <span>x402 paid reads</span>
+              <strong>{x402Activity.totalPaidReads}</strong>
               <LedgerRing value={stats.anchoredCoverage} label="Anchored" />
             </article>
             <article>
               <ChartLineUp size={18} />
-              <span>Record hashes</span>
-              <strong>{stats.hashRows} rows</strong>
+              <span>Avg receipt cost</span>
+              <strong>{x402Activity.averageUsdc} USDC</strong>
               <LedgerRing value={stats.hashCoverage} label="Hashed" />
             </article>
+          </div>
+
+          <div className="ledger-kpi-strip" aria-label="Receipt intelligence stats">
+            <span><b>{stats.groupCount}</b> distinct markets</span>
+            <span><b>{Math.max(stats.walletCount, x402Activity.distinctPayers)}</b> distinct payers</span>
+            <span><b>{x402Activity.totalUsdc} USDC</b> x402 collected</span>
+            <span><b>{stats.txRows}</b> Arc tx links</span>
           </div>
 
           <div className="ledger-chart-grid">
@@ -178,22 +185,6 @@ async function LedgerData() {
               </div>
             </section>
 
-            <section className="ledger-stat-block ledger-chart-block ledger-x402-block">
-              <div className="ledger-stat-block-head">
-                <span>x402 route</span>
-                <strong>{formatX402Status(x402Status.settlement)}</strong>
-              </div>
-              <div className="ledger-flow-chart">
-                <span>Request</span>
-                <i />
-                <span>Pay</span>
-                <i />
-                <span>Verify</span>
-                <i />
-                <span>Receipt</span>
-              </div>
-              <p>{x402Status.enabled ? 'Paywalled calls are discoverable for price, transcript, receipt, and proof lookups.' : 'Configure the x402 receiver to enable paid proof calls.'}</p>
-            </section>
           </div>
         </section>
 
@@ -342,25 +333,40 @@ function formatAmount(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
-async function getX402Status(): Promise<{ enabled: boolean; settlement: string }> {
+type X402Activity = {
+  totalPaidReads: number
+  totalUsdc: string
+  averageUsdc: string
+  distinctPayers: number
+  distinctCases: number
+}
+
+async function getX402Activity(): Promise<X402Activity> {
   const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   try {
-    const response = await fetch(`${backendUrl}/x402/status`, { cache: 'no-store' })
-    if (!response.ok) return { enabled: false, settlement: 'unavailable' }
-    const payload = await response.json() as { enabled?: boolean; settlement?: string }
+    const response = await fetch(`${backendUrl}/x402/activity`, { cache: 'no-store' })
+    if (!response.ok) return emptyX402Activity()
+    const payload = await response.json() as Partial<X402Activity>
     return {
-      enabled: Boolean(payload.enabled),
-      settlement: payload.settlement ?? 'unavailable',
+      totalPaidReads: Number(payload.totalPaidReads ?? 0),
+      totalUsdc: payload.totalUsdc ?? '0',
+      averageUsdc: payload.averageUsdc ?? '0',
+      distinctPayers: Number(payload.distinctPayers ?? 0),
+      distinctCases: Number(payload.distinctCases ?? 0),
     }
   } catch {
-    return { enabled: false, settlement: 'unavailable' }
+    return emptyX402Activity()
   }
 }
 
-function formatX402Status(value: string) {
-  if (value === 'facilitator-configured') return 'Ready'
-  if (value === 'challenge-only') return 'Challenge'
-  return 'Offline'
+function emptyX402Activity(): X402Activity {
+  return {
+    totalPaidReads: 0,
+    totalUsdc: '0',
+    averageUsdc: '0',
+    distinctPayers: 0,
+    distinctCases: 0,
+  }
 }
 
 function MiniLedgerBars({ values }: { values: number[] }) {

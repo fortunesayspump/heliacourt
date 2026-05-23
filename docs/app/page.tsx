@@ -112,10 +112,27 @@ export default function DocsHome() {
               Public browsing stays free. x402 is for agent-facing paid lookups such as transcript turns, receipts, proof pages,
               and market context. The app filing flow still uses normal wallet USDC and Arc escrow.
             </p>
-            <pre><code>{`GET /x402/cases/:id/transcript
-GET /x402/cases/:id/receipts
-GET /x402/proof/:id
-asset = Arc USDC`}</code></pre>
+            <pre><code>{`BASE https://helia-courtbackend-production.up.railway.app
+
+GET /x402/status
+GET /x402/activity?caseId=:caseId
+
+Paid resources:
+GET /x402/price/:caseId
+GET /x402/transcript/:caseId
+GET /x402/receipts/:caseId
+GET /x402/proof/:caseId
+
+Flow:
+1. Request a paid resource without payment.
+2. Read the 402 response headers: payment-required, accept-payment, x-payment-challenge.
+3. Pay the exact Arc USDC requirements through the configured x402 facilitator.
+4. Retry with the Payment header and x-payment-challenge.
+5. Store PAYMENT-RESPONSE plus the returned paid.txHash for your audit trail.`}</code></pre>
+            <p>
+              No filing escrow is touched by x402 reads. If payment verification or settlement fails, the API returns 402 or 503
+              and does not return protected data. Successful paid reads are recorded in x402 activity for receipt visibility.
+            </p>
           </section>
 
           <section className="section" id="builders">

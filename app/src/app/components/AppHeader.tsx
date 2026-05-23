@@ -1,25 +1,20 @@
-import {
-  BookOpenText,
-  Briefcase,
-  SquaresFour,
-  UserCircleCheck,
-  Wallet,
-} from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { NotificationsMenu } from './NotificationsMenu'
+import { GatewayBalance } from './GatewayBalance'
 import { WalletBalance } from './WalletBalance'
 import { WalletButton } from './WalletButton'
 
 type AppHeaderProps = {
-  active: 'dashboard' | 'cases' | 'new-case' | 'agents' | 'ledger' | 'docs' | 'profile'
+  active: 'dashboard' | 'cases' | 'new-case' | 'agents' | 'ledger' | 'x402' | 'docs' | 'profile'
 }
 
 const navItems = [
-  { key: 'dashboard', label: 'Dashboard', href: '/', icon: SquaresFour },
-  { key: 'cases', label: 'Cases', href: '/cases', icon: Briefcase },
-  { key: 'agents', label: 'Agents', href: '/agents', icon: UserCircleCheck },
-  { key: 'ledger', label: 'Ledger', href: '/ledger', icon: Wallet },
-  { key: 'docs', label: 'Help', href: '/docs', icon: BookOpenText },
+  { key: 'dashboard', label: 'Dashboard', href: '/' },
+  { key: 'cases', label: 'Cases', href: '/cases' },
+  { key: 'agents', label: 'Agents', href: '/agents' },
+  { key: 'ledger', label: 'Ledger', href: '/ledger' },
+  { key: 'x402', label: 'x402', href: '/x402' },
+  { key: 'docs', label: 'Help', href: '/docs' },
 ] as const
 
 export function AppHeader({ active }: AppHeaderProps) {
@@ -31,21 +26,17 @@ export function AppHeader({ active }: AppHeaderProps) {
         </div>
 
         <nav className="app-nav topnav-links" aria-label="Primary">
-          {navItems.map((item) => {
-            const Icon = item.icon
-
-            return (
-              <Link className={active === item.key ? 'active' : undefined} href={item.href} key={item.key}>
-                <Icon size={19} />
-                {item.label}
-              </Link>
-            )
-          })}
+          {navItems.map((item) => (
+            <Link className={active === item.key ? 'active' : undefined} href={item.href} key={item.key}>
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="app-header-wallet">
           <NotificationsMenu />
-          <WalletBalance compact />
+          <WalletBalance compact label="Wallet" />
+          <GatewayBalance compact />
           <WalletButton className="wallet-connect-button" />
         </div>
       </div>

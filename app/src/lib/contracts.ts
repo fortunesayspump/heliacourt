@@ -7,6 +7,7 @@ function publicAddress(value?: string): Address | undefined {
 
 export const contractAddresses = {
   usdc: publicAddress(process.env.NEXT_PUBLIC_ARC_USDC_ADDRESS) ?? '0x3600000000000000000000000000000000000000',
+  gatewayWallet: publicAddress(process.env.NEXT_PUBLIC_CIRCLE_GATEWAY_WALLET_ADDRESS) ?? '0x0077777d7EBA4688BDeF3E311b846F25870A19B9',
   agentRegistry: publicAddress(process.env.NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS),
   caseEscrow: publicAddress(process.env.NEXT_PUBLIC_CASE_ESCROW_ADDRESS),
   courtReceipts: publicAddress(process.env.NEXT_PUBLIC_COURT_RECEIPTS_ADDRESS),
@@ -41,6 +42,76 @@ export const erc20Abi = [
       { name: 'amount', type: 'uint256' },
     ],
     outputs: [{ name: '', type: 'bool' }],
+  },
+] as const
+
+export const gatewayWalletAbi = [
+  {
+    type: 'function',
+    name: 'deposit',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'value', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'totalBalance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'depositor', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'availableBalance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'depositor', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'withdrawingBalance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'depositor', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'withdrawableBalance',
+    stateMutability: 'view',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'depositor', type: 'address' },
+    ],
+    outputs: [{ name: '', type: 'uint256' }],
+  },
+  {
+    type: 'function',
+    name: 'initiateWithdrawal',
+    stateMutability: 'nonpayable',
+    inputs: [
+      { name: 'token', type: 'address' },
+      { name: 'value', type: 'uint256' },
+    ],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'withdraw',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'token', type: 'address' }],
+    outputs: [],
   },
 ] as const
 

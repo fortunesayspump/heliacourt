@@ -11,9 +11,13 @@
     "agents:smoke": "tsx src/scripts/smoke-witnesses.ts",
     "agents:sync-onchain": "tsx src/scripts/sync-agent-registry-onchain.ts",
     "agents:register-erc8004": "tsx src/scripts/register-erc8004-agent.ts",
+    "agents:erc8004:info": "tsx src/scripts/register-erc8004-agent.ts --info",
+    "agents:erc8004:update-uri": "tsx src/scripts/register-erc8004-agent.ts --update-uri",
     "onchain:approve-settlement-signer": "tsx src/scripts/approve-settlement-signer.ts",
     "hearing": "tsx src/scripts/run-hearing.ts",
-    "start": "tsx src/server.ts"
+    "start": "tsx src/server.ts",
+    "start:web": "HELIA_ENABLE_HEARING_WORKER=false tsx src/server.ts",
+    "start:worker": "tsx src/scripts/hearing-worker.ts"
   },
   "dependencies": {
     "@circle-fin/x402-batching": "^3.0.4",

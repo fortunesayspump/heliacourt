@@ -12,6 +12,7 @@
       "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
       "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
       "registrationTx": "https://testnet.arcscan.app/tx/0xb0aa3a9ef0d05878def0523c730c018d85c8b0bc8cf45d47c0a0262b35444ea3",
+      "latestURIUpdateTx": "https://testnet.arcscan.app/tx/0x2968b720e13a28fc6af249f69f222cb90a3b4fb449e49238ff51b4e393aabb0d",
       "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
     }
   },
@@ -46,7 +47,17 @@
   ],
   "endpoints": {
     "web": "https://app.heliacourt.xyz",
-    "registration": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+    "docs": "https://docs.heliacourt.xyz",
+    "api": "https://helia-courtbackend-production.up.railway.app",
+    "registration": "https://heliacourt.xyz/.well-known/erc8004-agent.json",
+    "x402Status": "https://helia-courtbackend-production.up.railway.app/x402/status",
+    "x402Activity": "https://helia-courtbackend-production.up.railway.app/x402/activity",
+    "x402Resources": {
+      "price": "GET /x402/price/:caseId",
+      "transcript": "GET /x402/transcript/:caseId",
+      "receipts": "GET /x402/receipts/:caseId",
+      "proof": "GET /x402/proof/:caseId"
+    }
   },
   "trustTypes": [
     "reputation",

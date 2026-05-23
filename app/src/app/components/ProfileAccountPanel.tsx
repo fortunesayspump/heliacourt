@@ -1,11 +1,12 @@
 'use client'
 
-import { Bell, Briefcase, CurrencyDollar, Robot, SealCheck, ShieldCheck, Stamp, UserCircle, X } from '@phosphor-icons/react'
+import { SealCheck, UserCircle, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState, type CSSProperties } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../lib/backend-data'
+import { GatewayBalance } from './GatewayBalance'
 import { WalletBalance } from './WalletBalance'
 import { WalletButton } from './WalletButton'
 
@@ -230,13 +231,12 @@ export function ProfileAccountPanel() {
 
         <section className="profile-access-grid" aria-label="Account sections">
           {[
-            { title: 'Filed cases', detail: 'Your petitions and case roles stay grouped by wallet.', Icon: Briefcase },
-            { title: 'Followed hearings', detail: 'Watched cases and notification state live here.', Icon: Bell },
-            { title: 'Private access', detail: 'Funded or permissioned case records unlock for this account.', Icon: ShieldCheck },
-            { title: 'Payout receipts', detail: 'Agent and account payment rows stay tied to wallet history.', Icon: CurrencyDollar },
-          ].map(({ title, detail, Icon }) => (
+            { title: 'Filed cases', detail: 'Your petitions and case roles stay grouped by wallet.' },
+            { title: 'Followed hearings', detail: 'Watched cases and notification state live here.' },
+            { title: 'Private access', detail: 'Funded or permissioned case records unlock for this account.' },
+            { title: 'Payout receipts', detail: 'Agent and account payment rows stay tied to wallet history.' },
+          ].map(({ title, detail }) => (
             <article className="profile-access-card" key={title}>
-              <Icon size={20} />
               <h3>{title}</h3>
               <p>{detail}</p>
             </article>
@@ -258,7 +258,8 @@ export function ProfileAccountPanel() {
           <p>{profileBio}</p>
           <div className="profile-address-row">
             <span>{profileHandle}</span>
-            {isOwnProfile ? <WalletBalance /> : null}
+            {isOwnProfile ? <WalletBalance label="Wallet" /> : null}
+            {isOwnProfile ? <GatewayBalance /> : null}
             {isOwnProfile ? <WalletButton className="secondary-button compact-back" label="Wallet" /> : null}
           </div>
         </div>
@@ -305,7 +306,6 @@ export function ProfileAccountPanel() {
 
           <article className="panel app-section-panel profile-record-section">
             <div className="profile-panel-heading app-section-heading profile-section-heading">
-              <Briefcase size={18} />
               <div>
                 <h3>Filed cases</h3>
                 <p>Cases created or managed by this wallet.</p>
@@ -344,7 +344,6 @@ export function ProfileAccountPanel() {
 
           <article className="panel app-section-panel profile-record-section">
             <div className="profile-panel-heading app-section-heading profile-section-heading">
-              <Bell size={18} />
               <div>
                 <h3>Followed cases</h3>
                 <p>Hearings this account is watching.</p>
@@ -371,7 +370,6 @@ export function ProfileAccountPanel() {
 
           <article className="panel app-section-panel profile-record-section">
             <div className="profile-panel-heading app-section-heading profile-section-heading">
-              <Robot size={18} />
               <div>
                 <h3>Owned agents</h3>
                 <p>Agent ownership and registry controls.</p>
@@ -387,7 +385,6 @@ export function ProfileAccountPanel() {
 
           <article className="panel app-section-panel profile-record-section">
             <div className="profile-panel-heading app-section-heading profile-section-heading">
-              <Stamp size={18} />
               <div>
                 <h3>Receipt history</h3>
                 <p>Wallet-linked payment records.</p>
