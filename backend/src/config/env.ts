@@ -17,15 +17,24 @@ const optionalUrl = z.preprocess((value) => {
   return normalized || undefined
 }, z.string().url().optional())
 
+const booleanString = z.preprocess((value) => {
+  if (typeof value !== 'string') return value
+  const normalized = value.trim().replace(/^['"]|['"]$/g, '').toLowerCase()
+  if (['true', '1', 'yes', 'on'].includes(normalized)) return true
+  if (['false', '0', 'no', 'off'].includes(normalized)) return false
+  return value
+}, z.boolean())
+
 const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   APP_ORIGIN: z.string().url().default('http://localhost:3000'),
   CIRCLE_API_KEY: z.string().optional(),
   CIRCLE_API_BASE_URL: z.string().url().default('https://api.circle.com'),
   DATABASE_URL: optionalUrl,
+  HELIA_ENABLE_HEARING_WORKER: booleanString.default(true),
   HELIA_HEARING_MAX_CONCURRENT: z.coerce.number().int().positive().default(1),
-  HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().min(0).default(2 * 60 * 1000),
-  HELIA_HEARING_STALE_RUNNING_MS: z.coerce.number().int().positive().default(2 * 60 * 1000),
+  HELIA_HEARING_TIMEOUT_MS: z.coerce.number().int().min(0).default(0),
+  HELIA_HEARING_STALE_RUNNING_MS: z.coerce.number().int().positive().default(10 * 60 * 1000),
   HELIA_HEARING_JOB_RETENTION_MS: z.coerce.number().int().positive().default(60 * 60 * 1000),
   HELIA_HEARING_MAX_RETAINED_JOBS: z.coerce.number().int().positive().default(100),
   HELIA_HEARING_QUEUE_POLL_MS: z.coerce.number().int().positive().default(2_000),

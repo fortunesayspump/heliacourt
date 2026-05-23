@@ -50,6 +50,13 @@
       "when": 1779575730246,
       "tag": "0007_youthful_kang",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1779660000000,
+      "tag": "0008_add-x402-receipts",
+      "breakpoints": true
     }
   ]
 }

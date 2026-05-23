@@ -41,6 +41,13 @@ const caseEscrowAbi = [
     outputs: [],
   },
   {
+    type: 'function',
+    name: 'cancelCase',
+    stateMutability: 'nonpayable',
+    inputs: [{ name: 'caseId', type: 'uint256' }],
+    outputs: [],
+  },
+  {
     type: 'event',
     name: 'AgentPaid',
     inputs: [
@@ -82,7 +89,7 @@ const courtReceiptsAbi = [
 const agentPaidEvent = parseAbiItem('event AgentPaid(uint256 indexed caseId, address indexed agentWallet, uint96 amount, bytes32 reasonHash)')
 
 export type OnchainSettlementReceipt = {
-  type: 'case-event' | 'verdict' | 'agent-payout' | 'case-close'
+  type: 'case-event' | 'verdict' | 'agent-payout' | 'case-close' | 'case-cancel'
   txHash: Hex
   chainId: string
   caseId: string
@@ -93,7 +100,7 @@ export type OnchainSettlementReceipt = {
 }
 
 export type OnchainSettlementResult = {
-  status: 'skipped' | 'recorded' | 'error'
+  status: 'skipped' | 'recorded' | 'refunded' | 'error'
   reason?: string
   receipts: OnchainSettlementReceipt[]
   recordHash?: Hex
@@ -259,6 +266,57 @@ export async function settleHearingOnchain(input: {
     protocolFeeUsdc: formatUsdc(payoutPlan.protocolFee),
     totalPayoutUsdc: formatUsdc(payoutPlan.totalPaid),
     capped: payoutPlan.capped,
+  }
+}
+
+export async function cancelHearingOnchain(input: {
+  marketCase: MarketCase
+  reason: string
+}): Promise<OnchainSettlementResult> {
+  const onchainCase = input.marketCase.onchain
+  if (!onchainCase) return { status: 'skipped', reason: 'case was not opened onchain', receipts: [] }
+  const signerKey = env.SETTLEMENT_PRIVATE_KEY ?? env.PRIVATE_KEY
+  if (!signerKey) return { status: 'skipped', reason: 'SETTLEMENT_PRIVATE_KEY or PRIVATE_KEY is not configured for backend settlement', receipts: [] }
+  if (!env.CASE_ESCROW_ADDRESS) return { status: 'skipped', reason: 'escrow contract address is missing', receipts: [] }
+
+  const account = privateKeyToAccount(signerKey as Hex)
+  const publicClient = createPublicClient({
+    chain: arcTestnet,
+    transport: http(env.ARC_RPC_URL),
+  })
+  const walletClient = createWalletClient({
+    account,
+    chain: arcTestnet,
+    transport: http(env.ARC_RPC_URL),
+  })
+  const caseId = BigInt(onchainCase.caseId)
+  const escrowState = await publicClient.readContract({
+    address: env.CASE_ESCROW_ADDRESS as Address,
+    abi: caseEscrowAbi,
+    functionName: 'cases',
+    args: [caseId],
+  })
+  const escrowStatus = Number(escrowState[3])
+  if (escrowStatus !== 1) {
+    return { status: 'skipped', reason: `case escrow status is ${escrowStatus}; only open cases can be cancelled`, receipts: [] }
+  }
+
+  const txHash = await writeAndWait(walletClient, publicClient, {
+    address: env.CASE_ESCROW_ADDRESS as Address,
+    abi: caseEscrowAbi,
+    functionName: 'cancelCase',
+    args: [caseId],
+  })
+
+  return {
+    status: 'recorded',
+    reason: input.reason,
+    receipts: [{
+      type: 'case-cancel',
+      txHash,
+      chainId: String(env.ARC_CHAIN_ID),
+      caseId: onchainCase.caseId,
+    }],
   }
 }
 

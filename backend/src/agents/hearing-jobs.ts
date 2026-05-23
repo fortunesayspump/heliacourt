@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, desc, eq, lt } from 'drizzle-orm'
 import Redis from 'ioredis'
-import { settleHearingOnchain, type OnchainSettlementResult } from '../chains/onchain-settlement.js'
+import { cancelHearingOnchain, settleHearingOnchain, type OnchainSettlementResult } from '../chains/onchain-settlement.js'
 import { env } from '../config/env.js'
 import { runHeliaiaConfiguredHearing } from '../court/heliaia-ai.js'
 import type { CourtArtifact, CourtTranscriptTurn, MarketCase, ToolEvidence } from '../court/types.js'
@@ -223,15 +223,17 @@ async function processQueue() {
   if (isDatabaseConfigured) await recoverStaleDatabaseJobs()
 
   while (activeJobs < env.HELIA_HEARING_MAX_CONCURRENT) {
-    const job = isDatabaseConfigured ? await popDatabaseJob() : redis ? await popRedisJob() : popMemoryJob()
+    const job = isDatabaseConfigured ? await claimDatabaseJob() : redis ? await popRedisJob() : popMemoryJob()
     if (!job) break
-    if (job.status !== 'queued') continue
+    if (job.status !== 'queued' && job.status !== 'running') continue
 
     activeJobs += 1
-    job.status = 'running'
-    job.startedAt = new Date().toISOString()
-    job.updatedAt = job.startedAt
-    void saveJob(job)
+    if (job.status === 'queued') {
+      job.status = 'running'
+      job.startedAt = new Date().toISOString()
+      job.updatedAt = job.startedAt
+      void saveJob(job)
+    }
 
     const liveResult: LiveHearingResult = {
       marketCase: job.marketCase,
@@ -280,9 +282,23 @@ async function processQueue() {
           receiptCount: onchainSettlement.receipts?.length,
         })
       })
-      .catch((error) => {
+      .catch(async (error) => {
+        const message = error instanceof Error ? error.message : 'hearing job failed'
+        const onchainSettlement = await cancelHearingOnchain({
+          marketCase: job.marketCase,
+          reason: `hearing failed: ${message}`,
+        }).catch((cancelError: unknown) => ({
+          status: 'error' as const,
+          reason: cancelError instanceof Error ? cancelError.message : 'onchain cancellation failed',
+          receipts: [],
+        }))
         job.status = 'failed'
-        job.error = error instanceof Error ? error.message : 'hearing job failed'
+        job.error = message
+        job.result = {
+          ...liveResult,
+          onchainSettlement,
+          partial: true,
+        }
         job.completedAt = new Date().toISOString()
         job.updatedAt = job.completedAt
         return saveJob(job)
@@ -379,7 +395,7 @@ async function connectRedis() {
   await redis.connect()
 }
 
-async function popDatabaseJob() {
+async function claimDatabaseJob() {
   const [row] = await db!
     .select()
     .from(hearingJobs)
@@ -387,7 +403,21 @@ async function popDatabaseJob() {
     .orderBy(hearingJobs.createdAt)
     .limit(1)
 
-  return row ? rowToJob(row) : undefined
+  if (!row) return undefined
+
+  const now = new Date()
+  const [claimed] = await db!
+    .update(hearingJobs)
+    .set({
+      status: 'running',
+      startedAt: row.startedAt ?? now,
+      updatedAt: now,
+      error: null,
+    })
+    .where(and(eq(hearingJobs.id, row.id), eq(hearingJobs.status, 'queued')))
+    .returning()
+
+  return claimed ? rowToJob(claimed) : undefined
 }
 
 async function getDatabaseJob(jobId: string) {

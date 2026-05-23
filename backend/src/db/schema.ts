@@ -232,3 +232,18 @@ export const onchainReceipts = pgTable('onchain_receipts', {
   index('onchain_receipts_tx_idx').on(table.txHash),
   uniqueIndex('onchain_receipts_tx_type_idx').on(table.txHash, table.receiptType),
 ])
+
+export const x402Receipts = pgTable('x402_receipts', {
+  id: text('id').primaryKey(),
+  caseId: text('case_id').notNull().references(() => cases.id, { onDelete: 'cascade' }),
+  payer: text('payer'),
+  transactionId: text('transaction_id').notNull(),
+  amountMicroUsdc: text('amount_micro_usdc').notNull(),
+  network: text('network').notNull(),
+  resource: text('resource').notNull(),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+}, (table) => [
+  index('x402_receipts_case_idx').on(table.caseId),
+  index('x402_receipts_payer_idx').on(table.payer),
+  uniqueIndex('x402_receipts_tx_resource_idx').on(table.transactionId, table.resource),
+])

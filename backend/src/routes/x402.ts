@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto'
 import { BatchFacilitatorClient } from '@circle-fin/x402-batching/server'
 import {
   CIRCLE_BATCHING_NAME,
@@ -6,9 +6,12 @@ import {
   GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS,
 } from '@circle-fin/x402-batching'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
+import { desc, eq } from 'drizzle-orm'
 import { listHearingJobs } from '../agents/hearing-jobs.js'
 import { env } from '../config/env.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
+import { db } from '../db/client.js'
+import { x402Receipts } from '../db/schema.js'
 
 const arcUsdcAddress = '0x3600000000000000000000000000000000000000'
 const gatewayWalletTestnet = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9'
@@ -61,6 +64,7 @@ export async function x402Routes(app: FastifyInstance) {
     if (!job) return reply
     const paid = await requireX402Payment(request, reply)
     if (!paid) return reply
+    await recordX402Receipt(job.marketCase.id, request.url, paid)
     const result = getResult(job)
     const verdict = findVerdict(result?.artifacts)
 
@@ -81,6 +85,7 @@ export async function x402Routes(app: FastifyInstance) {
     if (!job) return reply
     const paid = await requireX402Payment(request, reply)
     if (!paid) return reply
+    await recordX402Receipt(job.marketCase.id, request.url, paid)
     const result = getResult(job)
 
     return {
@@ -95,6 +100,7 @@ export async function x402Routes(app: FastifyInstance) {
     if (!job) return reply
     const paid = await requireX402Payment(request, reply)
     if (!paid) return reply
+    await recordX402Receipt(job.marketCase.id, request.url, paid)
     const result = getResult(job)
 
     return {
@@ -109,6 +115,7 @@ export async function x402Routes(app: FastifyInstance) {
     if (!job) return reply
     const paid = await requireX402Payment(request, reply)
     if (!paid) return reply
+    await recordX402Receipt(job.marketCase.id, request.url, paid)
     const result = getResult(job)
     const receipts = result?.onchainSettlement?.receipts ?? []
 
@@ -123,6 +130,13 @@ export async function x402Routes(app: FastifyInstance) {
       receipts,
       proofUrl: `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/proof/${encodeURIComponent(job.marketCase.id)}`,
     }
+  })
+
+  app.get('/x402/activity', async (request) => {
+    const caseId = typeof (request.query as { caseId?: unknown }).caseId === 'string'
+      ? (request.query as { caseId: string }).caseId
+      : undefined
+    return getX402Activity(caseId)
   })
 }
 
@@ -309,6 +323,87 @@ function getResult(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
       receipts?: unknown[]
     }
   } | undefined
+}
+
+async function recordX402Receipt(caseId: string, resource: string, paid: PaidEvidence) {
+  if (!db || !paid.txHash) return
+  try {
+    await db.insert(x402Receipts).values({
+      id: randomUUID(),
+      caseId,
+      payer: paid.payer?.toLowerCase(),
+      transactionId: paid.txHash,
+      amountMicroUsdc: String(paid.amountMicroUsdc),
+      network: paid.network ?? `eip155:${env.ARC_CHAIN_ID}`,
+      resource,
+      createdAt: new Date(),
+    }).onConflictDoNothing()
+  } catch (error) {
+    console.warn('[x402] failed to record receipt', error)
+  }
+}
+
+async function getX402Activity(caseId?: string) {
+  if (!db) {
+    return emptyX402Activity(caseId)
+  }
+
+  try {
+    const rows = caseId
+      ? await db.select().from(x402Receipts).where(eq(x402Receipts.caseId, caseId)).orderBy(desc(x402Receipts.createdAt)).limit(50)
+      : await db.select().from(x402Receipts).orderBy(desc(x402Receipts.createdAt)).limit(250)
+    const totalMicroUsdc = rows.reduce((total, row) => total + Number(row.amountMicroUsdc || 0), 0)
+    const distinctPayers = new Set(rows.map((row) => row.payer).filter(Boolean)).size
+    const distinctCases = new Set(rows.map((row) => row.caseId)).size
+    const averageMicroUsdc = rows.length ? totalMicroUsdc / rows.length : 0
+
+    return {
+      caseId: caseId ?? null,
+      totalPaidReads: rows.length,
+      totalMicroUsdc,
+      totalUsdc: formatMicroUsdc(totalMicroUsdc),
+      averageMicroUsdc,
+      averageUsdc: formatMicroUsdc(averageMicroUsdc),
+      distinctPayers,
+      distinctCases,
+      latest: rows[0] ? serializeX402Receipt(rows[0]) : null,
+      recent: rows.slice(0, 12).map(serializeX402Receipt),
+    }
+  } catch (error) {
+    return { ...emptyX402Activity(caseId), error: error instanceof Error ? error.message : 'x402 activity unavailable' }
+  }
+}
+
+function emptyX402Activity(caseId?: string) {
+  return {
+    caseId: caseId ?? null,
+    totalPaidReads: 0,
+    totalMicroUsdc: 0,
+    totalUsdc: '0',
+    averageMicroUsdc: 0,
+    averageUsdc: '0',
+    distinctPayers: 0,
+    distinctCases: 0,
+    latest: null,
+    recent: [],
+  }
+}
+
+function serializeX402Receipt(row: typeof x402Receipts.$inferSelect) {
+  return {
+    caseId: row.caseId,
+    payer: row.payer,
+    transactionId: row.transactionId,
+    amountMicroUsdc: Number(row.amountMicroUsdc || 0),
+    amountUsdc: formatMicroUsdc(Number(row.amountMicroUsdc || 0)),
+    network: row.network,
+    resource: row.resource,
+    createdAt: row.createdAt.toISOString(),
+  }
+}
+
+function formatMicroUsdc(value: number) {
+  return (value / 1_000_000).toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
 }
 
 function findVerdict(artifacts?: CourtArtifact[]) {
