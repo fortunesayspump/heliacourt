@@ -1,23 +1,15 @@
 'use client'
 
-import { ArrowRight, BookOpenText, CurrencyDollar, MagnifyingGlass, Scales, ShieldCheck, UserCircleCheck, Wallet } from '@phosphor-icons/react'
+import { BookOpenText, CheckCircle, MagnifyingGlass, Scales, ShieldCheck, Stamp } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatUnits, keccak256, parseEventLogs, parseUnits, stringToBytes } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../lib/arc'
 import type { ApiCase } from '../../lib/backend-data'
 import { caseEscrowAbi, contractAddresses, erc20Abi, hasCaseEscrowAddress } from '../../lib/contracts'
 import { WalletButton } from './WalletButton'
-
-type WitnessOption = {
-  id: string
-  category: string
-  agent: string
-  detail: string
-  priceUsd: number
-}
 
 type ExistingCase = {
   id: string
@@ -33,6 +25,10 @@ type FilingStatus = {
   text: string
 }
 
+type LinkPreview = {
+  image?: string
+}
+
 const usdcDecimals = 6
 const zero = BigInt(0)
 const supportedMarkets = ['polymarket.com', 'kalshi.com', 'manifold.markets']
@@ -40,14 +36,12 @@ const supportedMarkets = ['polymarket.com', 'kalshi.com', 'manifold.markets']
 export function CaseFilingFlow({
   parentCase,
   filingKind = 'original',
-  witnessOptions,
-  likelyBench,
+  initialMarketUrl,
   existingCases,
 }: {
   parentCase?: ApiCase
   filingKind?: 'original' | 'fresh-hearing' | 'private-fork'
-  witnessOptions: WitnessOption[]
-  likelyBench: WitnessOption[]
+  initialMarketUrl?: string
   existingCases: ExistingCase[]
 }) {
   const router = useRouter()
@@ -58,14 +52,14 @@ export function CaseFilingFlow({
 
   const [question, setQuestion] = useState(parentCase?.title ?? '')
   const [context, setContext] = useState(parentCase?.resolution ?? '')
-  const [sourceLinks, setSourceLinks] = useState((parentCase?.links ?? []).join('\n'))
+  const [sourceLinks, setSourceLinks] = useState(parentCase ? (parentCase.links ?? []).join('\n') : initialMarketUrl?.trim() ?? '')
   const [horizon, setHorizon] = useState(parentCase?.horizon ?? '')
   const [budget, setBudget] = useState('')
-  const [metadataURI, setMetadataURI] = useState('')
   const [visibility, setVisibility] = useState<'public' | 'unlisted' | 'private'>(filingKind === 'private-fork' ? 'private' : 'public')
   const [payerVisibility, setPayerVisibility] = useState<'public' | 'private'>('private')
   const [status, setStatus] = useState<FilingStatus | undefined>()
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>()
+  const [marketPreview, setMarketPreview] = useState<LinkPreview | undefined>()
 
   const budgetUnits = useMemo(() => safeBudget(budget), [budget])
   const escrowAddress = contractAddresses.caseEscrow
@@ -85,13 +79,6 @@ export function CaseFilingFlow({
     args: address && escrowAddress ? [address, escrowAddress] : undefined,
     query: { enabled: canRead },
   })
-  const nextCaseId = useReadContract({
-    abi: caseEscrowAbi,
-    address: escrowAddress,
-    functionName: 'nextCaseId',
-    query: { enabled: Boolean(escrowAddress) },
-  })
-
   const allowanceValue = typeof allowance.data === 'bigint' ? allowance.data : zero
   const balanceValue = typeof balance.data === 'bigint' ? balance.data : zero
   const needsApproval = Boolean(budgetUnits && allowanceValue < budgetUnits)
@@ -114,12 +101,35 @@ export function CaseFilingFlow({
     horizon.trim() ? `Time horizon: ${horizon.trim()}` : '',
   ].filter(Boolean).join('\n\n')
 
+  useEffect(() => {
+    if (!predictionMarketLink) {
+      setMarketPreview(undefined)
+      return
+    }
+
+    let cancelled = false
+    const params = new URLSearchParams({ url: predictionMarketLink })
+    if (question.trim()) params.set('title', question.trim())
+    fetch(`/api/market-image?${params.toString()}`, { cache: 'no-store' })
+      .then((response) => response.json())
+      .then((payload: LinkPreview) => {
+        if (!cancelled) setMarketPreview(payload)
+      })
+      .catch(() => {
+        if (!cancelled) setMarketPreview(undefined)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [predictionMarketLink, question])
+
   const fileCase = async () => {
     setStatus(undefined)
     setLastTx(undefined)
 
     if (!hasCaseEscrowAddress || !escrowAddress) {
-      setStatus({ tone: 'bad', text: 'CaseEscrow is not configured. Set the proxy address first.' })
+      setStatus({ tone: 'bad', text: 'Case filing is not ready yet.' })
       return
     }
     if (!isConnected || !address) {
@@ -127,7 +137,7 @@ export function CaseFilingFlow({
       return
     }
     if (!publicClient) {
-      setStatus({ tone: 'bad', text: 'Arc RPC client is not ready.' })
+      setStatus({ tone: 'bad', text: 'Arc connection is not ready yet.' })
       return
     }
     if (wrongChain) {
@@ -157,7 +167,7 @@ export function CaseFilingFlow({
     }
     if (!questionHash) return
 
-    const uri = metadataURI.trim() || `helia-case://${questionHash}`
+    const uri = `helia-case://${questionHash}`
 
     try {
       if (needsApproval) {
@@ -202,6 +212,7 @@ export function CaseFilingFlow({
           question: question.trim(),
           context: composedContext || undefined,
           links,
+          imageUrl: marketPreview?.image,
           type: 'prediction-market',
           parentCaseId: parentCase?.id,
           filingKind,
@@ -219,7 +230,7 @@ export function CaseFilingFlow({
           },
         }),
       })
-      const payload = await response.json().catch(() => ({ error: 'case backend returned a non-json response' }))
+      const payload = await response.json().catch(() => ({ error: 'No case data returned.' }))
       if (!response.ok) {
         throw new Error(payload.error ?? 'case filing failed after escrow opened')
       }
@@ -227,21 +238,27 @@ export function CaseFilingFlow({
       setStatus({ tone: 'good', text: `Case ${txHash.slice(0, 10)}...${txHash.slice(-6)} funded and queued.` })
       void allowance.refetch()
       void balance.refetch()
-      void nextCaseId.refetch()
       router.push(`/cases/${txHash}`)
     } catch (error) {
       setStatus({ tone: 'bad', text: error instanceof Error ? error.message : 'Case filing failed.' })
     }
   }
 
+  const checklistItems = [
+    { label: 'Market question', ready: Boolean(question.trim()) },
+    { label: 'Supported market link', ready: Boolean(predictionMarketLink) },
+    { label: 'Time horizon', ready: Boolean(horizon.trim()) },
+    { label: 'USDC budget', ready: budgetUnits > zero },
+  ]
+
   return (
     <>
-      <section className="form-grid">
-        <section className="panel">
+      <section className="case-filing-shell">
+        <section className="panel case-filing-main">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Case brief</p>
-              <h2>Market question</h2>
+              <p className="eyebrow">Petition desk</p>
+              <h2>File a prediction case</h2>
             </div>
           </div>
           {parentCase ? (
@@ -252,7 +269,7 @@ export function CaseFilingFlow({
           ) : null}
           <div className="case-box case-form">
             <label htmlFor="question">Question</label>
-            <textarea id="question" placeholder="Paste the market question exactly as it appears." value={question} onChange={(event) => setQuestion(event.target.value)} />
+            <input id="question" placeholder="Paste the market question exactly as it appears." value={question} onChange={(event) => setQuestion(event.target.value)} />
             <label htmlFor="case-context">Case context</label>
             <textarea
               id="case-context"
@@ -261,9 +278,9 @@ export function CaseFilingFlow({
               onChange={(event) => setContext(event.target.value)}
             />
             <label htmlFor="source-links">Market and source links</label>
-            <textarea
+            <input
               id="source-links"
-              placeholder={`Polymarket, Kalshi, or Manifold market URL required\nPrimary resolution source URL`}
+              placeholder="Supported market URL"
               value={sourceLinks}
               onChange={(event) => setSourceLinks(event.target.value)}
             />
@@ -285,129 +302,61 @@ export function CaseFilingFlow({
           </div>
         </section>
 
-        <aside className="panel similar-case-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Similarity check</p>
-              <h2>Existing hearings found</h2>
+        <aside className="case-filing-side">
+          <section className="panel filing-checklist-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Readiness</p>
+                <h2>Filing checklist</h2>
+              </div>
+              <CheckCircle size={19} />
             </div>
-            <MagnifyingGlass size={19} />
-          </div>
-          <p className="panel-copy">
-            Before funding, the court checks whether this question already has an active or recent record.
-          </p>
-          <div className="similar-case-list">
-            {relatedCases.length ? relatedCases.map((item) => (
-              <Link className="similar-case-row" href={`/cases/${item.id}`} key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <span>{item.status}{item.probability ? ` · ${item.probability}` : ''}</span>
+            <div className="filing-checklist">
+              {checklistItems.map((item) => (
+                <div className={item.ready ? 'ready' : undefined} key={item.label}>
+                  <CheckCircle size={16} />
+                  <span>{item.label}</span>
                 </div>
-                <ArrowRight size={15} />
-              </Link>
-            )) : (
-              <div className="empty-state">
-                <strong>{question.trim() || predictionMarketLink ? 'No nearby backend case found' : 'Paste a market question to compare'}</strong>
-                <p>{existingCases.length ? `${existingCases.length} backend case records are available for comparison.` : 'No backend cases are available in this environment yet.'}</p>
-              </div>
-            )}
-          </div>
-        </aside>
+              ))}
+            </div>
+            <div className="direction-strip inline-strip">
+              <ShieldCheck size={19} />
+              <p>Wallet connection is only needed when you file and fund the case.</p>
+            </div>
+          </section>
 
-        <aside className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Witness bench</p>
-              <h2>Court-selected agents</h2>
-            </div>
-            <UserCircleCheck size={19} />
-          </div>
-          <p className="panel-copy">
-            Heliaia seats witnesses from the case brief, market type, horizon, and budget. Users do not manually pick agents for the MVP.
-          </p>
-          <div className="compact-list">
-            {witnessOptions.length ? witnessOptions.map(({ id, category, agent, detail }) => (
-              <article className="witness-option" key={id}>
-                <span>{category}</span>
-                <strong>{agent}</strong>
-                <p>{detail}</p>
-              </article>
-            )) : (
-              <div className="empty-state">
-                <strong>Backend registry unavailable</strong>
-                <p>Set BACKEND_URL to preview the live witness bench.</p>
+          <section className="panel similar-case-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Similarity check</p>
+                <h2>Existing hearings</h2>
               </div>
-            )}
-          </div>
-        </aside>
-
-        <aside className="panel">
-          <div className="panel-heading">
-            <div>
-              <p className="eyebrow">Settlement</p>
-              <h2>Budget and escrow</h2>
+              <MagnifyingGlass size={19} />
             </div>
-            <CurrencyDollar size={19} />
-          </div>
-          <div className="settlement-table">
-            <div>
-              <span>Available witnesses</span>
-              <strong>{witnessOptions.length ? `${witnessOptions.length} registry seats` : 'Pending'}</strong>
+            <div className="similar-case-list">
+              {relatedCases.length ? relatedCases.map((item) => (
+                <Link className="similar-case-row" href={`/cases/${item.id}`} key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <span>{item.status}{item.probability ? ` · ${item.probability}` : ''}</span>
+                  </div>
+                  <Stamp size={15} />
+                </Link>
+              )) : (
+                <div className="empty-state">
+                  <strong>{question.trim() || predictionMarketLink ? 'No nearby case found' : 'Paste a question to compare'}</strong>
+                  <p>{existingCases.length ? `${existingCases.length} case records are available for comparison.` : 'No existing cases are available yet.'}</p>
+                </div>
+              )}
             </div>
-            <div>
-              <span>Escrow route</span>
-              <strong>{hasCaseEscrowAddress ? 'Arc CaseEscrow' : 'Not configured'}</strong>
-            </div>
-            <div>
-              <span>Wallet balance</span>
-              <strong>{address ? `${formatUnits(balanceValue, usdcDecimals)} USDC` : 'Connect wallet'}</strong>
-            </div>
-            <div>
-              <span>Next onchain case</span>
-              <strong>{typeof nextCaseId.data === 'bigint' ? `#${nextCaseId.data.toString()}` : 'Pending'}</strong>
-            </div>
-          </div>
-          <div className="onchain-widget">
-            <div>
-              <ShieldCheck size={18} />
-              <strong>Arc escrow</strong>
-            </div>
-            <div className="onchain-grid">
-              <label>
-                <span>Metadata URI</span>
-                <input placeholder="ipfs://... or https://..." value={metadataURI} onChange={(event) => setMetadataURI(event.target.value)} />
-              </label>
-            </div>
-            <div className="onchain-facts">
-              <span>Allowance: {address ? `${formatUnits(allowanceValue, usdcDecimals)} USDC` : 'Connect wallet'}</span>
-              <span>Budget: {budgetUnits > zero ? `${formatUnits(budgetUnits, usdcDecimals)} USDC` : 'Pending'}</span>
-            </div>
-            {isConnected ? (
-              <button className="primary-button full-width" disabled={isPending || isSwitching} type="button" onClick={fileCase}>
-                <Wallet size={16} />
-                {wrongChain ? 'Switch to Arc' : needsApproval ? 'Approve, fund, and file' : 'Fund and file case'}
-              </button>
-            ) : (
-              <WalletButton className="primary-button full-width" label="Connect wallet" />
-            )}
-            {status ? <p className={`onchain-status ${status.tone}`}>{status.text}</p> : null}
-            {lastTx ? (
-              <a className="onchain-tx" href={`${arcTestnet.blockExplorers.default.url}/tx/${lastTx}`} target="_blank" rel="noreferrer">
-                {lastTx.slice(0, 10)}...{lastTx.slice(-6)}
-              </a>
-            ) : null}
-          </div>
-          <div className="direction-strip inline-strip">
-            <ShieldCheck size={19} />
-            <p>Funding opens escrow first. Once confirmed, Heliaia queues the hearing and writes the transcript to the backend.</p>
-          </div>
+          </section>
         </aside>
       </section>
 
       <section className="panel case-preview-panel" id="case-preview">
         <div className="panel-heading">
           <div>
-            <p className="eyebrow">Draft preview</p>
+            <p className="eyebrow">Case preview</p>
             <h2>Review before filing</h2>
           </div>
           <BookOpenText size={19} />
@@ -417,65 +366,52 @@ export function CaseFilingFlow({
           <article className="case-box preview-summary">
             {question.trim() ? (
               <>
-                <p className="eyebrow">Question</p>
+                <p className="eyebrow">Market question</p>
                 <h3>{question.trim()}</h3>
-                {composedContext ? <p>{composedContext}</p> : null}
+                <div className="preview-meta-row">
+                  <span>{predictionMarketLink ? 'Market linked' : 'Market link missing'}</span>
+                  <span>{horizon.trim() || 'Horizon pending'}</span>
+                  <span>{visibility}</span>
+                  <span>{payerVisibility === 'private' ? 'Private payer' : 'Public payer'}</span>
+                </div>
+                {context.trim() ? <p>{context.trim()}</p> : null}
               </>
             ) : (
               <div className="empty-state">
-                <strong>Draft preview will render from your case brief</strong>
-                <p>No sample market is prefilled. The court should only preview the question, context, links, horizon, and budget the filer actually provides.</p>
+                <strong>Your case preview will appear here</strong>
+                <p>Start with the exact market question and source link.</p>
               </div>
             )}
           </article>
 
-          <article className="case-box">
-            <p className="eyebrow">Available witness pool</p>
-            <div className="preview-witness-list">
-              {likelyBench.length ? likelyBench.map(({ id, category, agent }) => (
-                <div key={id}>
-                  <span>{category}</span>
-                  <strong>{agent}</strong>
-                </div>
-              )) : (
-              <div>
-                <span>Registry</span>
-                <strong>Pending backend</strong>
-              </div>
+          <aside className="case-box preview-submit-card">
+            <div>
+              <p className="eyebrow">Budget</p>
+              <strong>{budgetUnits > zero ? `${formatUnits(budgetUnits, usdcDecimals)} USDC` : 'Pending'}</strong>
+            </div>
+            <div className="preview-route">
+              <Scales size={18} />
+              <span>Escrow opens on Arc when you file.</span>
+            </div>
+            <div className="preview-actions">
+              <Link className="secondary-button" href="#question">Back to edit</Link>
+              {isConnected ? (
+                <button className="primary-button wallet-primary" disabled={isPending || isSwitching} type="button" onClick={fileCase}>
+                  {wrongChain ? 'Switch to Arc' : 'File funded case'}
+                  <Stamp size={16} />
+                </button>
+              ) : (
+                <WalletButton className="primary-button wallet-primary" label="Connect wallet" />
               )}
             </div>
-          </article>
-
-          <article className="case-box">
-            <p className="eyebrow">Settlement route</p>
-            <div className="preview-route">
-              <Scales size={19} />
-              <p>Wallet funds CaseEscrow, backend stores the case, Heliaia runs the hearing, then settlement and receipt actions can be recorded onchain.</p>
-            </div>
-          </article>
-
-          <article className="case-box">
-            <p className="eyebrow">Budget check</p>
-            <div className="settlement-table preview-budget">
-              <div>
-                <span>Requested budget</span>
-                <strong>{budgetUnits > zero ? `${formatUnits(budgetUnits, usdcDecimals)} USDC` : 'Pending'}</strong>
-              </div>
-            </div>
-          </article>
+          </aside>
         </div>
-
-        <div className="preview-actions">
-          <Link className="secondary-button" href="#question">Back to edit</Link>
-          {isConnected ? (
-            <button className="primary-button wallet-primary" disabled={isPending || isSwitching} type="button" onClick={fileCase}>
-              {wrongChain ? 'Switch to Arc' : 'File funded case'}
-              <ArrowRight size={16} />
-            </button>
-          ) : (
-            <WalletButton className="primary-button wallet-primary" label="Connect wallet" />
-          )}
-        </div>
+        {status ? <p className={`onchain-status ${status.tone}`}>{status.text}</p> : null}
+        {lastTx ? (
+          <a className="onchain-tx" href={`${arcTestnet.blockExplorers.default.url}/tx/${lastTx}`} target="_blank" rel="noreferrer">
+            {lastTx.slice(0, 10)}...{lastTx.slice(-6)}
+          </a>
+        ) : null}
       </section>
     </>
   )

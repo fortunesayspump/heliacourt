@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
-import { FadeImageLayer } from './FadeImageLayer'
+import { FadeImageLayer, type FadeImageSource } from './FadeImageLayer'
 
 type PageTitleProps = {
   eyebrow: string
@@ -7,6 +7,7 @@ type PageTitleProps = {
   description?: string
   actions?: ReactNode
   imageSrc?: string
+  imageSrcs?: FadeImageSource[]
   imagePosition?: string
   tone?: 'light' | 'dark'
   className?: string
@@ -17,7 +18,8 @@ export function PageTitle({
   title,
   description,
   actions,
-  imageSrc = '/assets/ancient-athenian-juries.jpg',
+  imageSrc,
+  imageSrcs,
   imagePosition = 'center',
   tone = 'dark',
   className,
@@ -25,10 +27,12 @@ export function PageTitle({
   const imageStyle = {
     '--page-title-position': imagePosition,
   } as CSSProperties
+  const titleImages = imageSrcs?.length ? imageSrcs : imageSrc ? [{ src: imageSrc, position: imagePosition }] : []
+  const firstImageSrc = typeof titleImages[0] === 'string' ? titleImages[0] : titleImages[0]?.src
 
   return (
     <header className={`workspace-header compact-header page-title page-title-${tone}${className ? ` ${className}` : ''}`} style={imageStyle}>
-      <FadeImageLayer src={imageSrc} position={imagePosition} />
+      {firstImageSrc ? <FadeImageLayer src={firstImageSrc} sources={titleImages} position={imagePosition} /> : null}
       <div className="page-title-copy">
         <p className="eyebrow">{eyebrow}</p>
         <h1>{title}</h1>

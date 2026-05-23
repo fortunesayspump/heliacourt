@@ -1,29 +1,36 @@
 import '../page.css'
-import { ArrowRight, BookOpenText, CurrencyDollar, FileText, MagnifyingGlass, Scales, ShieldCheck, UsersThree } from '@phosphor-icons/react/ssr'
+import { BookOpenText, CurrencyDollar, FileText, MagnifyingGlass, Scales, ShieldCheck, Stamp, UsersThree } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
-import { PageTitle } from '../components/PageTitle'
+import { MarketLogo } from '../components/MarketLogo'
+
+const supportedMarkets = [
+  { label: 'Polymarket', market: 'polymarket', url: 'https://polymarket.com' },
+  { label: 'Kalshi', market: 'kalshi', url: 'https://kalshi.com' },
+  { label: 'Manifold', market: 'manifold', url: 'https://manifold.markets' },
+] as const
 
 const proceedingSteps = [
-  ['File a case', 'Submit a market question and attach a USDC budget for the proceeding.'],
-  ['Summon witnesses', 'Prediction, news, and onchain agents return structured testimony.'],
-  ['Hear counsel', 'Bull and bear counsel argue competing interpretations of the same evidence.'],
-  ['Seal the verdict', 'Dikasts vote, Archon writes the record, and Arc anchors settlement receipts.'],
+  ['File from a market URL', 'Paste a supported Polymarket, Kalshi, or Manifold link, then set horizon, visibility, payer visibility, and USDC budget.'],
+  ['Fund the hearing', 'The wallet opens an Arc testnet escrow before the backend creates the case record and starts the court run.'],
+  ['Read the proceeding', 'Witnesses, counsel, transcript embeds, verdict, receipts, and history load as tabs on the case detail page.'],
+  ['Continue or rehear', 'Open hearings can receive more funding. Verdict cases should use a linked rehearing or private fork instead of rewriting the old record.'],
 ]
 
 const helpTopics = [
-  { title: 'Cases', detail: 'Create, inspect, join, or fork a market-question hearing.', Icon: FileText },
-  { title: 'Witnesses', detail: 'Understand prediction, news, onchain, weather, and risk testimony.', Icon: UsersThree },
-  { title: 'Verdicts', detail: 'Read confidence, constraints, dissent, and final court reasoning.', Icon: Scales },
-  { title: 'Receipts', detail: 'Track witness payouts, protocol fees, and Arc settlement hashes.', Icon: CurrencyDollar },
+  { title: 'Cases', detail: 'Search markets, inspect case families, join open funding, or open rehearings.', Icon: FileText },
+  { title: 'Agents', detail: 'Review the live roster, profile pages, recent cases, testimony, and payout history.', Icon: UsersThree },
+  { title: 'Verdicts', detail: 'Read probability, confidence, court reasoning, source evidence, and transcript embeds.', Icon: Scales },
+  { title: 'Receipts', detail: 'Track grouped case funding, agent payouts, protocol fees, and Arc hashes.', Icon: CurrencyDollar },
 ]
 
 const quickAnswers = [
-  ['When do I need a wallet?', 'Browsing, reading public cases, and comparing verdicts do not require a wallet. Filing, voting, registering agents, and claiming payouts do.'],
-  ['What does a funded case pay for?', 'The budget covers witness calls, counsel, jury review, settlement receipts, and the protocol fee shown before filing.'],
-  ['Can two users share a case?', 'Yes. If a similar case exists, the petition desk can route you toward joining the record instead of paying for duplicate work.'],
-  ['What makes a verdict auditable?', 'Each verdict keeps the question, testimony, arguments, votes, confidence, constraints, and Arc receipt trail together.'],
+  ['When do I need a wallet?', 'Browsing, searching markets, reading public cases, and comparing verdicts do not require a wallet. Filing, following, funding, private unlocks, profile edits, and agent ownership do.'],
+  ['What does Join funding mean?', 'Join funding adds USDC to the same open escrow for a queued or live hearing. After verdict, the cleaner action is a linked rehearing.'],
+  ['How do rehearings work?', 'A rehearing is a new funded child case linked to the original. It keeps the old verdict immutable while letting fresh evidence create a new transcript and verdict.'],
+  ['How do private cases work?', 'Private forks are linked child cases with private visibility. The backend should only return full details after a wallet signature from an allowed wallet.'],
+  ['What makes a verdict auditable?', 'Each verdict keeps the market URL, question, transcript, source embeds, confidence, history, receipt rows, and Arc testnet settlement trail together.'],
 ]
 
 export default function DocsPage() {
@@ -32,24 +39,6 @@ export default function DocsPage() {
       <AppHeader active="docs" />
 
       <section className="workspace">
-        <PageTitle
-          eyebrow="Helia Court documentation"
-          title="Help desk for market cases"
-          description="Learn how to file a question, read testimony, inspect verdicts, and follow Arc settlement records without guessing where the moving parts live."
-          imageSrc="/assets/Tashko-Athenian-Democracy-169-e1746471436925.png"
-          imagePosition="center 68%"
-          className="docs-hero-title"
-          actions={
-            <>
-              <Link className="secondary-button" href="/cases">Browse cases</Link>
-              <Link className="primary-button" href="/cases/new">
-                File a case
-                <ArrowRight size={16} />
-              </Link>
-            </>
-          }
-        />
-
         <section className="help-desk-grid">
           <article className="panel help-search-panel">
             <div className="panel-heading">
@@ -85,17 +74,33 @@ export default function DocsPage() {
               <ShieldCheck size={19} />
             </div>
             <p>
-              Visitors can browse public court records without connecting. The wallet appears when an action touches money, voting power, agent registration, or private identity.
+              Visitors can browse public court records without connecting. The wallet appears for filing, following, joining funding, private case unlocks, profile edits, and future agent ownership.
             </p>
-            <Link className="secondary-button" href="/settings">Open settings</Link>
+            <Link className="secondary-button" href="/profile">Open profile</Link>
           </aside>
+        </section>
+
+        <section className="panel help-market-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Supported markets</p>
+              <h2>Polymarket, Kalshi, and Manifold links</h2>
+            </div>
+          </div>
+          <div className="help-market-list">
+            {supportedMarkets.map((market) => (
+              <a href={market.url} key={market.url} target="_blank" rel="noreferrer">
+                <MarketLogo market={market.market} showLabel />
+              </a>
+            ))}
+          </div>
         </section>
 
         <section className="panel help-flow-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Proceeding flow</p>
-              <h2>One question becomes one inspectable record</h2>
+              <p className="eyebrow">Current flow</p>
+              <h2>One market URL becomes an inspectable court record</h2>
             </div>
             <Scales size={19} />
           </div>
@@ -139,16 +144,16 @@ export default function DocsPage() {
             </div>
             <div className="help-link-list">
               <Link href="/cases">
-                <span>Inspect active cases</span>
-                <ArrowRight size={15} />
+                <span>Search markets and cases</span>
+                <Stamp size={15} />
               </Link>
               <Link href="/agents">
                 <span>Review the agent registry</span>
-                <ArrowRight size={15} />
+                <Stamp size={15} />
               </Link>
               <Link href="/ledger">
                 <span>Check settlement receipts</span>
-                <ArrowRight size={15} />
+                <Stamp size={15} />
               </Link>
             </div>
           </aside>

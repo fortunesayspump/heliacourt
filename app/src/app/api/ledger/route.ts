@@ -11,7 +11,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({
       rows: [],
-      error: error instanceof Error ? error.message : 'backend unavailable',
+      error: error instanceof Error ? error.message : 'Ledger data is unavailable.',
     })
   }
 }

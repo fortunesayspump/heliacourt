@@ -9,6 +9,7 @@ const hearingRequestSchema = z.object({
   question: z.string().trim().min(1),
   context: z.string().trim().optional(),
   links: z.array(z.string().trim().url()).optional(),
+  imageUrl: z.string().trim().url().optional(),
   type: z.enum(['crypto-market', 'prediction-market', 'macro', 'real-world-event']).optional(),
   filer: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]+$/.test(value)).optional(),
 })
@@ -95,6 +96,7 @@ function parseHearingRequest(body: unknown): { ok: true; marketCase: MarketCase 
       question: data.question,
       context: data.context || undefined,
       links: data.links?.filter(Boolean),
+      imageUrl: data.imageUrl,
       type: (data.type ?? 'prediction-market') as CaseType,
       filer: data.filer,
       createdAt: new Date().toISOString(),

@@ -10,12 +10,12 @@ export async function POST(_request: Request, { params }: { params: Promise<{ wa
       method: 'POST',
       cache: 'no-store',
     })
-    const payload = await response.json().catch(() => ({ error: 'backend returned a non-json response' }))
+    const payload = await response.json().catch(() => ({ error: 'No wallet data returned.' }))
 
     return NextResponse.json(payload, { status: response.status })
   } catch (error) {
     return NextResponse.json({
-      error: error instanceof Error ? error.message : 'backend unavailable',
+      error: error instanceof Error ? error.message : 'Wallet data is unavailable.',
     }, { status: 502 })
   }
 }

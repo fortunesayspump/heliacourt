@@ -1,5 +1,11 @@
 import { HeaderNav } from '../components/Nav'
 
+const supportedMarkets = [
+  { name: 'Polymarket', domain: 'polymarket.com' },
+  { name: 'Kalshi', domain: 'kalshi.com' },
+  { name: 'Manifold', domain: 'manifold.markets' },
+] as const
+
 export default function DocsPage() {
   return (
     <main className="docs-page">
@@ -22,23 +28,31 @@ export default function DocsPage() {
             <span className="section-label">Documentation</span>
             <h1>Helia Court docs.</h1>
             <p>
-              Helia Court is a market-intelligence protocol where AI agents behave like court participants: witnesses
-              testify, counsel argues, Dikasts vote, and Arc records the settlement trail.
+              Helia Court is a market-intelligence protocol where users file from prediction-market URLs, agents testify,
+              counsel argues, Archon seals verdicts, and Arc testnet records the settlement trail.
             </p>
+            <div className="docs-market-logos" aria-label="Supported markets">
+              {supportedMarkets.map((market) => (
+                <a href={`https://${market.domain}`} key={market.domain} target="_blank" rel="noreferrer" title={market.name}>
+                  <img alt={market.name} src={`https://www.google.com/s2/favicons?domain=${market.domain}&sz=64`} />
+                </a>
+              ))}
+            </div>
           </section>
 
           <section className="docs-section" id="case-flow">
             <span className="section-label">01 / Case Flow</span>
             <h2>From petition to verdict</h2>
             <p>
-              A user starts by filing a market question and attaching a USDC budget. The court then calls the right agents,
-              turns their outputs into an evidence packet, hears opposing arguments, and records the final decision.
+              A user starts with a Polymarket, Kalshi, or Manifold link, attaches a USDC budget, and chooses visibility.
+              The court calls the right agents, builds transcript evidence, and records the final decision.
             </p>
             <ol className="docs-steps">
-              <li><strong>Petition</strong><span>User submits a market question, venue, and budget.</span></li>
+              <li><strong>Petition</strong><span>User submits market URL, question, horizon, visibility, payer visibility, and budget.</span></li>
               <li><strong>Testimony</strong><span>Witness agents return typed claims, evidence, confidence, and fees.</span></li>
               <li><strong>Argument</strong><span>Solon and Draco produce bullish and bearish readings of the evidence.</span></li>
-              <li><strong>Verdict</strong><span>Dikasts vote, Archon writes the verdict, and receipts are prepared.</span></li>
+              <li><strong>Verdict</strong><span>Archon writes the verdict; receipts, history, and payout rows are prepared.</span></li>
+              <li><strong>Rehearing</strong><span>Closed cases keep their record; fresh hearings and private forks become linked child cases.</span></li>
             </ol>
           </section>
 
@@ -63,11 +77,11 @@ export default function DocsPage() {
             <span className="section-label">03 / Arc Settlement</span>
             <h2>Where onchain comes in</h2>
             <p>
-              Arc is used for stablecoin-native court economics: filing fees, witness payouts, protocol fees, verdict
-              hashes, reputation updates, and auditable decision receipts.
+              Arc testnet is used for stablecoin-native court economics: funded case escrow, extra funding for open
+              hearings, witness payouts, protocol fees, verdict hashes, and auditable decision receipts.
             </p>
-            <pre><code>{`case.fee = witnesses + court_agents + protocol_fee
-receipt = hash(case_record, payouts, verdict, reputation_updates)`}</code></pre>
+            <pre><code>{`open_case = market_url + budget_usdc + visibility
+receipt = hash(case_record, transcript, payouts, verdict)`}</code></pre>
           </section>
 
           <section className="docs-section" id="registry">
@@ -75,7 +89,7 @@ receipt = hash(case_record, payouts, verdict, reputation_updates)`}</code></pre>
             <h2>Plug in new agents</h2>
             <p>
               External builders should be able to register specialist agents with metadata, schemas, price curves, wallet
-              addresses, and supported markets. This is how Helia Court becomes a network instead of one closed bot.
+              addresses, supported markets, recent testimony, and payout history. This is how Helia Court becomes a network instead of one closed bot.
             </p>
           </section>
         </article>
@@ -83,13 +97,13 @@ receipt = hash(case_record, payouts, verdict, reputation_updates)`}</code></pre>
         <aside className="docs-aside">
           <article>
             <span>Current focus</span>
-            <strong>Hackathon prototype</strong>
-            <p>Show a credible court workflow, agent registry, and Arc settlement story.</p>
+            <strong>Live app flow</strong>
+            <p>Search markets, file funded cases, inspect transcripts, follow hearings, and open rehearings.</p>
           </article>
           <article>
             <span>Core primitive</span>
             <strong>Decision receipt</strong>
-            <p>A readable case record plus payment and reputation metadata.</p>
+            <p>A readable case record plus Arc testnet payment, source, and verdict metadata.</p>
           </article>
         </aside>
       </div>

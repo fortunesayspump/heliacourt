@@ -1,14 +1,18 @@
-import { ArrowLeft, Briefcase, ShieldCheck, Sparkle, Timer, TrendUp, UserCircleCheck } from '@phosphor-icons/react/ssr'
+import { Briefcase, Gavel, Gauge, Scroll, ShieldCheck, Stamp, Timer, UserCircleCheck } from '@phosphor-icons/react/ssr'
+import { Suspense } from 'react'
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAddFundingButton } from '../../components/CaseAddFundingButton'
 import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
+import { CaseDetailTabs } from '../../components/CaseDetailTabs'
 import { CaseFollowButton } from '../../components/CaseFollowButton'
+import { getMarketProvider, MarketLogo } from '../../components/MarketLogo'
 import { MarketPreviewImage } from '../../components/MarketPreviewImage'
 import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
 import { SourceEmbedCard } from '../../components/SourceEmbedCard'
-import { formatConfidence, getBackendCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
+import { TranscriptLiveMotion } from '../../components/TranscriptLiveMotion'
+import { formatConfidence, getBackendCaseDetail, type ApiCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import '../../page.css'
 
 const tabs = [
@@ -36,6 +40,61 @@ export default async function CaseRecordPage({
   searchParams?: Promise<{ tab?: string }>
 }) {
   const { id } = await params
+
+  return (
+    <main className="app-shell">
+      <AppHeader active="cases" />
+      <section className="workspace case-record-workspace">
+        <section className="case-detail-topbar" aria-label="Case navigation">
+          <Link className="secondary-button compact-back" href="/cases">
+            <Gavel size={16} />
+            Docket
+          </Link>
+          <div className="case-detail-actions">
+            <CaseFollowButton caseId={id} />
+            <Suspense fallback={<CaseFundingSkeleton />}>
+              <CaseFundingAction caseId={id} />
+            </Suspense>
+            <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(id)}&kind=fresh-hearing`}>
+              Fresh hearing
+            </Link>
+            <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(id)}&kind=private-fork`}>
+              Private fork
+            </Link>
+          </div>
+        </section>
+        <Suspense fallback={<CaseRecordSkeleton />}>
+          <CaseRecordData id={id} searchParams={searchParams} />
+        </Suspense>
+      </section>
+      <AppFooter />
+    </main>
+  )
+}
+
+async function CaseFundingAction({ caseId }: { caseId: string }) {
+  const caseDetail = await getBackendCaseDetail(caseId)
+  return <CaseAddFundingButton caseId={caseId} onchain={caseDetail?.case.onchain} />
+}
+
+function CaseFundingSkeleton() {
+  return (
+    <div className="case-add-funding-control case-add-funding-skeleton">
+      <input aria-label="Additional USDC funding loading" disabled placeholder="0.10 USDC" />
+      <button className="secondary-button compact-back" disabled type="button">
+        Join funding
+      </button>
+    </div>
+  )
+}
+
+async function CaseRecordData({
+  id,
+  searchParams,
+}: {
+  id: string
+  searchParams?: Promise<{ tab?: string }>
+}) {
   const query = await searchParams
   const caseDetail = await getBackendCaseDetail(id)
   const courtCase = caseDetail?.case
@@ -43,27 +102,12 @@ export default async function CaseRecordPage({
 
   if (!courtCase) {
     return (
-      <main className="app-shell">
-        <AppHeader active="cases" />
-        <section className="workspace">
-          <Link className="secondary-button compact-back" href="/cases">
-            <ArrowLeft size={16} />
-            Docket
-          </Link>
+      <>
           <PrivateCaseUnlockPanel caseId={id} />
-        </section>
-        <AppFooter />
-      </main>
+      </>
     )
   }
 
-  const confidence = formatConfidence(courtCase.confidence)
-  const caseFacts = [
-    ['Status', courtCase.status, ShieldCheck],
-    ['Confidence', confidence, TrendUp],
-    ['Horizon', courtCase.horizon ?? 'Open', Timer],
-    ['Market', courtCase.market ?? 'Prediction market', Briefcase],
-  ] as const
   const seatedAgents = summarizeSeatedAgents(caseDetail.transcript)
   const verdictArtifact = caseDetail.artifacts.findLast((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
@@ -71,108 +115,74 @@ export default async function CaseRecordPage({
   const artifactById = new Map(caseDetail.artifacts.map((artifact) => [artifact.id, artifact]))
   const relatedLinks = getRelatedLinks(courtCase.links, courtCase.resolution, caseDetail.artifacts)
   const predictionMarketLink = [...courtCase.links ?? [], ...relatedLinks.map((link) => link.url)].find(isSupportedPredictionMarketLink)
+  const confidence = formatConfidence(courtCase.confidence)
+  const marketLabel = getMarketProvider({ url: predictionMarketLink, market: courtCase.market })?.label ?? formatMarketType(courtCase.market)
+  const verdictDisplay = getVerdictDisplay({
+    confidence,
+    fallback: courtCase.verdict,
+    summary: verdictArtifact?.summary,
+    transcriptMessage: verdictArtifact?.transcriptMessage,
+  })
+  const caseFacts = [
+    ['Status', courtCase.status, ShieldCheck],
+    ['Confidence', confidence, Gauge],
+    ['Horizon', courtCase.horizon ?? 'Open', Timer],
+    ['Market', marketLabel, Briefcase],
+  ] as const
 
   return (
-    <main className="app-shell">
+    <>
       <CaseAutoRefresh active={Boolean(caseDetail.partial || courtCase.status === 'Hearing' || courtCase.status === 'Queued')} />
-      <AppHeader active="cases" />
-
-      <section className="workspace case-record-workspace">
-        <section className="case-detail-topbar" aria-label="Case navigation">
-          <Link className="secondary-button compact-back" href="/cases">
-            <ArrowLeft size={16} />
-            Docket
-          </Link>
-          <CaseFollowButton caseId={courtCase.id} />
-          <CaseAddFundingButton caseId={courtCase.id} onchain={courtCase.onchain} />
-          <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(courtCase.id)}&kind=fresh-hearing`}>
-            Fresh hearing
-          </Link>
-          <Link className="secondary-button compact-back" href={`/cases/new?parent=${encodeURIComponent(courtCase.id)}&kind=private-fork`}>
-            Private fork
-          </Link>
-          <nav className="case-record-tabs top-record-tabs" aria-label="Case sections">
-            {tabs.map(([tab, label]) => (
-              <Link
-                aria-current={activeTab === tab ? 'page' : undefined}
-                className={activeTab === tab ? 'active' : undefined}
-                href={`/cases/${id}${tab === 'transcript' ? '' : `?tab=${tab}`}`}
-                key={tab}
-              >
-                {label}
-              </Link>
-            ))}
-          </nav>
+        <section className="panel case-detail-hero">
+          <div className="case-hero-media">
+            <MarketPreviewImage fallbackTitle={courtCase.title} imageUrl={courtCase.imageUrl} preferOgImage url={predictionMarketLink} />
+          </div>
+          <div className="case-hero-copy">
+            <div className="case-hero-kicker">
+              <span className="state-dot active">{courtCase.status}</span>
+              <span className="case-hero-market-logo">
+                <MarketLogo url={predictionMarketLink} market={courtCase.market} />
+              </span>
+              <span>{courtCase.horizon ?? 'Open'}</span>
+            </div>
+            <h1>{courtCase.title}</h1>
+            <div className="case-hero-stats" aria-label="Case stats">
+              {caseFacts.map(([label, value, Icon]) => (
+                <article key={label}>
+                  <Icon size={16} />
+                  <span>{label}</span>
+                  <strong>{value}</strong>
+                </article>
+              ))}
+            </div>
+            {courtCase.onchain ? (
+              <div className="onchain-facts case-onchain-facts">
+                <span>Escrow case #{courtCase.onchain.caseId}</span>
+                <span>{courtCase.onchain.budgetUsdc} USDC funded</span>
+                <span>Chain {courtCase.onchain.chainId}</span>
+                {courtCase.parentCaseId ? <span>{formatFilingKind(courtCase.filingKind)} of {shortCaseId(courtCase.parentCaseId)}</span> : null}
+              </div>
+            ) : null}
+          </div>
         </section>
 
         <section className="case-detail-shell">
-          <aside className="case-detail-sidebar" aria-label="Case sidebar">
-            <section className="panel sidebar-card">
-              <div className="panel-heading">
-                <div>
-                  <p className="eyebrow">Case facts</p>
-                  <h2>Record status</h2>
-                </div>
-                <Briefcase size={19} />
-              </div>
-              <div className="sidebar-facts">
-                {caseFacts.map(([label, value, Icon]) => (
-                  <article className="compact-card fact-card" key={label}>
-                    <span className="agent-presence" aria-hidden="true"><Icon size={15} /></span>
-                    <div>
-                      <h3>{label}</h3>
-                      <p>{value}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </section>
-            {relatedLinks.length ? (
-              <section className="panel sidebar-card related-links-card">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">Related links</p>
-                    <h2>Sources</h2>
-                  </div>
-                </div>
-                <div className="related-link-list">
-                  {relatedLinks.map((link) => (
-                    <a href={link.url} key={link.url} target="_blank" rel="noreferrer">
-                      <span>{link.kind}</span>
-                      <strong>{link.title}</strong>
-                      <em>{domainFromUrl(link.url)}</em>
-                    </a>
-                  ))}
-                </div>
-              </section>
-            ) : null}
-          </aside>
-
           <section className="case-detail-main">
-            {activeTab === 'transcript' && (
+            <CaseDetailTabs
+              initialTab={activeTab}
+              tabs={tabs}
+              panels={{
+                transcript: (
               <section className="panel hearing-transcript-panel">
                 <div className="panel-heading">
                   <div>
                     <p className="eyebrow">Court transcript</p>
                     <h2>Hearing record</h2>
                   </div>
-                  <Sparkle size={19} />
+                  <Scroll size={19} />
                 </div>
-                <div className="court-matter">
-                  <MarketPreviewImage fallbackTitle={courtCase.title} url={predictionMarketLink} />
-                  <p className="eyebrow">Matter before the court</p>
-                  <h3>{courtCase.title}</h3>
-                  <p>{courtCase.resolution ?? 'Resolution context is stored with the backend case record.'}</p>
-                  {courtCase.onchain ? (
-                    <div className="onchain-facts case-onchain-facts">
-                      <span>Escrow case #{courtCase.onchain.caseId}</span>
-                      <span>{courtCase.onchain.budgetUsdc} USDC funded</span>
-                      <span>Chain {courtCase.onchain.chainId}</span>
-                      {courtCase.parentCaseId ? <span>{formatFilingKind(courtCase.filingKind)} of {shortCaseId(courtCase.parentCaseId)}</span> : null}
-                    </div>
-                  ) : null}
-                </div>
-                <div className="court-transcript">
+                <TranscriptLiveMotion caseId={courtCase.id} />
+                <div className="court-transcript" data-live-transcript>
                   {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => {
                     const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
                     const artifact = turn.artifactId ? artifactById.get(turn.artifactId) : undefined
@@ -213,14 +223,14 @@ export default async function CaseRecordPage({
                   }) : (
                     <div className="empty-state">
                       <strong>No transcript turns yet</strong>
-                      <p>Run the hearing to write live court turns into the backend record.</p>
+                      <p>Run the hearing to add live court turns to this case.</p>
                     </div>
                   )}
                 </div>
               </section>
-            )}
+                ),
 
-            {activeTab === 'verdict' && (
+                verdict: (
               <section className="panel case-tab-panel">
                 <div className="panel-heading">
                   <div>
@@ -229,109 +239,274 @@ export default async function CaseRecordPage({
                   </div>
                   <ShieldCheck size={19} />
                 </div>
-                <div className="verdict-box compact-verdict">
-                  <div className="verdict-mark">
-                    <ShieldCheck size={28} />
-                  </div>
-                  <div>
-                    <p className="eyebrow">Backend outcome</p>
-                    <h2>{verdictArtifact?.summary ?? courtCase.verdict ?? 'Hearing pending'}</h2>
-                    <p>{verdictArtifact?.transcriptMessage ?? `Confidence: ${confidence}. Verdict-only intelligence; no trade is executed.`}</p>
-                  </div>
-                  <ul>
-                    <li><TrendUp size={16} /> {courtCase.probability ?? confidence} probability</li>
-                    <li><Sparkle size={16} /> {caseDetail.recordHash ?? courtCase.receipt ?? 'Receipt pending'}</li>
-                  </ul>
-                </div>
-                {verdictArtifact?.claims?.length ? (
-                  <div className="compact-list">
-                    {verdictArtifact.claims.map((claim) => (
-                      <article className="roster-row" key={claim}>
-                        <div>
-                          <h3>{claim}</h3>
-                          <p>Verdict claim from backend artifact</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-              </section>
-            )}
+                <div className="verdict-sheet">
+                  <section className="verdict-sheet-hero">
+                    <div className="verdict-mark">
+                      <ShieldCheck size={28} />
+                    </div>
+                    <div>
+                      <p className="eyebrow">Court outcome</p>
+                      <h2>{verdictDisplay.title}</h2>
+                      <p>{verdictDisplay.body}</p>
+                    </div>
+                  </section>
 
-            {activeTab === 'receipts' && (
+                  <section className="verdict-stat-grid" aria-label="Verdict stats">
+                    <article>
+                      <Gauge size={17} />
+                      <span>Probability</span>
+                      <strong>{courtCase.probability ?? confidence}</strong>
+                    </article>
+                    <article>
+                      <ShieldCheck size={17} />
+                      <span>Confidence</span>
+                      <strong>{verdictArtifact?.confidence ? formatConfidence(verdictArtifact.confidence) : confidence}</strong>
+                    </article>
+                    <article>
+                      <Stamp size={17} />
+                      <span>Record hash</span>
+                      <strong>{shortReceiptHash(caseDetail.recordHash ?? courtCase.receipt)}</strong>
+                    </article>
+                    <article>
+                      <Briefcase size={17} />
+                      <span>Settlement</span>
+                      <strong>{caseDetail.onchainSettlement?.status ?? courtCase.onchainSettlement?.status ?? 'Pending'}</strong>
+                    </article>
+                  </section>
+
+                  {verdictArtifact?.claims?.length ? (
+                    <section className="verdict-section">
+                      <div className="verdict-section-heading">
+                        <p className="eyebrow">Findings</p>
+                        <h3>Claims accepted by the court</h3>
+                      </div>
+                      <div className="verdict-claim-grid">
+                        {verdictArtifact.claims.map((claim, index) => (
+                          <article key={claim}>
+                            <span>{String(index + 1).padStart(2, '0')}</span>
+                            <p>{claim}</p>
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {verdictArtifact?.risks?.length || verdictArtifact?.notes?.length ? (
+                    <section className="verdict-section verdict-two-column">
+                      {verdictArtifact.risks?.length ? (
+                        <div>
+                          <div className="verdict-section-heading">
+                            <p className="eyebrow">Risks</p>
+                            <h3>What could move the decision</h3>
+                          </div>
+                          <div className="verdict-note-list">
+                            {verdictArtifact.risks.map((risk) => <p key={risk}>{risk}</p>)}
+                          </div>
+                        </div>
+                      ) : null}
+                      {verdictArtifact.notes?.length ? (
+                        <div>
+                          <div className="verdict-section-heading">
+                            <p className="eyebrow">Notes</p>
+                            <h3>Bench context</h3>
+                          </div>
+                          <div className="verdict-note-list">
+                            {verdictArtifact.notes.map((note) => <p key={note}>{note}</p>)}
+                          </div>
+                        </div>
+                      ) : null}
+                    </section>
+                  ) : null}
+
+                  {verdictArtifact?.toolEvidence?.length ? (
+                    <section className="verdict-section">
+                      <div className="verdict-section-heading">
+                        <p className="eyebrow">Evidence</p>
+                        <h3>Sources behind the verdict</h3>
+                      </div>
+                      <div className="verdict-evidence-grid">
+                        {verdictArtifact.toolEvidence.map((evidence, index) => (
+                          <article key={`${evidence.capability ?? 'evidence'}-${index}`}>
+                            <span>{evidence.capability ? formatAgentLabel(evidence.capability.replace(/_/g, '-')) : 'Evidence'}</span>
+                            <strong>{evidence.provider ?? evidence.status ?? 'Court source'}</strong>
+                            {evidence.observations?.length ? <p>{evidence.observations.slice(0, 2).join(' ')}</p> : null}
+                            {evidence.sources?.length ? (
+                              <div>
+                                {evidence.sources.slice(0, 4).map((source) => source.url ? (
+                                  <a href={source.url} key={source.url} target="_blank" rel="noreferrer">{source.title ?? formatUrlLabel(source.url)}</a>
+                                ) : null)}
+                              </div>
+                            ) : null}
+                          </article>
+                        ))}
+                      </div>
+                    </section>
+                  ) : null}
+
+                  {settlementArtifact ? (
+                    <section className="verdict-section verdict-settlement-strip">
+                      <div>
+                        <p className="eyebrow">Settlement</p>
+                        <h3>{settlementArtifact.summary}</h3>
+                      </div>
+                      <strong>{settlementArtifact.costUsd?.toFixed(2) ?? '0.00'} USDC</strong>
+                    </section>
+                  ) : null}
+                </div>
+              </section>
+                ),
+
+                receipts: (
               <section className="panel case-tab-panel">
                 <div className="panel-heading">
                   <div>
                     <p className="eyebrow">Arc receipt</p>
                     <h2>Payments and record hash</h2>
                   </div>
-                  <Sparkle size={19} />
+                  <Stamp size={19} />
                 </div>
-                <div className="settlement-table compact-settlement">
-                  <div><span>Escrow case</span><strong>{courtCase.onchain ? `#${courtCase.onchain.caseId}` : 'Pending'}</strong></div>
-                  <div><span>Escrow funding</span><strong>{courtCase.onchain ? `${courtCase.onchain.budgetUsdc} USDC` : 'Pending'}</strong></div>
-                  <div><span>Funding tx</span><strong>{courtCase.onchain?.txHash ? `${courtCase.onchain.txHash.slice(0, 10)}...${courtCase.onchain.txHash.slice(-6)}` : 'Pending'}</strong></div>
-                  <div><span>Onchain settlement</span><strong>{caseDetail.onchainSettlement?.status ?? courtCase.onchainSettlement?.status ?? 'Pending'}</strong></div>
-                  <div><span>Agent payouts</span><strong>{caseDetail.onchainSettlement?.totalPayoutUsdc ? `${caseDetail.onchainSettlement.totalPayoutUsdc} USDC` : 'Pending'}</strong></div>
-                  <div><span>Record hash</span><strong>{caseDetail.recordHash ?? courtCase.receipt ?? 'Pending'}</strong></div>
-                  <div><span>Settlement artifact</span><strong>{settlementArtifact ? `${settlementArtifact.costUsd?.toFixed(2) ?? '0.00'} USDC` : 'Pending'}</strong></div>
-                  <div><span>Source</span><strong>Backend hearing job</strong></div>
-                </div>
-                {onchainReceipts.length ? (
-                  <div className="compact-list">
-                    {onchainReceipts.map((receipt) => (
-                      <article className="roster-row" key={`${receipt.type}-${receipt.txHash}`}>
-                        <div>
-                          <h3>{formatReceiptType(receipt.type)}</h3>
-                          <p>{receipt.agentId ? `${receipt.agentId} · ` : ''}{receipt.amountUsdc ? `${receipt.amountUsdc} USDC · ` : ''}{receipt.txHash.slice(0, 10)}...{receipt.txHash.slice(-6)}</p>
-                        </div>
-                        <div className="roster-meta">
-                          <span className="state-dot voting">Arc</span>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : null}
-                {courtCase.onchain?.txHash ? (
-                  <a className="secondary-button compact-back" href={`https://explorer.testnet.arc.network/tx/${courtCase.onchain.txHash}`} target="_blank" rel="noreferrer">
-                    View funding tx
-                  </a>
-                ) : null}
-              </section>
-            )}
-
-            {activeTab === 'history' && (
-              <section className="panel case-tab-panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="eyebrow">Witnesses</p>
-                    <h2>Agents seated</h2>
-                  </div>
-                  <UserCircleCheck size={19} />
-                </div>
-                <div className="compact-list">
-                  {seatedAgents.length ? seatedAgents.map((agent) => (
-                    <article className="roster-row" key={agent.id}>
-                      <div>
-                        <h3>{agent.name}</h3>
-                        <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
-                      </div>
-                      <div className="roster-meta">
-                        <span className="state-dot voting">Seated</span>
-                      </div>
+                <div className="receipt-sheet">
+                  <section className="receipt-summary-grid" aria-label="Receipt summary">
+                    <article>
+                      <span>Escrow case</span>
+                      <strong>{courtCase.onchain ? `#${courtCase.onchain.caseId}` : 'Pending'}</strong>
                     </article>
-                  )) : (
+                    <article>
+                      <span>Escrow funding</span>
+                      <strong>{courtCase.onchain ? `${courtCase.onchain.budgetUsdc} USDC` : 'Pending'}</strong>
+                    </article>
+                    <article>
+                      <span>Agent payouts</span>
+                      <strong>{caseDetail.onchainSettlement?.totalPayoutUsdc ? `${caseDetail.onchainSettlement.totalPayoutUsdc} USDC` : 'Pending'}</strong>
+                    </article>
+                    <article>
+                      <span>Settlement</span>
+                      <strong>{caseDetail.onchainSettlement?.status ?? courtCase.onchainSettlement?.status ?? 'Pending'}</strong>
+                    </article>
+                  </section>
+
+                  <section className="receipt-record-strip">
+                    <div>
+                      <p className="eyebrow">Record hash</p>
+                      <h3>{shortReceiptHash(caseDetail.recordHash ?? courtCase.receipt)}</h3>
+                    </div>
+                    <div>
+                      <span>Funding tx</span>
+                      <strong>{shortReceiptHash(courtCase.onchain?.txHash)}</strong>
+                    </div>
+                    <div>
+                      <span>Settlement artifact</span>
+                      <strong>{settlementArtifact ? `${settlementArtifact.costUsd?.toFixed(2) ?? '0.00'} USDC` : 'Pending'}</strong>
+                    </div>
+                    {courtCase.onchain?.txHash ? (
+                      <a className="secondary-button compact-back" href={`https://explorer.testnet.arc.network/tx/${courtCase.onchain.txHash}`} target="_blank" rel="noreferrer">
+                        View funding tx
+                      </a>
+                    ) : null}
+                  </section>
+
+                  {onchainReceipts.length ? (
+                    <section className="receipt-section">
+                      <div className="receipt-section-heading">
+                        <p className="eyebrow">Receipt ledger</p>
+                        <h3>{onchainReceipts.length} settlement record{onchainReceipts.length === 1 ? '' : 's'}</h3>
+                      </div>
+                      <div className="receipt-ledger-list">
+                        {onchainReceipts.map((receipt, index) => (
+                          <a className="case-receipt-row" href={`https://explorer.testnet.arc.network/tx/${receipt.txHash}`} key={`${receipt.type}-${receipt.txHash}`} target="_blank" rel="noreferrer">
+                            <div className="receipt-index">{String(index + 1).padStart(2, '0')}</div>
+                            <div>
+                              <span>{formatReceiptType(receipt.type)}</span>
+                              <h3>{receipt.agentId ? formatAgentLabel(receipt.agentId) : 'Case escrow'}</h3>
+                              <p>{receipt.txHash.slice(0, 10)}...{receipt.txHash.slice(-6)}</p>
+                            </div>
+                            <strong>{receipt.amountUsdc ? `${receipt.amountUsdc} USDC` : 'Record'}</strong>
+                            <span className="state-dot voting">Arc</span>
+                          </a>
+                        ))}
+                      </div>
+                    </section>
+                  ) : (
                     <div className="empty-state">
-                      <strong>No witness list yet</strong>
-                      <p>The backend case has not published seated agents for this record.</p>
+                      <strong>No receipts yet</strong>
+                      <p>Settlement records will appear here when this case records payment or verdict activity.</p>
                     </div>
                   )}
                 </div>
               </section>
-            )}
+                ),
+
+                history: (
+              <section className="panel case-tab-panel">
+                <div className="panel-heading">
+                  <div>
+                    <p className="eyebrow">Case history</p>
+                    <h2>Activity timeline</h2>
+                  </div>
+                  <Timer size={19} />
+                </div>
+                <div className="case-history-sheet">
+                  <section className="history-summary-grid" aria-label="Case history summary">
+                    <article>
+                      <span>Filed</span>
+                      <strong>{formatHistoryDate(courtCase.createdAt)}</strong>
+                    </article>
+                    <article>
+                      <span>Last update</span>
+                      <strong>{formatHistoryDate(courtCase.updated)}</strong>
+                    </article>
+                    <article>
+                      <span>Transcript turns</span>
+                      <strong>{caseDetail.transcript.length}</strong>
+                    </article>
+                    <article>
+                      <span>Receipts</span>
+                      <strong>{onchainReceipts.length}</strong>
+                    </article>
+                  </section>
+
+                  <section className="case-history-timeline">
+                    {buildCaseHistoryEvents(courtCase, caseDetail, onchainReceipts).map((event, index) => (
+                      <article className="case-history-event" key={`${event.title}-${event.time ?? index}`}>
+                        <div className="history-marker">{String(index + 1).padStart(2, '0')}</div>
+                        <div>
+                          <span>{event.kind}</span>
+                          <h3>{event.title}</h3>
+                          <p>{event.detail}</p>
+                        </div>
+                        <time dateTime={event.time}>{formatHistoryDate(event.time)}</time>
+                      </article>
+                    ))}
+                  </section>
+                </div>
+              </section>
+                ),
+              }}
+            />
           </section>
 
           <aside className="case-detail-right" aria-label="Court bench">
+            <section className="panel sidebar-card">
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">Case facts</p>
+                  <h2>Record status</h2>
+                </div>
+                <Briefcase size={19} />
+              </div>
+              <div className="sidebar-facts">
+                {caseFacts.map(([label, value, Icon]) => (
+                  <article className="compact-card fact-card" key={label}>
+                    <span className="agent-presence" aria-hidden="true"><Icon size={15} /></span>
+                    <div>
+                      <h3>{label}</h3>
+                      <p>{value}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+
             <section className="panel hearing-side-stack">
               <div className="panel-heading">
                 <div>
@@ -340,11 +515,11 @@ export default async function CaseRecordPage({
                 </div>
                 <UserCircleCheck size={19} />
               </div>
-              <div className="compact-list">
+              <div className="bench-agent-list">
                 {seatedAgents.length ? seatedAgents.map((agent) => (
-                  <article className="compact-card bench-news" key={agent.id}>
-                    <span className="agent-presence" aria-hidden="true">{agent.name.slice(0, 1).toUpperCase()}</span>
-                    <div>
+                  <article className="bench-agent-row" key={agent.id}>
+                    <span className="bench-agent-avatar" aria-hidden="true">{agent.name.slice(0, 1).toUpperCase()}</span>
+                    <div className="bench-agent-copy">
                       <h3>{agent.name}</h3>
                       <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
                     </div>
@@ -359,9 +534,120 @@ export default async function CaseRecordPage({
             </section>
           </aside>
         </section>
+    </>
+  )
+}
+
+function CaseRecordSkeleton() {
+  return (
+    <>
+      <section className="panel case-detail-hero skeleton-detail-hero">
+        <div className="case-hero-media">
+          <span className="skeleton skeleton-fill" />
+        </div>
+        <div className="case-hero-copy">
+          <div className="case-hero-kicker">
+            <span className="skeleton skeleton-pill" />
+            <span className="skeleton skeleton-icon small" />
+            <span className="skeleton skeleton-line short" />
+          </div>
+          <span className="skeleton skeleton-line hero-title" />
+          <span className="skeleton skeleton-line title" />
+          <span className="skeleton skeleton-line" />
+          <div className="case-hero-stats" aria-label="Case stats loading">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <article key={index}>
+                <span className="skeleton skeleton-icon small" />
+                <span className="skeleton skeleton-line tiny" />
+                <strong className="skeleton skeleton-line short" />
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
-      <AppFooter />
-    </main>
+
+      <section className="case-detail-shell">
+        <section className="case-detail-main">
+          <div className="case-tab-shell">
+            <nav className="case-record-tabs top-record-tabs" aria-label="Case sections loading">
+              {tabs.map(([tab, label], index) => (
+                <button aria-current={index === 0 ? 'page' : undefined} className={index === 0 ? 'active' : undefined} disabled key={tab} type="button">
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div className="case-tab-panels">
+              <div>
+                <section className="panel hearing-transcript-panel">
+                  <div className="panel-heading">
+                    <div>
+                      <p className="eyebrow">Court transcript</p>
+                      <h2>Hearing record</h2>
+                    </div>
+                    <Scroll size={19} />
+                  </div>
+                  <div className="court-transcript">
+                    {Array.from({ length: 6 }).map((_, index) => (
+                      <article className="transcript-entry skeleton-transcript-entry" key={index}>
+                        <span className="transcript-avatar skeleton skeleton-icon" />
+                        <div className="transcript-message">
+                          <div className="transcript-meta">
+                            <div>
+                              <strong className="skeleton skeleton-line short" />
+                              <span className="skeleton skeleton-line tiny" />
+                            </div>
+                          </div>
+                          <p className="skeleton skeleton-line title" />
+                          <p className="skeleton skeleton-line" />
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            </div>
+          </div>
+        </section>
+        <aside className="case-detail-side">
+          <section className="panel case-facts-panel">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Case facts</p>
+                <h2>Record status</h2>
+              </div>
+            </div>
+            <div className="fact-list">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index}>
+                  <span className="skeleton skeleton-line tiny" />
+                  <strong className="skeleton skeleton-line short" />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="panel hearing-side-stack">
+            <div className="panel-heading">
+              <div>
+                <p className="eyebrow">Court bench</p>
+                <h2>Agents seated</h2>
+              </div>
+              <UserCircleCheck size={19} />
+            </div>
+            <div className="bench-agent-list">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <article className="bench-agent-row" key={index}>
+                  <span className="bench-agent-avatar skeleton skeleton-icon" />
+                  <div className="bench-agent-copy">
+                    <h3 className="skeleton skeleton-line short" />
+                    <p className="skeleton skeleton-line" />
+                  </div>
+                </article>
+              ))}
+            </div>
+          </section>
+        </aside>
+      </section>
+    </>
   )
 }
 
@@ -443,7 +729,6 @@ function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact
       seen.add(key)
       return true
     })
-    .slice(0, 3)
 }
 
 function getRelatedLinks(caseLinks: string[] | undefined, context: string | undefined, artifacts: ApiCourtArtifact[]) {
@@ -576,16 +861,155 @@ function formatReceiptType(type: string) {
     .join(' ')
 }
 
+function buildCaseHistoryEvents(
+  courtCase: NonNullable<ApiCaseDetail['case']>,
+  caseDetail: ApiCaseDetail,
+  receipts: NonNullable<ApiCaseDetail['onchainSettlement']>['receipts'],
+) {
+  const events: Array<{ kind: string; title: string; detail: string; time?: string }> = []
+
+  events.push({
+    kind: 'Filing',
+    title: 'Case filed',
+    detail: `${courtCase.market ?? 'Prediction market'} question opened for review.`,
+    time: courtCase.createdAt,
+  })
+
+  if (courtCase.onchain) {
+    events.push({
+      kind: 'Funding',
+      title: `${courtCase.onchain.budgetUsdc} USDC escrowed`,
+      detail: `Escrow case #${courtCase.onchain.caseId} opened on Arc.`,
+      time: courtCase.createdAt,
+    })
+  }
+
+  for (const turn of caseDetail.transcript.slice(0, 10)) {
+    events.push({
+      kind: formatAgentLabel(turn.seat),
+      title: `${turn.agentName}: ${turn.stage}`,
+      detail: summarizeTurn(turn),
+      time: turn.createdAt,
+    })
+  }
+
+  for (const artifact of caseDetail.artifacts.slice(0, 5)) {
+    events.push({
+      kind: formatReceiptType(artifact.type),
+      title: artifact.summary,
+      detail: artifact.claims?.slice(0, 2).join(' ') || artifact.transcriptMessage || 'Artifact recorded for the case.',
+      time: artifact.createdAt,
+    })
+  }
+
+  for (const receipt of receipts ?? []) {
+    events.push({
+      kind: formatReceiptType(receipt.type),
+      title: receipt.agentId ? `${formatAgentLabel(receipt.agentId)} receipt` : 'Settlement receipt',
+      detail: `${receipt.amountUsdc ? `${receipt.amountUsdc} USDC · ` : ''}${receipt.txHash.slice(0, 10)}...${receipt.txHash.slice(-6)}`,
+      time: caseDetail.case.updated,
+    })
+  }
+
+  return events
+    .sort((left, right) => Date.parse(left.time ?? '') - Date.parse(right.time ?? ''))
+    .slice(0, 24)
+}
+
+function formatHistoryDate(value?: string) {
+  if (!value) return 'Pending'
+  const timestamp = Date.parse(value)
+  if (!Number.isFinite(timestamp)) return value
+
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(new Date(timestamp))
+}
+
+function getVerdictDisplay({
+  confidence,
+  fallback,
+  summary,
+  transcriptMessage,
+}: {
+  confidence: string
+  fallback?: string
+  summary?: string
+  transcriptMessage?: string
+}) {
+  const rawSummary = summary || fallback || 'Hearing pending'
+  const title = formatVerdictTitle(rawSummary)
+  const defaultBody = rawSummary !== title ? rawSummary : `Confidence: ${confidence}. Verdict-only intelligence; no trade is executed.`
+  const body = stripRepeatedVerdictLead(transcriptMessage, rawSummary) || defaultBody
+
+  return { title, body }
+}
+
+function formatVerdictTitle(value: string) {
+  const normalized = value.replace(/^verdict:\s*/i, '').trim()
+  const lower = normalized.toLowerCase()
+
+  if (lower.includes('leaning yes')) return 'Leaning Yes'
+  if (lower.includes('leaning no')) return 'Leaning No'
+  if (lower.includes('unresolved')) return 'Unresolved'
+  if (lower.includes('hearing open')) return 'Hearing Open'
+  if (lower.includes('settled yes')) return 'Settled Yes'
+  if (lower.includes('settled no')) return 'Settled No'
+
+  const firstClause = normalized.split(/[.,;:]/)[0]?.trim()
+  if (firstClause && firstClause.length <= 42) return titleCaseVerdict(firstClause)
+  if (normalized.length <= 58) return normalized
+  return `${normalized.slice(0, 55).trim()}...`
+}
+
+function stripRepeatedVerdictLead(message: string | undefined, summary: string) {
+  if (!message) return undefined
+
+  const trimmedMessage = message.trim()
+  const trimmedSummary = summary.trim()
+  if (!trimmedMessage) return undefined
+  if (trimmedMessage === trimmedSummary) return undefined
+  if (!trimmedMessage.toLowerCase().startsWith(trimmedSummary.toLowerCase())) return trimmedMessage
+
+  const withoutSummary = trimmedMessage.slice(trimmedSummary.length).replace(/^[\s.:;-]+/, '').trim()
+  return withoutSummary || undefined
+}
+
+function titleCaseVerdict(value: string) {
+  return value
+    .split(/\s+/)
+    .map((word) => word.length <= 3 ? word.toUpperCase() : `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
+    .join(' ')
+}
+
 function formatFilingKind(kind?: string) {
   if (kind === 'fresh-hearing') return 'Fresh hearing'
   if (kind === 'private-fork') return 'Private fork'
   return 'Case'
 }
 
+function formatMarketType(value?: string) {
+  if (!value || value === 'prediction-market') return 'Prediction market'
+  return value
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(' ')
+}
+
 function shortCaseId(id: string) {
   if (id.startsWith('0x') && id.length > 18) return `${id.slice(0, 8)}...${id.slice(-6)}`
   if (id.length > 18) return `${id.slice(0, 12)}...`
   return id
+}
+
+function shortReceiptHash(value?: string) {
+  if (!value) return 'Pending'
+  if (value.length > 18) return `${value.slice(0, 10)}...${value.slice(-6)}`
+  return value
 }
 
 function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {

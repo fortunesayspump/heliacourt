@@ -1,7 +1,8 @@
+import { Suspense } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
-import { PageTitle } from '../components/PageTitle'
 import { getBackendAgents, getBackendLedgerRows } from '../../lib/backend-data'
+import Link from 'next/link'
 import '../page.css'
 
 const seatLabels: Record<string, string> = {
@@ -17,7 +18,22 @@ const seatLabels: Record<string, string> = {
   'outcome-reviewer': 'Outcome Reviewer',
 }
 
-export default async function AgentsPage() {
+export default function AgentsPage() {
+  return (
+    <main className="app-shell">
+      <AppHeader active="agents" />
+
+      <section className="workspace">
+        <Suspense fallback={<AgentsSkeleton />}>
+          <AgentsData />
+        </Suspense>
+      </section>
+      <AppFooter />
+    </main>
+  )
+}
+
+async function AgentsData() {
   const [agents, ledgerRows] = await Promise.all([
     getBackendAgents(),
     getBackendLedgerRows(),
@@ -25,21 +41,10 @@ export default async function AgentsPage() {
   const payoutStats = summarizeAgentPayouts(ledgerRows)
 
   return (
-    <main className="app-shell">
-      <AppHeader active="agents" />
-
-      <section className="workspace">
-        <PageTitle
-          eyebrow="Agent registry"
-          title="Prediction witness bench"
-          description="First-party witnesses cover prediction markets, web search, exact-page scraping, source quality, timelines, research synthesis, onchain data, structured data APIs, quant checks, and risk."
-          imageSrc="/assets/schoolxl.jpg"
-        />
-
         <section className="panel app-roster-page">
           <div className="registry-heading">
             <div>
-              <p className="eyebrow">Backend registry</p>
+              <p className="eyebrow">Agent registry</p>
               <h2>Agent roster</h2>
             </div>
             <span>{agents.length} seats</span>
@@ -52,14 +57,13 @@ export default async function AgentsPage() {
               <span className="registry-seat">Seat</span>
               <span className="registry-rep">Mode</span>
               <span className="registry-fee">Payouts</span>
-              <span className="registry-status">Status</span>
             </div>
             {agents.length ? agents.map((agent, index) => {
               const payouts = payoutStats.get(agent.id)
               const payoutLabel = payouts ? `${formatAmount(payouts.total)} USDC` : '0 USDC'
 
               return (
-              <article className="registry-row" key={agent.id} role="row">
+              <Link className="registry-row" href={`/agents/${agent.id}`} key={agent.id} role="row">
                 <span className="registry-rank">{String(index + 1).padStart(2, '0')}</span>
                 <div className="registry-agent">
                   <span className="registry-avatar" aria-hidden="true">{agent.name.slice(0, 1)}</span>
@@ -71,22 +75,54 @@ export default async function AgentsPage() {
               <span className="registry-seat">{seatLabels[agent.seat] ?? agent.seat}</span>
               <strong className="registry-rep">{agent.runMode}</strong>
               <strong className="registry-fee" title={`${payouts?.count ?? 0} recorded payout rows`}>{payoutLabel}</strong>
-                <span className={`registry-status state-dot ${getAgentStatusClass(agent.onchain?.registrationStatus, agent.enabled)}`}>
-                  {formatAgentStatus(agent.onchain?.registrationStatus, agent.enabled)}
-                </span>
-              </article>
+              </Link>
               )
             }) : (
               <div className="empty-state">
-                <strong>Backend registry unavailable</strong>
-                <p>Start the backend server to load the agent roster.</p>
+                <strong>No agents yet</strong>
+                <p>Agent records will appear here when available.</p>
               </div>
             )}
           </div>
         </section>
-      </section>
-      <AppFooter />
-    </main>
+  )
+}
+
+function AgentsSkeleton() {
+  return (
+    <section className="panel app-roster-page">
+      <div className="registry-heading">
+        <div>
+          <p className="eyebrow">Agent registry</p>
+          <h2>Agent roster</h2>
+        </div>
+        <span>Loading</span>
+      </div>
+      <div className="registry-table" role="table" aria-label="Agent registry loading">
+        <div className="registry-row registry-row-head" role="row">
+          <span className="registry-rank">Rank</span>
+          <span className="registry-agent-head">Agent</span>
+          <span className="registry-seat">Seat</span>
+          <span className="registry-rep">Mode</span>
+          <span className="registry-fee">Payouts</span>
+        </div>
+        {Array.from({ length: 8 }).map((_, index) => (
+          <div className="registry-row skeleton-registry-row" key={index}>
+            <span className="registry-rank skeleton skeleton-line tiny" />
+            <div className="registry-agent">
+              <span className="registry-avatar skeleton skeleton-icon" />
+              <div>
+                <h3 className="skeleton skeleton-line short" />
+                <p className="skeleton skeleton-line" />
+              </div>
+            </div>
+            <span className="registry-seat skeleton skeleton-line" />
+            <strong className="registry-rep skeleton skeleton-line short" />
+            <strong className="registry-fee skeleton skeleton-line short" />
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -113,19 +149,4 @@ function parseAmount(value: string) {
 
 function formatAmount(value: number) {
   return value.toFixed(6).replace(/0+$/, '').replace(/\.$/, '')
-}
-
-function formatAgentStatus(status: NonNullable<Awaited<ReturnType<typeof getBackendAgents>>[number]['onchain']>['registrationStatus'] | undefined, enabled: boolean) {
-  if (!enabled) return 'Disabled'
-  if (status === 'registered') return 'Onchain'
-  if (status === 'protocol-wallet-ready') return 'Protocol wallet'
-  if (status === 'external-wallet-ready') return 'External wallet'
-  return 'Wallet pending'
-}
-
-function getAgentStatusClass(status: NonNullable<Awaited<ReturnType<typeof getBackendAgents>>[number]['onchain']>['registrationStatus'] | undefined, enabled: boolean) {
-  if (!enabled) return 'voting'
-  if (status === 'registered') return 'ready'
-  if (status === 'protocol-wallet-ready' || status === 'external-wallet-ready') return 'active'
-  return 'voting'
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowSquareOut } from '@phosphor-icons/react'
+import { LinkSimple } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 type Preview = {
@@ -52,8 +52,8 @@ export function SourceEmbedCard({
       <strong>{displayTitle}</strong>
       {displayDetail ? <em>{displayDetail}</em> : null}
       <small>
-        {preview?.host ?? detail ?? hostFromUrl(url)}
-        <ArrowSquareOut size={12} />
+        <span>{preview?.host ?? detail ?? hostFromUrl(url)}</span>
+        <LinkSimple size={12} />
       </small>
     </a>
   )

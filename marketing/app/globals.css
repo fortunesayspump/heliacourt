@@ -354,6 +354,36 @@ a {
   animation: hero-enter 760ms var(--ease-snap) 620ms both;
 }
 
+.hero-market-logos {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 26px;
+  animation: hero-enter 760ms var(--ease-snap) 700ms both;
+}
+
+.hero-market-logos a {
+  display: inline-flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.78;
+  transition: opacity 160ms ease, transform 160ms var(--ease-out);
+}
+
+.hero-market-logos a:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.hero-market-logos img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+}
+
 @keyframes hero-enter {
   from {
     opacity: 0;
@@ -793,8 +823,8 @@ a {
 
 .site-footer {
   display: grid;
-  grid-template-columns: 1.1fr auto auto;
-  gap: 44px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(300px, auto);
+  gap: 34px;
   align-items: end;
   padding: 44px max(24px, calc((100vw - 1180px) / 2));
   border-top: 1px solid rgba(244, 227, 198, 0.18);
@@ -1137,6 +1167,34 @@ a {
   font-size: clamp(20px, 2vw, 27px);
   font-weight: 600;
   line-height: 1.18;
+}
+
+.docs-market-logos {
+  display: inline-flex;
+  align-items: center;
+  gap: 18px;
+  margin-top: 24px;
+}
+
+.docs-market-logos a {
+  display: inline-flex;
+  width: 34px;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.82;
+  transition: opacity 160ms ease, transform 160ms var(--ease-out);
+}
+
+.docs-market-logos a:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.docs-market-logos img {
+  width: 27px;
+  height: 27px;
+  object-fit: contain;
 }
 
 .docs-section {
@@ -2158,10 +2216,20 @@ body,
   --image-scale: 1.035;
 }
 
+.registry,
+.protocol-page {
+  --image-scale: 1.12;
+}
+
 .landing-hero:hover,
 .registry:hover,
 .protocol-page:hover {
   --image-scale: 1.065;
+}
+
+.registry:hover,
+.protocol-page:hover {
+  --image-scale: 1.18;
 }
 
 .landing-hero .fade-image-layer {
@@ -2172,10 +2240,15 @@ body,
 
 .registry .fade-image-layer,
 .protocol-page .fade-image-layer {
-  transform: translateY(calc((var(--marketing-scroll, 0) - 0.48) * 34px)) scale(var(--image-scale));
+  inset: -14%;
+  transform: translateY(calc((var(--marketing-scroll, 0) - 0.48) * 30px)) scale(var(--image-scale));
   transform-origin: center;
   transition: transform 620ms var(--ease-out), opacity 520ms ease;
   will-change: transform;
+}
+
+.registry .fade-image-layer {
+  background-position: center center;
 }
 
 .button,
@@ -2338,8 +2411,8 @@ body,
 /* Shared footer source of truth. */
 .site-footer {
   display: grid;
-  grid-template-columns: 1.1fr auto auto;
-  gap: 44px;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, auto);
+  gap: 34px;
   align-items: end;
   width: 100%;
   min-height: 148px;
@@ -2349,9 +2422,15 @@ body,
   border-top: 1px solid var(--ag-border-invert);
 }
 
-.site-footer div {
+.site-footer > div:not(.footer-market-row) {
   display: grid;
   gap: 12px;
+}
+
+.site-footer .footer-link-stack {
+  display: grid !important;
+  justify-items: end;
+  gap: 8px !important;
 }
 
 .site-footer .footer-wordmark {
@@ -2384,7 +2463,9 @@ body,
 }
 
 .site-footer nav a,
-.site-footer > span {
+.site-footer > span,
+.site-footer .footer-network-line,
+.footer-market-row {
   color: var(--ag-footer-muted);
 }
 
@@ -2396,6 +2477,43 @@ body,
   justify-self: end;
   font-size: 13px;
   text-align: right;
+}
+
+.site-footer .footer-network-line {
+  justify-self: end;
+  font-size: 12.5px;
+  text-align: right;
+}
+
+.site-footer .footer-market-row {
+  display: inline-flex !important;
+  justify-self: end;
+  align-items: center;
+  gap: 12px;
+  color: var(--ag-footer-muted);
+  white-space: nowrap;
+}
+
+.site-footer .footer-market-row a {
+  display: inline-flex;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.86;
+  transition: opacity 160ms ease, transform 160ms var(--ease-out);
+}
+
+.site-footer .footer-market-row a:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.site-footer .footer-market-row img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
 }
 
 /* Final mixed Helia Court theme: dark-first with intentional light parchment sections. */
@@ -2695,19 +2813,23 @@ body,
 
 .site-footer p,
 .site-footer nav a,
-.site-footer > span {
+.site-footer > span,
+.site-footer .footer-network-line {
   color: rgba(255, 250, 242, 0.72) !important;
 }
 
 .intro,
 .agents,
 .arc,
-.closing,
-.site-footer {
+.closing {
   background-image:
     radial-gradient(ellipse at 16% 18%, rgba(241, 211, 170, 0.07) 0 1px, transparent 1px 42px),
     radial-gradient(ellipse at 78% 28%, rgba(241, 211, 170, 0.045) 0 1px, transparent 1px 56px),
     repeating-radial-gradient(circle at 24% 34%, rgba(241, 211, 170, 0.023) 0 1px, transparent 1px 5px) !important;
+}
+
+.site-footer {
+  background-image: none !important;
 }
 
 .intro,
@@ -2883,11 +3005,11 @@ body,
 }
 
 .ledger {
-  width: min(520px, 100%) !important;
+  width: min(430px, 100%) !important;
   max-width: 760px;
   justify-self: end;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 16px !important;
+  gap: 12px !important;
 }
 
 .ledger article {
@@ -2896,8 +3018,8 @@ body,
   display: grid !important;
   place-items: center;
   align-content: center;
-  gap: 14px;
-  padding: 22px !important;
+  gap: 10px;
+  padding: 18px !important;
   text-align: center;
   border: 1px solid rgba(241, 211, 170, 0.16) !important;
   border-radius: 18px !important;
@@ -2907,8 +3029,12 @@ body,
 .ledger strong {
   margin-top: 0 !important;
   font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif !important;
-  font-size: clamp(31px, 3vw, 48px) !important;
+  font-size: clamp(25px, 2.3vw, 36px) !important;
   line-height: 0.95 !important;
+}
+
+.ledger span {
+  font-size: 12px !important;
 }
 
 @media (max-width: 980px) {

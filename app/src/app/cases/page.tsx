@@ -1,121 +1,40 @@
-import { ArrowRight, Briefcase, Clock, Gavel } from '@phosphor-icons/react/ssr'
-import Link from 'next/link'
+import { Briefcase, Clock, Gavel, SealCheck } from '@phosphor-icons/react/ssr'
+import { Suspense } from 'react'
 import { AppHeader } from '../components/AppHeader'
 import { AppFooter } from '../components/AppFooter'
-import { PageTitle } from '../components/PageTitle'
-import { CaseMarketIcon } from '../components/CaseMarketIcon'
-import { type ApiCase, formatConfidence, formatUpdated, getBackendCases } from '../../lib/backend-data'
+import { CaseSearchList } from '../components/CaseSearchList'
+import { getBackendCases } from '../../lib/backend-data'
 import '../page.css'
 import './cases.css'
 
-export default async function CasesPage() {
-  const backendCases = await getBackendCases()
-
+export default function CasesPage() {
   return (
     <main className="app-shell">
       <AppHeader active="cases" />
 
       <section className="workspace">
-        <PageTitle
-          eyebrow="Docket"
-          title="Cases"
-          imageSrc="/assets/socrates.1400x0.jpg"
-          imagePosition="center 38%"
-          actions={
-            <Link className="primary-button" href="/cases/new">
-              File case
-              <ArrowRight size={16} />
-            </Link>
-          }
-        />
+        <Suspense fallback={<CasesSkeleton />}>
+          <CasesData />
+        </Suspense>
+      </section>
+      <AppFooter />
+    </main>
+  )
+}
 
-        <section className="cases-docket-panel">
-          <div className="cases-market-heading">
-            <div>
-              <p className="eyebrow">Prediction docket</p>
-              <h2>Markets under review</h2>
-            </div>
-            <Briefcase size={20} />
-          </div>
+async function CasesData() {
+  const backendCases = await getBackendCases()
+  const initialNow = Date.now()
 
-          {backendCases.length ? (
-          <div className="docket-case-grid">
-            {backendCases.map((item) => {
-              const marketLink = getPredictionMarketLink(item)
-              const provider = marketLink ? formatMarketProvider(marketLink) : item.market ?? 'Market source missing'
-              const probability = item.probability ?? formatConfidence(item.confidence)
-              const budget = item.onchain?.budgetUsdc ? `${item.onchain.budgetUsdc} USDC` : 'Not funded'
-
-              return (
-              <article className="docket-case-card" key={item.id}>
-                <div className="docket-case-card-head">
-                  <CaseMarketIcon url={marketLink} title={item.title} />
-                  <div>
-                    <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
-                      <h3>{item.title}</h3>
-                    </Link>
-                    <span>{item.parentCaseId ? `${formatFilingKind(item.filingKind)} · ${provider}` : provider}</span>
-                  </div>
-                  <strong className="case-status-pill">{item.status}</strong>
-                </div>
-
-                <div className="case-market-lines">
-                  <div>
-                    <span>Probability</span>
-                    <strong>{probability}</strong>
-                  </div>
-                  <div>
-                    <span>Horizon</span>
-                    <strong>{item.horizon ?? 'Open'}</strong>
-                  </div>
-                  <div>
-                    <span>Budget</span>
-                    <strong>{budget}</strong>
-                  </div>
-                </div>
-
-                <div className="case-market-foot">
-                  <span>{shortCaseId(item.id)}</span>
-                  <span>{item.witnesses?.length ?? 0} witness{(item.witnesses?.length ?? 0) === 1 ? '' : 'es'}</span>
-                  <span>
-                    <Clock size={13} />
-                    {formatUpdated(item.updated)}
-                  </span>
-                </div>
-
-                <div className="docket-case-card-actions">
-                  {marketLink ? (
-                    <a className="market-source-link" href={marketLink} target="_blank" rel="noreferrer">
-                      Market
-                    </a>
-                  ) : (
-                    <span className="market-source-link disabled">No source</span>
-                  )}
-                  <Link className="docket-case-card-link" href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
-                    Open
-                    <ArrowRight size={16} />
-                  </Link>
-                </div>
-              </article>
-              )
-            })}
-          </div>
-          ) : (
-            <div className="empty-state">
-              <h3>No cases yet</h3>
-              <Link className="primary-button" href="/cases/new">
-                File case
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-          )}
-        </section>
+  return (
+    <>
+        <CaseSearchList cases={backendCases} initialNow={initialNow} />
 
         <section className="metrics-grid">
           <div className="metric">
             <Briefcase size={19} />
             <div>
-              <span>Drafts</span>
+              <span>Queued</span>
               <strong>{backendCases.filter((item) => item.status === 'Queued').length} cases</strong>
             </div>
           </div>
@@ -134,51 +53,77 @@ export default async function CasesPage() {
             </div>
           </div>
           <div className="metric">
-            <ArrowRight size={19} />
+            <SealCheck size={19} />
             <div>
               <span>Settled today</span>
               <strong>{backendCases.filter((item) => item.status === 'Verdict').length} receipts</strong>
             </div>
           </div>
         </section>
-      </section>
-      <AppFooter />
-    </main>
+    </>
   )
 }
 
-function getPredictionMarketLink(item: ApiCase) {
-  const links = item.links ?? []
-  return links.find((link) => {
-    try {
-      const host = new URL(link).hostname.replace(/^www\./, '')
-      return ['polymarket.com', 'kalshi.com', 'manifold.markets'].some((supported) => host === supported || host.endsWith(`.${supported}`))
-    } catch {
-      return false
-    }
-  }) ?? links[0]
-}
-
-function formatMarketProvider(url: string) {
-  try {
-    const host = new URL(url).hostname.replace(/^www\./, '')
-    if (host.includes('polymarket')) return 'Polymarket'
-    if (host.includes('kalshi')) return 'Kalshi'
-    if (host.includes('manifold')) return 'Manifold'
-    return host
-  } catch {
-    return 'Prediction market'
-  }
-}
-
-function shortCaseId(id: string) {
-  if (id.startsWith('0x') && id.length > 18) return `${id.slice(0, 8)}...${id.slice(-6)}`
-  if (id.length > 18) return `${id.slice(0, 12)}...`
-  return id
-}
-
-function formatFilingKind(kind?: string) {
-  if (kind === 'fresh-hearing') return 'Fresh hearing'
-  if (kind === 'private-fork') return 'Private fork'
-  return 'Original case'
+function CasesSkeleton() {
+  return (
+    <>
+      <div className="case-search-field skeleton-case-search" aria-hidden="true">
+        <span className="skeleton skeleton-icon small" />
+        <span className="skeleton skeleton-line" />
+      </div>
+      <section className="cases-docket-panel">
+          <div className="cases-market-heading">
+            <div>
+              <p className="eyebrow">Prediction docket</p>
+              <h2>Markets</h2>
+            </div>
+            <Briefcase size={20} />
+          </div>
+        <div className="docket-case-grid">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <article className="docket-case-card skeleton-card" key={index}>
+              <div className="docket-case-card-banner">
+                <span className="skeleton skeleton-fill" />
+                <div><span className="skeleton skeleton-pill" /></div>
+                <strong><span className="skeleton skeleton-line tiny" /></strong>
+              </div>
+              <div className="docket-case-card-head">
+                <div>
+                  <span className="market-provider-line">
+                    <span className="skeleton skeleton-icon small" />
+                    <span className="skeleton skeleton-line short" />
+                  </span>
+                  <span className="skeleton skeleton-line title" />
+                  <span className="skeleton skeleton-line" />
+                </div>
+              </div>
+              <div className="case-market-lines">
+                {Array.from({ length: 3 }).map((_, lineIndex) => (
+                  <div key={lineIndex}>
+                    <span className="skeleton skeleton-line tiny" />
+                    <strong className="skeleton skeleton-line short" />
+                  </div>
+                ))}
+              </div>
+              <div className="docket-case-card-actions">
+                <span className="skeleton skeleton-button" />
+                <span className="skeleton skeleton-button" />
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="metrics-grid">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <div className="metric skeleton-metric" key={index}>
+            <span className="skeleton skeleton-icon" />
+            <div>
+              <span className="skeleton skeleton-line short" />
+              <strong className="skeleton skeleton-line" />
+            </div>
+          </div>
+        ))}
+      </section>
+    </>
+  )
 }

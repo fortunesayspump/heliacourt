@@ -94,6 +94,95 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+w3m-modal,
+w3m-modal *,
+w3m-router,
+w3m-router *,
+w3m-connect-view,
+w3m-connect-view *,
+w3m-wallet-login-list,
+w3m-wallet-login-list * {
+  --apkt-tokens-theme-overlay: rgba(13, 12, 9, 0.72);
+  --apkt-tokens-theme-backgroundPrimary: #0d0c09;
+  --apkt-tokens-theme-backgroundPrimary-base: #0d0c09;
+  --apkt-tokens-theme-foregroundPrimary: #211e17;
+  --apkt-tokens-theme-foregroundSecondary: #171510;
+  --apkt-tokens-theme-foregroundTertiary: #2c261c;
+  --apkt-tokens-theme-textPrimary: #fffaf2;
+  --apkt-tokens-theme-textSecondary: rgba(255, 250, 242, 0.74);
+  --apkt-tokens-theme-textTertiary: rgba(241, 211, 170, 0.7);
+  --apkt-tokens-theme-borderPrimary: rgba(241, 211, 170, 0.18);
+  --apkt-tokens-theme-borderPrimaryDark: rgba(241, 211, 170, 0.2);
+  --apkt-tokens-theme-borderSecondary: rgba(241, 211, 170, 0.28);
+  --apkt-tokens-theme-iconDefault: rgba(241, 211, 170, 0.74);
+  --apkt-tokens-theme-iconInverse: #fffaf2;
+  --apkt-tokens-core-backgroundAccentPrimary: #476352;
+  --apkt-tokens-core-backgroundAccentPrimary-base: #476352;
+  --apkt-tokens-core-textAccentPrimary: #f1d3aa;
+  --apkt-tokens-core-iconAccentPrimary: #f1d3aa;
+  --apkt-tokens-core-borderAccentPrimary: #476352;
+  --apkt-tokens-core-foregroundAccent010: rgba(71, 99, 82, 0.18);
+  --apkt-tokens-core-foregroundAccent020: rgba(71, 99, 82, 0.26);
+  --apkt-tokens-core-foregroundAccent040: rgba(71, 99, 82, 0.38);
+  --apkt-tokens-core-foregroundAccent060: rgba(71, 99, 82, 0.54);
+  --apkt-tokens-core-glass010: rgba(241, 211, 170, 0.08);
+  --w3m-accent: #476352;
+  --w3m-color-mix: #0d0c09;
+  --w3m-color-mix-strength: 28%;
+  --w3m-border-radius-master: 4px;
+  --w3m-qr-color: #f1d3aa;
+}
+
+.route-loading-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 99999;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+.route-loading-bar span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ag-cream), var(--ag-green), var(--ag-cream));
+  box-shadow: 0 0 18px rgba(241, 211, 170, 0.38);
+  transform: translate3d(-100%, 0, 0);
+  transition: transform 240ms ease;
+}
+
+.route-loading-bar.loading,
+.route-loading-bar.done {
+  opacity: 1;
+}
+
+.route-loading-bar.loading span {
+  animation: route-progress-loading 1200ms ease-out forwards;
+}
+
+.route-loading-bar.done span {
+  transform: translate3d(0, 0, 0);
+}
+
+@keyframes route-progress-loading {
+  0% {
+    transform: translate3d(-100%, 0, 0);
+  }
+
+  55% {
+    transform: translate3d(-38%, 0, 0);
+  }
+
+  100% {
+    transform: translate3d(-14%, 0, 0);
+  }
+}
+
 body::before {
   content: none;
 }

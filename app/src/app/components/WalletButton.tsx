@@ -1,9 +1,9 @@
 'use client'
 
 import { useAppKit } from '@reown/appkit/react'
-import { CaretDown, Plus, Gear, ShieldCheck, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
+import { DotsThreeVertical, Plus, ShieldCheck, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
 import { appKitProjectId, arcTestnet } from '../../lib/arc'
 
@@ -39,7 +39,7 @@ export function WalletButton({
     <InjectedWalletButton
       className={className}
       connectedLabel={connectedLabel}
-      label="Set up modal"
+      label={label}
       showIcon={showIcon}
     />
   )
@@ -56,7 +56,27 @@ function AppKitWalletButton({
   const { disconnect } = useDisconnect()
   const { switchChain, isPending: isSwitching } = useSwitchChain()
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const isWrongChain = isConnected && chainId !== arcTestnet.id
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
 
   if (isConnected && address && isWrongChain) {
     return (
@@ -69,11 +89,11 @@ function AppKitWalletButton({
 
   if (isConnected && address) {
     return (
-      <div className="wallet-menu">
+      <div className="wallet-menu" ref={menuRef}>
         <button className={className} type="button" onClick={() => setMenuOpen((value) => !value)}>
           {showIcon ? <Wallet size={16} /> : null}
           {connectedLabel ?? shortAddress(address)}
-          <CaretDown size={15} />
+          <DotsThreeVertical size={15} />
         </button>
         {menuOpen ? (
           <div className="wallet-menu-panel">
@@ -85,14 +105,20 @@ function AppKitWalletButton({
               <UserCircle size={15} />
               Profile
             </Link>
-            <Link href="/settings" onClick={() => setMenuOpen(false)}>
-              <Gear size={15} />
-              Gear
-            </Link>
-            <button type="button" onClick={() => disconnect()}>
+            <button type="button" onClick={() => {
+              setMenuOpen(false)
+              disconnect()
+            }}>
               <Wallet size={15} />
               Disconnect
             </button>
+            <div className="wallet-menu-network">
+              <img alt="" src="https://www.google.com/s2/favicons?domain=arc.network&sz=64" />
+              <div>
+                <span>Network</span>
+                <strong>{chainId === arcTestnet.id ? arcTestnet.name : `Chain ${chainId ?? 'unknown'}`}</strong>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
@@ -120,6 +146,7 @@ function InjectedWalletButton({
   const [attempted, setAttempted] = useState(false)
   const [localError, setLocalError] = useState('')
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   const connector = useMemo(
     () => connectors.find((item) => item.type === 'injected') ?? connectors[0],
@@ -127,6 +154,25 @@ function InjectedWalletButton({
   )
   const isWrongChain = isConnected && chainId !== arcTestnet.id
   const hasError = attempted && (Boolean(error) || Boolean(localError))
+
+  useEffect(() => {
+    if (!menuOpen) return
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) setMenuOpen(false)
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+
+    document.addEventListener('pointerdown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [menuOpen])
 
   const handleConnect = async () => {
     setAttempted(true)
@@ -163,11 +209,11 @@ function InjectedWalletButton({
 
   if (isConnected && address) {
     return (
-      <div className="wallet-menu">
+      <div className="wallet-menu" ref={menuRef}>
         <button className={className} type="button" onClick={() => setMenuOpen((value) => !value)}>
           {showIcon ? <Wallet size={16} /> : null}
           {connectedLabel ?? shortAddress(address)}
-          <CaretDown size={15} />
+          <DotsThreeVertical size={15} />
         </button>
         {menuOpen ? (
           <div className="wallet-menu-panel">
@@ -179,14 +225,20 @@ function InjectedWalletButton({
               <UserCircle size={15} />
               Profile
             </Link>
-            <Link href="/settings" onClick={() => setMenuOpen(false)}>
-              <Gear size={15} />
-              Gear
-            </Link>
-            <button type="button" onClick={() => disconnect()}>
+            <button type="button" onClick={() => {
+              setMenuOpen(false)
+              disconnect()
+            }}>
               <Wallet size={15} />
               Disconnect
             </button>
+            <div className="wallet-menu-network">
+              <img alt="" src="https://www.google.com/s2/favicons?domain=arc.network&sz=64" />
+              <div>
+                <span>Network</span>
+                <strong>{chainId === arcTestnet.id ? arcTestnet.name : `Chain ${chainId ?? 'unknown'}`}</strong>
+              </div>
+            </div>
           </div>
         ) : null}
       </div>
@@ -202,7 +254,7 @@ function InjectedWalletButton({
       onClick={handleConnect}
     >
       {showIcon ? <Wallet size={16} /> : null}
-      {isPending ? 'Connecting...' : hasError ? 'No wallet found' : label}
+      {isPending ? 'Connecting...' : label}
     </button>
   )
 }

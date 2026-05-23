@@ -34,7 +34,7 @@ export async function POST(request: Request) {
   })
 
   const payload = await response.json().catch(() => ({
-    error: 'backend returned a non-json response',
+    error: 'No hearing data returned.',
   }))
 
   if (!response.ok) {

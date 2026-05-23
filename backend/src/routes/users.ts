@@ -25,6 +25,87 @@ const PROFILE_UPDATE_PURPOSE = 'profile:update'
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
 
 export async function userRoutes(app: FastifyInstance) {
+  app.get('/users/:wallet/notifications', async (request, reply) => {
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const parsed = z.object({ wallet: walletSchema }).safeParse(request.params)
+    if (!parsed.success) return reply.status(400).send({ error: 'invalid wallet' })
+
+    const wallet = normalizeWallet(parsed.data.wallet)
+    await ensureUser(wallet)
+
+    const [participatedCases, followedCases, payoutRows] = await Promise.all([
+      db!
+        .select({
+          caseId: cases.id,
+          question: cases.question,
+          role: caseParticipants.role,
+          visibility: cases.visibility,
+          updatedAt: cases.updatedAt,
+        })
+        .from(caseParticipants)
+        .innerJoin(cases, eq(cases.id, caseParticipants.caseId))
+        .where(eq(caseParticipants.wallet, wallet))
+        .orderBy(desc(cases.updatedAt)),
+      db!
+        .select({
+          caseId: cases.id,
+          question: cases.question,
+          visibility: cases.visibility,
+          followedAt: caseFollows.createdAt,
+          updatedAt: cases.updatedAt,
+        })
+        .from(caseFollows)
+        .innerJoin(cases, eq(cases.id, caseFollows.caseId))
+        .where(eq(caseFollows.wallet, wallet))
+        .orderBy(desc(caseFollows.createdAt)),
+      db!
+        .select()
+        .from(onchainReceipts)
+        .where(eq(onchainReceipts.receiptType, 'agent-payout'))
+        .orderBy(desc(onchainReceipts.createdAt)),
+    ])
+
+    const walletPayouts = payoutRows.filter((row) => {
+      const payload = row.payload as { wallet?: string } | null
+      return payload?.wallet?.toLowerCase() === wallet
+    })
+
+    const notifications = [
+      ...walletPayouts.map((row) => {
+        const payload = row.payload as { amountUsdc?: string; agentId?: string; wallet?: string } | null
+        return {
+          id: `payout:${row.txHash}`,
+          kind: 'receipt',
+          href: `/cases/${row.caseId}?tab=receipts`,
+          title: 'Receipt recorded',
+          detail: payload?.amountUsdc ? `${payload.amountUsdc} USDC agent payout` : 'Agent payout recorded',
+          createdAt: row.createdAt.toISOString(),
+        }
+      }),
+      ...participatedCases.map((item) => ({
+        id: `case:${item.caseId}:${item.role}`,
+        kind: item.role === 'filer' ? 'case' : 'follow',
+        href: `/cases/${item.caseId}`,
+        title: item.question,
+        detail: item.role === 'filer' ? 'Filed case updated' : `${item.role} participation updated`,
+        createdAt: item.updatedAt.toISOString(),
+      })),
+      ...followedCases.map((item) => ({
+        id: `follow:${item.caseId}`,
+        kind: 'follow',
+        href: `/cases/${item.caseId}`,
+        title: item.question,
+        detail: 'Followed case updated',
+        createdAt: item.updatedAt.toISOString(),
+      })),
+    ]
+      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+      .slice(0, 12)
+
+    return { wallet, notifications }
+  })
+
   app.get('/users/:wallet', async (request, reply) => {
     if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
 

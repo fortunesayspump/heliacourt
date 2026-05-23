@@ -5,6 +5,7 @@ export type MarketCase = {
   question: string
   context?: string
   links?: string[]
+  imageUrl?: string
   type: CaseType
   parentCaseId?: string
   filingKind?: 'original' | 'fresh-hearing' | 'private-fork'

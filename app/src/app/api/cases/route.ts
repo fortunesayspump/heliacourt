@@ -11,7 +11,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({
       cases: [],
-      error: error instanceof Error ? error.message : 'backend unavailable',
+      error: error instanceof Error ? error.message : 'Case data is unavailable.',
     })
   }
 }
@@ -28,13 +28,13 @@ export async function POST(request: Request) {
       body: JSON.stringify(body),
     })
     const payload = await response.json().catch(() => ({
-      error: 'backend returned a non-json response',
+      error: 'No case data returned.',
     }))
 
     return NextResponse.json(payload, { status: response.status })
   } catch (error) {
     return NextResponse.json({
-      error: error instanceof Error ? error.message : 'backend unavailable',
+      error: error instanceof Error ? error.message : 'Case data is unavailable.',
     }, { status: 502 })
   }
 }

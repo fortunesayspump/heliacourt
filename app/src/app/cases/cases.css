@@ -1,6 +1,11 @@
 .cases-docket-panel {
   display: grid;
   gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--ag-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--ag-surface);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
 }
 
 .cases-market-heading {
@@ -8,7 +13,7 @@
   align-items: end;
   justify-content: space-between;
   gap: 16px;
-  padding: 0 2px 2px;
+  padding: 0 2px 4px;
 }
 
 .cases-market-heading h2 {
@@ -23,73 +28,202 @@
   color: var(--ag-muted);
 }
 
+.case-search-field {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 12px;
+  border: 1px solid var(--ag-border);
+  border-radius: var(--radius-md);
+  color: var(--ag-muted);
+  background: rgba(255, 250, 242, 0.035);
+}
+
+.case-search-field:focus-within {
+  border-color: rgba(241, 211, 170, 0.34);
+  background: rgba(255, 250, 242, 0.045);
+}
+
+.case-search-field input {
+  width: 100%;
+  min-width: 0;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  color: var(--ag-ink);
+  background: transparent !important;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.case-search-field input:focus,
+.case-search-field input:focus-visible {
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.case-search-field input::placeholder {
+  color: var(--ag-muted);
+}
+
+.case-search-field button {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ag-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.case-search-field button:hover {
+  color: var(--ag-ink);
+  background: rgba(241, 211, 170, 0.08);
+}
+
+.case-search-empty {
+  min-height: 180px;
+}
+
+.skeleton-case-search {
+  pointer-events: none;
+}
+
 .docket-case-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
 }
 
 .docket-case-card {
   position: relative;
   display: grid;
-  min-height: 184px;
-  grid-template-rows: auto 1fr auto;
+  min-height: 274px;
+  grid-template-rows: auto auto 1fr auto;
   gap: 12px;
   overflow: hidden;
-  padding: 12px;
+  padding: 8px 0 0;
   border: 1px solid var(--ag-border-strong);
-  border-radius: 12px;
-  background: var(--ag-inner-surface);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.16);
-  transition: border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease;
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(241, 211, 170, 0.055), transparent 44%),
+    var(--ag-inner-surface);
+  box-shadow: inset 0 0 0 1px rgba(255, 250, 242, 0.025);
+  transition: border-color 160ms ease, transform 160ms ease, background-color 160ms ease;
 }
 
 .docket-case-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(241, 211, 170, 0.42);
-  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.2);
+  border-color: rgba(241, 211, 170, 0.48);
+  background-color: var(--ag-inner-surface-strong);
 }
 
 .docket-case-card::before {
+  display: none;
+}
+
+.docket-case-card-banner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  height: 128px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 0 8px;
+  padding: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(241, 211, 170, 0.16);
+  border-radius: var(--radius-md);
+  background:
+    radial-gradient(circle at 18% 28%, rgba(241, 211, 170, 0.3), transparent 24%),
+    radial-gradient(circle at 82% 18%, rgba(92, 165, 128, 0.28), transparent 28%),
+    linear-gradient(135deg, rgba(71, 99, 82, 0.52), rgba(20, 19, 15, 0.92)),
+    var(--ag-inner-surface-strong);
+}
+
+.docket-case-card-banner img {
   position: absolute;
   inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.docket-case-card-banner::before {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   pointer-events: none;
   content: "";
-  background-image:
-    linear-gradient(rgba(241, 211, 170, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(241, 211, 170, 0.035) 1px, transparent 1px);
-  background-size: 24px 24px;
-  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.9), transparent 64%);
+  background:
+    linear-gradient(180deg, rgba(13, 12, 9, 0.18), rgba(13, 12, 9, 0.54)),
+    linear-gradient(90deg, rgba(13, 12, 9, 0.42), transparent 58%);
+}
+
+.docket-case-card-banner::after {
+  position: absolute;
+  right: -24px;
+  bottom: -32px;
+  width: 142px;
+  height: 142px;
+  border: 1px solid rgba(241, 211, 170, 0.18);
+  border-radius: 50%;
+  pointer-events: none;
+  content: "";
+  background: rgba(255, 250, 242, 0.035);
+}
+
+.docket-case-card-banner > div,
+.docket-case-card-banner > strong {
+  position: relative;
+  z-index: 2;
+}
+
+.docket-case-card-banner > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 250, 242, 0.16);
+  border-radius: var(--radius-sm);
+  color: #86d5aa;
+  background: rgba(13, 12, 9, 0.38);
+  backdrop-filter: blur(10px);
+}
+
+.docket-case-card-banner > div > span {
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.docket-case-card-banner > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid rgba(255, 250, 242, 0.16);
+  border-radius: var(--radius-sm);
+  color: var(--ag-cream);
+  background: rgba(13, 12, 9, 0.34);
+  font-size: 11px;
+  font-weight: 780;
 }
 
 .docket-case-card-head {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: start;
-}
-
-.case-market-icon {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--ag-border);
-  border-radius: 6px;
-  background: var(--ag-inner-surface-strong);
-  color: var(--ag-cream);
-  font-family: var(--font-title);
-  font-size: 18px;
-  font-weight: 760;
-}
-
-.case-market-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  grid-template-columns: 1fr;
+  min-height: 58px;
+  align-items: center;
+  padding: 0 16px;
 }
 
 .docket-case-card-head a {
@@ -100,14 +234,14 @@
 .docket-case-card-head h3 {
   display: -webkit-box;
   overflow: hidden;
-  margin: 0;
+  margin: 4px 0 0;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   color: var(--ag-ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 720;
   letter-spacing: 0;
-  line-height: 1.18;
+  line-height: 1.14;
   text-wrap: pretty;
 }
 
@@ -120,24 +254,13 @@
 .docket-case-card-head div > span {
   display: block;
   overflow: hidden;
-  margin-top: 5px;
   color: var(--ag-muted);
-  font-size: 12px;
-  font-weight: 680;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.case-status-pill {
-  min-width: max-content;
-  padding: 5px 7px;
-  border: 1px solid rgba(92, 165, 128, 0.35);
-  border-radius: 999px;
-  color: #86d5aa;
-  background: rgba(92, 165, 128, 0.12);
   font-size: 11px;
   font-weight: 760;
-  line-height: 1;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .case-market-lines {
@@ -146,15 +269,19 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
+  margin: 2px 16px 0;
   overflow: hidden;
   border: 1px solid var(--ag-border);
-  border-radius: 8px;
-  background: var(--ag-border);
+  border-radius: var(--radius-md);
+  border: 0;
+  background: transparent;
 }
 
 .case-market-lines > div {
   min-width: 0;
   padding: 10px;
+  border: 0;
+  border-radius: 0;
   background: var(--ag-inner-surface-strong);
 }
 
@@ -183,7 +310,6 @@
   line-height: 1.1;
 }
 
-.case-market-foot,
 .docket-case-card-actions {
   position: relative;
   z-index: 1;
@@ -191,50 +317,32 @@
   align-items: center;
 }
 
-.case-market-foot {
-  gap: 8px;
-  color: var(--ag-muted);
-  font-size: 11px;
-  font-weight: 650;
-  white-space: nowrap;
-}
-
-.case-market-foot span {
-  display: inline-flex;
-  min-width: 0;
-  align-items: center;
-  gap: 4px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.case-market-foot span:first-child {
-  max-width: 34%;
-}
-
 .docket-case-card-actions {
+  padding: 0 16px 16px;
   justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
 }
 
 .market-source-link,
 .docket-case-card-link {
   display: inline-flex;
-  min-height: 32px;
+  flex: 1;
+  min-height: 40px;
   align-items: center;
   justify-content: center;
   gap: 7px;
-  border-radius: 7px;
+  padding: 0 14px;
+  border-radius: var(--radius-sm);
   font-size: 13px;
-  font-weight: 760;
+  font-weight: 800;
+  line-height: 1;
   text-decoration: none;
 }
 
 .market-source-link {
-  flex: 1;
   border: 1px solid var(--ag-border);
   color: var(--ag-ink);
-  background: rgba(241, 211, 170, 0.05);
+  background: rgba(241, 211, 170, 0.075);
 }
 
 .market-source-link.disabled {
@@ -242,7 +350,6 @@
 }
 
 .docket-case-card-link {
-  flex: 1;
   border: 1px solid rgba(92, 165, 128, 0.42);
   color: var(--ag-cream);
   background: var(--ag-green);
@@ -254,6 +361,11 @@
 }
 
 @media (max-width: 760px) {
+  .cases-docket-panel {
+    padding: 18px;
+    border-radius: var(--radius-lg);
+  }
+
   .cases-market-heading {
     align-items: start;
   }
@@ -267,24 +379,25 @@
   }
 
   .docket-case-card {
-    min-height: 178px;
+    min-height: 0;
+    padding: 8px 0 0;
   }
 
   .docket-case-card-head {
-    grid-template-columns: 36px minmax(0, 1fr);
-  }
-
-  .case-market-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .case-status-pill {
-    grid-column: 1 / -1;
-    width: max-content;
+    grid-template-columns: 1fr;
   }
 
   .case-market-lines {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  .docket-case-card-actions {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .market-source-link,
+  .docket-case-card-link {
+    flex: none;
   }
 }

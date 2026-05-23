@@ -1,7 +1,8 @@
 'use client'
 
-import { ChartLineUp } from '@phosphor-icons/react'
+import { Scales } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
+import { MarketLogo } from './MarketLogo'
 
 type Preview = {
   title?: string
@@ -13,9 +14,13 @@ type Preview = {
 export function MarketPreviewImage({
   url,
   fallbackTitle,
+  imageUrl,
+  preferOgImage = false,
 }: {
   url?: string
   fallbackTitle: string
+  imageUrl?: string
+  preferOgImage?: boolean
 }) {
   const [preview, setPreview] = useState<Preview | undefined>()
 
@@ -23,7 +28,9 @@ export function MarketPreviewImage({
     if (!url) return
     let cancelled = false
 
-    fetch(`/api/link-preview?url=${encodeURIComponent(url)}`)
+    const params = new URLSearchParams({ url })
+    if (fallbackTitle && !preferOgImage) params.set('title', fallbackTitle)
+    fetch(`${preferOgImage ? '/api/link-preview' : '/api/market-image'}?${params.toString()}`)
       .then((response) => response.ok ? response.json() as Promise<Preview> : undefined)
       .then((payload) => {
         if (!cancelled) setPreview(payload)
@@ -35,19 +42,24 @@ export function MarketPreviewImage({
     return () => {
       cancelled = true
     }
-  }, [url])
+  }, [fallbackTitle, preferOgImage, url])
+
+  const resolvedImage = preferOgImage ? preview?.image ?? imageUrl : imageUrl ?? preview?.image
 
   return (
-    <a className={`market-preview-image${preview?.image ? ' has-image' : ''}`} href={url ?? '#'} target={url ? '_blank' : undefined} rel={url ? 'noreferrer' : undefined}>
-      {preview?.image ? (
-        <img alt="" src={preview.image} />
+    <a className={`market-preview-image${resolvedImage ? ' has-image' : ''}`} href={url ?? '#'} target={url ? '_blank' : undefined} rel={url ? 'noreferrer' : undefined}>
+      {resolvedImage ? (
+        <img alt="" src={resolvedImage} />
       ) : (
         <div className="market-preview-fallback">
-          <ChartLineUp size={28} />
+          <Scales size={28} />
         </div>
       )}
       <div>
-        <span>{preview?.host ?? (url ? hostFromUrl(url) : 'Prediction market')}</span>
+        <span className="market-preview-source">
+          <MarketLogo url={url} market={preview?.host} />
+          {preview?.host ?? (url ? hostFromUrl(url) : 'Market')}
+        </span>
         <strong>{preview?.title ?? fallbackTitle}</strong>
       </div>
     </a>

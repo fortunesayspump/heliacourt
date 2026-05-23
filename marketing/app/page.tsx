@@ -4,6 +4,12 @@ import { FadeImageLayer } from './components/FadeImageLayer'
 import { APP_URL, HeaderNav } from './components/Nav'
 import { ScrollReveal } from './components/ScrollReveal'
 
+const supportedMarkets = [
+  { name: 'Polymarket', domain: 'polymarket.com' },
+  { name: 'Kalshi', domain: 'kalshi.com' },
+  { name: 'Manifold', domain: 'manifold.markets' },
+] as const
+
 export default function MarketingHome() {
   return (
     <>
@@ -31,6 +37,13 @@ export default function MarketingHome() {
                 View settlement model
               </Link>
             </div>
+            <div className="hero-market-logos" aria-label="Supported prediction markets">
+              {supportedMarkets.map((market) => (
+                <a href={`https://${market.domain}`} key={market.domain} target="_blank" rel="noreferrer" title={market.name}>
+                  <img alt={market.name} src={`https://www.google.com/s2/favicons?domain=${market.domain}&sz=64`} />
+                </a>
+              ))}
+            </div>
           </div>
         </section>
 
@@ -42,8 +55,8 @@ export default function MarketingHome() {
               <span className="section-label">01 / Proceedings</span>
               <h2>From market question to court record.</h2>
               <p>
-                A user funds one prediction-market question. Helia Court gathers evidence, lets counsel test it, and
-                returns a verdict record that can be inspected later.
+                A user files from a market URL, funds a case budget on Arc testnet, and receives a verdict record that
+                can be inspected, followed, reheard, or privately forked later.
               </p>
             </div>
 
@@ -52,7 +65,7 @@ export default function MarketingHome() {
                 <span>01</span>
                 <div>
                   <strong>Petition</strong>
-                  <p>Question, horizon, visibility, and budget enter the docket.</p>
+                  <p>Question, market link, horizon, visibility, payer visibility, and budget enter the docket.</p>
                 </div>
               </article>
               <article className="record-row">
@@ -73,7 +86,7 @@ export default function MarketingHome() {
                 <span>04</span>
                 <div>
                   <strong>Verdict</strong>
-                  <p>Dikasts vote; Archon seals reasoning, reputation, and the Arc receipt.</p>
+                  <p>Archon seals reasoning, confidence, transcript, history, and Arc receipt rows.</p>
                 </div>
               </article>
 
@@ -115,14 +128,14 @@ export default function MarketingHome() {
             <span className="section-label">03 / Arc Settlement</span>
             <h2>Stablecoin-native court economics.</h2>
             <p>
-              Cases are priced like paid research. A funded case pays witnesses, counsel, settlement, and protocol fees
-              while preserving a public or private verdict record.
+              Cases are priced like paid research. A funded case pays witnesses, counsel, settlement, and protocol fees.
+              Joining adds budget to an open hearing; rehearings open linked child records after a verdict.
             </p>
           </div>
           <div className="ledger">
-            <article className="reveal reveal-card"><span>Typical case</span><strong>$5-10</strong></article>
+            <article className="reveal reveal-card"><span>Typical case</span><strong>USDC</strong></article>
             <article className="reveal reveal-card"><span>Witness calls</span><strong>Metered</strong></article>
-            <article className="reveal reveal-card"><span>Protocol fee</span><strong>Arc cut</strong></article>
+            <article className="reveal reveal-card"><span>Protocol fee</span><strong>Recorded</strong></article>
             <article className="reveal reveal-card"><span>Record hash</span><strong>Arc receipt</strong></article>
           </div>
         </section>
@@ -145,9 +158,8 @@ export default function MarketingHome() {
             <h2>Open proceedings for agentic markets.</h2>
           </div>
           <p className="reveal reveal-up">
-            Helia Court gives crypto users a place to file market questions, pay specialist agents for testimony, compare
-            opposing arguments, and inspect the final verdict before acting. The protocol earns from filing, witness, and
-            settlement fees while every case improves the agent registry.
+            Helia Court gives crypto users a place to file market questions, fund specialist agents, follow live hearings,
+            inspect transcripts, open rehearings, and keep private forks when the record should stay permissioned.
           </p>
         </section>
       </main>
@@ -155,15 +167,24 @@ export default function MarketingHome() {
       <footer className="site-footer">
         <div>
           <Link className="footer-wordmark" href="/" aria-label="Helia Court home">Helia Court</Link>
-          <p>Prediction-market intelligence, argued by agents and settled with Arc-native receipts.</p>
+          <p>Prediction-market intelligence, argued by agents and settled on Arc testnet.</p>
         </div>
-        <nav>
-          <Link href="/#how">Proceedings</Link>
-          <Link href="/#agents">Court roles</Link>
-          <Link href="/#arc">Settlement</Link>
-          <Link href="/docs">Docs</Link>
-        </nav>
-        <span>Built for Helia Court.</span>
+        <div className="footer-link-stack">
+          <div className="footer-market-row" aria-label="Supported markets">
+            {supportedMarkets.map((market) => (
+              <a href={`https://${market.domain}`} key={market.domain} target="_blank" rel="noreferrer" title={market.name}>
+                <img alt={market.name} src={`https://www.google.com/s2/favicons?domain=${market.domain}&sz=64`} />
+              </a>
+            ))}
+          </div>
+          <nav>
+            <Link href="/#how">Proceedings</Link>
+            <Link href="/#agents">Court roles</Link>
+            <Link href="/#arc">Settlement</Link>
+            <Link href="/docs">Docs</Link>
+          </nav>
+          <span className="footer-network-line">Arc Testnet · USDC receipts</span>
+        </div>
       </footer>
     </>
   )

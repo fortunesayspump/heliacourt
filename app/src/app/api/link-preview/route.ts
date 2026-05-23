@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { resolveMarketPreview } from '../../../lib/market-images'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,6 +19,16 @@ export async function GET(request: Request) {
   }
 
   try {
+    const marketPreview = await resolveMarketPreview([target.toString()])
+    if (marketPreview?.image || marketPreview?.title) {
+      return NextResponse.json({
+        url: target.toString(),
+        host: target.hostname.replace(/^www\./, ''),
+        title: marketPreview.title,
+        image: marketPreview.image,
+      })
+    }
+
     const response = await fetch(target, {
       headers: {
         accept: 'text/html,application/xhtml+xml',

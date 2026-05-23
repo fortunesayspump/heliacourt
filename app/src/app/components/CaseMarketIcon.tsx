@@ -1,6 +1,6 @@
 'use client'
 
-import { ChartLineUp } from '@phosphor-icons/react'
+import { Scales } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 type Preview = {
@@ -36,7 +36,7 @@ export function CaseMarketIcon({
 
   return (
     <div className={`case-market-icon${image ? ' has-image' : ''}`} aria-hidden="true">
-      {image ? <img alt="" src={image} /> : <span>{title.trim().slice(0, 1).toUpperCase() || <ChartLineUp size={18} />}</span>}
+      {image ? <img alt="" src={image} /> : <span>{title.trim().slice(0, 1).toUpperCase() || <Scales size={18} />}</span>}
     </div>
   )
 }

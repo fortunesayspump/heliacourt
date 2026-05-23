@@ -1,7 +1,7 @@
 'use client'
 
 import { CurrencyDollar } from '@phosphor-icons/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { formatUnits, parseEventLogs, parseUnits } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../lib/arc'
@@ -24,6 +24,11 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
   const { writeContractAsync, isPending } = useWriteContract()
   const [amount, setAmount] = useState('')
   const [status, setStatus] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const amountUnits = useMemo(() => safeAmount(amount), [amount])
   const escrowAddress = onchain?.escrowAddress ?? contractAddresses.caseEscrow
@@ -123,6 +128,17 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Funding failed.')
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="case-add-funding-control case-add-funding-skeleton">
+        <input aria-label="Additional USDC funding loading" disabled placeholder="0.10 USDC" />
+        <button className="secondary-button compact-back" disabled type="button">
+          Join funding
+        </button>
+      </div>
+    )
   }
 
   if (!isConnected) {

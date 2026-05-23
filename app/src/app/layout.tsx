@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Cinzel_Decorative, Cormorant_Garamond, Inter } from 'next/font/google'
 import './globals.css'
 import { AppScrollMotion } from './components/AppScrollMotion'
+import { RouteLoadingBar } from './components/RouteLoadingBar'
 import { Providers } from './providers'
 
 const cinzelDecorative = Cinzel_Decorative({
@@ -35,6 +36,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${cinzelDecorative.variable} ${cormorant.variable} ${inter.variable}`}>
         <div className="app-scroll-root">
+          <RouteLoadingBar />
           <AppScrollMotion />
           <Providers>{children}</Providers>
         </div>

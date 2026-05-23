@@ -1,70 +1,44 @@
-import { ArrowRight } from '@phosphor-icons/react/ssr'
-import Link from 'next/link'
+import { Suspense } from 'react'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
-import { PageTitle } from '../../components/PageTitle'
-import { WalletNotice } from '../../components/WalletNotice'
 import { CaseFilingFlow } from '../../components/CaseFilingFlow'
-import { getBackendAgents, getBackendCaseDetail, getBackendCases } from '../../../lib/backend-data'
+import { getBackendCaseDetail, getBackendCases } from '../../../lib/backend-data'
 import '../../page.css'
 
-export default async function NewCasePage({
+export default function NewCasePage(props: {
+  searchParams?: Promise<{ parent?: string; kind?: string; market?: string }>
+}) {
+  return (
+    <main className="app-shell">
+      <AppHeader active="new-case" />
+      <section className="workspace">
+        <Suspense fallback={<NewCaseSkeleton />}>
+          <NewCaseData {...props} />
+        </Suspense>
+      </section>
+      <AppFooter />
+    </main>
+  )
+}
+
+async function NewCaseData({
   searchParams,
 }: {
-  searchParams?: Promise<{ parent?: string; kind?: string }>
+  searchParams?: Promise<{ parent?: string; kind?: string; market?: string }>
 }) {
   const query = await searchParams
   const parentCaseId = query?.parent?.trim()
   const filingKind = query?.kind === 'private-fork' ? 'private-fork' : query?.kind === 'fresh-hearing' ? 'fresh-hearing' : 'original'
-  const [liveAgents, existingCases, parentCase] = await Promise.all([
-    getBackendAgents(),
+  const [existingCases, parentCase] = await Promise.all([
     getBackendCases(),
     parentCaseId ? getBackendCaseDetail(parentCaseId).then((detail) => detail?.case) : Promise.resolve(undefined),
   ])
-  const witnessOptions = liveAgents
-    .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
-    .map((agent) => ({
-      id: agent.id,
-      category: formatAgentCategory(agent.description),
-      agent: agent.name,
-      detail: formatAgentDetail(agent.description),
-      priceUsd: agent.priceUsd,
-    }))
-  const likelyBench = witnessOptions.slice(0, 5)
 
   return (
-    <main className="app-shell">
-      <AppHeader active="new-case" />
-
-      <section className="workspace">
-        <PageTitle
-          eyebrow="Petition desk"
-          title="File a prediction case"
-          description="Paste the market question, attach the actual market link, fund escrow on Arc, and let Heliaia seat the right agents."
-          imageSrc="/assets/socrates-address-louis-joseph-lebrun-1867-credit-public-domain-wikimedia-commons.jpeg"
-          imagePosition="center 42%"
-          actions={
-            <>
-              <Link className="secondary-button" href="/cases">Cancel</Link>
-              <a className="primary-button" href="#case-preview">
-                Preview case
-                <ArrowRight size={16} />
-              </a>
-            </>
-          }
-        />
-
-        <WalletNotice
-          title="Fund the case budget before the court starts"
-          detail="The wallet funds the exact USDC budget you enter. The backend records the case, runs the hearing, and writes settlement receipts after verdict."
-          action="Connect and fund"
-        />
-
         <CaseFilingFlow
           parentCase={parentCase}
           filingKind={parentCase ? filingKind : 'original'}
-          witnessOptions={witnessOptions}
-          likelyBench={likelyBench}
+          initialMarketUrl={query?.market}
           existingCases={existingCases.map((item) => ({
             id: item.id,
             title: item.title,
@@ -74,17 +48,63 @@ export default async function NewCasePage({
             updated: item.updated,
           }))}
         />
-      </section>
-      <AppFooter />
-    </main>
   )
 }
 
-function formatAgentCategory(description: string) {
-  return description.split('.')[0] || 'Witness'
-}
-
-function formatAgentDetail(description: string) {
-  const [, detail] = description.split('. ')
-  return detail || description
+function NewCaseSkeleton() {
+  return (
+    <>
+      <section className="case-filing-shell">
+        <section className="panel case-filing-main">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">Petition desk</p>
+              <h2>File a prediction case</h2>
+            </div>
+          </div>
+          <div className="case-box case-form">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div className="skeleton-form-row" key={index}>
+                <span className="skeleton skeleton-line tiny" />
+                <span className={`skeleton skeleton-input${index === 1 ? ' tall' : ''}`} />
+              </div>
+            ))}
+          </div>
+        </section>
+        <aside className="case-filing-side">
+          {Array.from({ length: 2 }).map((_, index) => (
+            <section className="panel filing-checklist-panel" key={index}>
+              <div className="panel-heading">
+                <div>
+                  <p className="eyebrow">{index === 0 ? 'Readiness' : 'Similarity check'}</p>
+                  <h2>{index === 0 ? 'Filing checklist' : 'Existing hearings'}</h2>
+                </div>
+              </div>
+              <div className="filing-checklist">
+                {Array.from({ length: 4 }).map((_, itemIndex) => (
+                  <div key={itemIndex}>
+                    <span className="skeleton skeleton-icon small" />
+                    <span className="skeleton skeleton-line short" />
+                  </div>
+                ))}
+              </div>
+            </section>
+          ))}
+        </aside>
+      </section>
+      <section className="panel case-preview-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="eyebrow">Case preview</p>
+            <h2>Case packet</h2>
+          </div>
+        </div>
+        <div className="case-box preview-summary">
+          <span className="skeleton skeleton-line title" />
+          <span className="skeleton skeleton-line" />
+          <span className="skeleton skeleton-line short" />
+        </div>
+      </section>
+    </>
+  )
 }

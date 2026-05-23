@@ -6,10 +6,12 @@ import {
   Wallet,
 } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
+import { NotificationsMenu } from './NotificationsMenu'
+import { WalletBalance } from './WalletBalance'
 import { WalletButton } from './WalletButton'
 
 type AppHeaderProps = {
-  active: 'dashboard' | 'cases' | 'new-case' | 'agents' | 'ledger' | 'settings' | 'docs' | 'profile'
+  active: 'dashboard' | 'cases' | 'new-case' | 'agents' | 'ledger' | 'docs' | 'profile'
 }
 
 const navItems = [
@@ -23,25 +25,29 @@ const navItems = [
 export function AppHeader({ active }: AppHeaderProps) {
   return (
     <header className="app-topnav">
-      <div className="topnav-brand">
-        <Link className="app-brand" href="/" aria-label="Helia Court home" />
-      </div>
+      <div className="app-topnav-inner">
+        <div className="topnav-brand">
+          <Link className="app-brand" href="/" aria-label="Helia Court home" />
+        </div>
 
-      <nav className="app-nav topnav-links" aria-label="Primary">
-        {navItems.map((item) => {
-          const Icon = item.icon
+        <nav className="app-nav topnav-links" aria-label="Primary">
+          {navItems.map((item) => {
+            const Icon = item.icon
 
-          return (
-            <Link className={active === item.key ? 'active' : undefined} href={item.href} key={item.key}>
-              <Icon size={17} />
-              {item.label}
-            </Link>
-          )
-        })}
-      </nav>
+            return (
+              <Link className={active === item.key ? 'active' : undefined} href={item.href} key={item.key}>
+                <Icon size={19} />
+                {item.label}
+              </Link>
+            )
+          })}
+        </nav>
 
-      <div className="app-header-wallet">
-        <WalletButton className="wallet-connect-button" />
+        <div className="app-header-wallet">
+          <NotificationsMenu />
+          <WalletBalance compact />
+          <WalletButton className="wallet-connect-button" />
+        </div>
       </div>
     </header>
   )

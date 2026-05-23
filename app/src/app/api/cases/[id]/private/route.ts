@@ -14,12 +14,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       },
       body: JSON.stringify(body),
     })
-    const payload = await response.json().catch(() => ({ error: 'backend returned a non-json response' }))
+    const payload = await response.json().catch(() => ({ error: 'No private case data returned.' }))
 
     return NextResponse.json(payload, { status: response.status })
   } catch (error) {
     return NextResponse.json({
-      error: error instanceof Error ? error.message : 'backend unavailable',
+      error: error instanceof Error ? error.message : 'Private case data is unavailable.',
     }, { status: 502 })
   }
 }
