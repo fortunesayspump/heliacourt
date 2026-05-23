@@ -126,16 +126,20 @@ async function DashboardData() {
             <Stamp size={19} />
           </div>
           <div className="live-court-feed">
-            {liveFeed.length ? liveFeed.map((item) => (
-              <Link className="live-court-feed-row" href={item.href} key={item.id}>
-                <span className={`live-feed-mark ${item.tone}`}>{item.kind.slice(0, 1)}</span>
-                <span>
-                  <strong>{item.label}</strong>
-                  <small>{item.title}</small>
-                </span>
-                <time>{formatRelativeTime(item.timestamp)}</time>
-              </Link>
-            )) : (
+            {liveFeed.length ? (
+              <div className="live-court-feed-track">
+                {[...liveFeed, ...liveFeed].map((item, index) => (
+                  <Link className="live-court-feed-row" href={item.href} key={`${item.id}-${index}`}>
+                    <span className={`live-feed-mark ${item.tone}`}>{item.kind.slice(0, 1)}</span>
+                    <span>
+                      <strong>{item.label}</strong>
+                      <small>{item.title}</small>
+                    </span>
+                    <time>{formatRelativeTime(item.timestamp)}</time>
+                  </Link>
+                ))}
+              </div>
+            ) : (
               <div className="empty-state">
                 <strong>No activity yet</strong>
                 <p>Case filings and receipts will appear here.</p>
@@ -302,6 +306,7 @@ function DashboardDataSkeleton() {
           <Stamp size={19} />
         </div>
         <div className="live-court-feed">
+          <div className="live-court-feed-track">
           {Array.from({ length: 4 }).map((_, index) => (
             <article className="live-court-feed-row" key={index}>
               <span className="skeleton skeleton-icon small" />
@@ -312,6 +317,7 @@ function DashboardDataSkeleton() {
               <time className="skeleton skeleton-line tiny" />
             </article>
           ))}
+          </div>
         </div>
       </section>
       <section className="dashboard-grid">

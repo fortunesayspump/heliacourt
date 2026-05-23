@@ -1049,14 +1049,26 @@ button {
 }
 
 .live-court-feed {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+
+.live-court-feed-track {
+  display: flex;
+  width: max-content;
   gap: 10px;
+  animation: live-feed-scroll 34s linear infinite;
+}
+
+.live-court-feed:hover .live-court-feed-track {
+  animation-play-state: paused;
 }
 
 .live-court-feed-row {
   display: grid;
   grid-template-columns: 34px minmax(0, 1fr) auto;
+  flex: 0 0 clamp(270px, 28vw, 350px);
   gap: 10px;
   align-items: center;
   min-height: 72px;
@@ -1067,6 +1079,7 @@ button {
   background: var(--surface-inner);
   text-decoration: none;
   transition: border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+  animation: surface-row-enter 420ms var(--ease-out) both;
 }
 
 .live-court-feed-row:hover {
@@ -1134,6 +1147,72 @@ button {
 .live-court-feed-row time {
   justify-self: end;
   font-weight: 760;
+}
+
+@keyframes live-feed-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 5px));
+  }
+}
+
+@keyframes surface-row-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.case-row,
+.receipt-card,
+.roster-row,
+.app-record-row,
+.case-receipt-row,
+.receipt-ledger-row,
+.docket-case-card,
+.agent-testimony-row {
+  animation: surface-row-enter 420ms var(--ease-out) both;
+}
+
+.case-row:nth-child(2),
+.receipt-card:nth-child(2),
+.roster-row:nth-child(2),
+.app-record-row:nth-child(2),
+.case-receipt-row:nth-child(2),
+.receipt-ledger-row:nth-child(2),
+.docket-case-card:nth-child(2),
+.agent-testimony-row:nth-child(2) {
+  animation-delay: 35ms;
+}
+
+.case-row:nth-child(3),
+.receipt-card:nth-child(3),
+.roster-row:nth-child(3),
+.app-record-row:nth-child(3),
+.case-receipt-row:nth-child(3),
+.receipt-ledger-row:nth-child(3),
+.docket-case-card:nth-child(3),
+.agent-testimony-row:nth-child(3) {
+  animation-delay: 70ms;
+}
+
+.case-row:nth-child(4),
+.receipt-card:nth-child(4),
+.roster-row:nth-child(4),
+.app-record-row:nth-child(4),
+.case-receipt-row:nth-child(4),
+.receipt-ledger-row:nth-child(4),
+.docket-case-card:nth-child(4),
+.agent-testimony-row:nth-child(4) {
+  animation-delay: 105ms;
 }
 
 .dashboard-grid > .panel {
@@ -3548,7 +3627,9 @@ a.registry-row:hover {
 
 @media (max-width: 820px) {
   .live-court-feed {
-    grid-template-columns: 1fr;
+    margin-right: -14px;
+    margin-left: -14px;
+    padding-inline: 14px;
   }
 
   .app-shell {
@@ -3746,6 +3827,15 @@ a.registry-row:hover {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .live-court-feed {
+    overflow-x: auto;
+    mask-image: none;
+  }
+
+  .live-court-feed-track {
+    animation: none !important;
   }
 }
 
