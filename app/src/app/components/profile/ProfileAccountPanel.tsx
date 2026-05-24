@@ -23,6 +23,7 @@ const emptyForm: ProfileForm = {
 }
 
 type VisibilityFilter = 'all' | 'public' | 'private'
+type StatusTone = 'info' | 'success' | 'error'
 
 export function ProfileAccountPanel() {
   const searchParams = useSearchParams()
@@ -31,10 +32,12 @@ export function ProfileAccountPanel() {
   const [account, setAccount] = useState<ApiUserAccount | undefined>()
   const [form, setForm] = useState<ProfileForm>(emptyForm)
   const [status, setStatus] = useState('')
+  const [statusTone, setStatusTone] = useState<StatusTone>('info')
   const [loading, setLoading] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [telegramLinking, setTelegramLinking] = useState(false)
+  const [telegramLinked, setTelegramLinked] = useState(false)
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
   const telegramLinkToken = searchParams.get('telegramLink')
   const requestedWallet = normalizeWalletParam(
@@ -45,6 +48,10 @@ export function ProfileAccountPanel() {
   )
   const targetWallet = requestedWallet ?? address
   const isOwnProfile = Boolean(address && targetWallet && address.toLowerCase() === targetWallet.toLowerCase())
+  const setPanelStatus = (message: string, tone: StatusTone = 'info') => {
+    setStatus(message)
+    setStatusTone(tone)
+  }
 
   useEffect(() => {
     if (!targetWallet) {
@@ -54,7 +61,7 @@ export function ProfileAccountPanel() {
     }
 
     let cancelled = false
-    setStatus('')
+    setPanelStatus('')
     setLoading(true)
     fetch(`/api/users/${targetWallet}`, { cache: 'no-store' })
       .then((response) => response.json())
@@ -70,7 +77,7 @@ export function ProfileAccountPanel() {
         })
       })
       .catch((error) => {
-        if (!cancelled) setStatus(error instanceof Error ? error.message : 'Profile unavailable')
+        if (!cancelled) setPanelStatus(error instanceof Error ? error.message : 'Profile unavailable', 'error')
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -157,16 +164,17 @@ export function ProfileAccountPanel() {
   const linkTelegram = async () => {
     if (telegramLinking) return
     if (!telegramLinkToken) {
-      setStatus('Telegram link token is missing. Open the latest /connect link from Telegram.')
+      setPanelStatus('Telegram link token is missing. Open the latest /connect link from Telegram.', 'error')
       return
     }
     if (!address) {
-      setStatus('Connect the wallet you want to link with Telegram first.')
+      setPanelStatus('Connect the wallet you want to link with Telegram first.', 'error')
       return
     }
 
+    setTelegramLinked(false)
     setTelegramLinking(true)
-    setStatus('Preparing Telegram link signature...')
+    setPanelStatus('Preparing Telegram link signature...')
     try {
       const challengeResponse = await fetch('/api/telegram/link-challenge', {
         method: 'POST',
@@ -175,13 +183,13 @@ export function ProfileAccountPanel() {
       })
       const challenge = await challengeResponse.json().catch(() => ({ error: 'Telegram link challenge returned a non-json response' }))
       if (!challengeResponse.ok || !challenge.message) {
-        setStatus(challenge.error ?? 'Telegram link challenge failed')
+        setPanelStatus(challenge.error ?? 'Telegram link challenge failed', 'error')
         return
       }
 
-      setStatus('Sign the Telegram link in your wallet...')
+      setPanelStatus('Sign the Telegram link in your wallet...')
       const signature = await signMessageAsync({ message: challenge.message })
-      setStatus('Linking Telegram...')
+      setPanelStatus('Linking Telegram...')
 
       const response = await fetch('/api/telegram/link', {
         method: 'POST',
@@ -197,13 +205,14 @@ export function ProfileAccountPanel() {
       })
       const payload = await response.json().catch(() => ({ error: 'Telegram link returned a non-json response' }))
       if (!response.ok) {
-        setStatus(payload.error ?? 'Telegram link failed')
+        setPanelStatus(payload.error ?? 'Telegram link failed', 'error')
         return
       }
 
-      setStatus('Telegram linked. Return to the bot and send /me.')
+      setTelegramLinked(true)
+      setPanelStatus('Telegram linked. Return to the bot and send /me.', 'success')
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Telegram link failed')
+      setPanelStatus(error instanceof Error ? error.message : 'Telegram link failed', 'error')
     } finally {
       setTelegramLinking(false)
     }
@@ -268,11 +277,11 @@ export function ProfileAccountPanel() {
           </button>
         ) : null}
         {isOwnProfile && telegramLinkToken ? (
-          <button className="primary-button compact-back profile-edit-trigger" type="button" onClick={linkTelegram} disabled={telegramLinking}>
-            {telegramLinking ? 'Linking Telegram' : 'Link Telegram'}
+          <button className="primary-button compact-back profile-edit-trigger" type="button" onClick={linkTelegram} disabled={telegramLinking || telegramLinked}>
+            {telegramLinking ? 'Linking Telegram' : telegramLinked ? 'Telegram linked' : 'Link Telegram'}
           </button>
         ) : null}
-        {status ? <p className="profile-inline-status">{status}</p> : null}
+        {status ? <p className={`profile-inline-status profile-inline-status-${statusTone}`} role="status" aria-live="polite">{status}</p> : null}
       </section>
 
       <section className="app-summary-grid profile-stat-grid" aria-label="Profile summary">

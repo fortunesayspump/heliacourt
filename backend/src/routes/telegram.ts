@@ -7,7 +7,7 @@ import { listHearingJobs } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, telegramAccounts, telegramAlertSubscriptions, telegramLinkRequests, users } from '../db/schema.js'
-import { buildTelegramBotReply } from '../integrations/telegram.js'
+import { TELEGRAM_BOT_COMMANDS, buildTelegramBotReply } from '../integrations/telegram.js'
 
 type TelegramUpdate = {
   message?: {
@@ -176,21 +176,7 @@ export async function telegramRoutes(app: FastifyInstance) {
   })
 
   app.get('/telegram/commands', async () => ({
-    commands: [
-      { command: 'cases', description: 'Latest public cases' },
-      { command: 'case', description: 'Case status and verdict' },
-      { command: 'transcript', description: 'Latest transcript turns' },
-      { command: 'receipts', description: 'Arc receipt summary' },
-      { command: 'file', description: 'Prepare a filing from a market URL' },
-      { command: 'connect', description: 'Link Telegram to your wallet' },
-      { command: 'account', description: 'Linked wallet account summary' },
-      { command: 'mycases', description: 'Cases tied to your linked wallet' },
-      { command: 'notifications', description: 'Wallet account notifications' },
-      { command: 'subscribe', description: 'Receive case alerts in this chat' },
-      { command: 'unsubscribe', description: 'Stop case alerts in this chat' },
-      { command: 'alerts', description: 'Check alert subscription status' },
-      { command: 'disconnect', description: 'Unlink Telegram from your wallet' },
-    ],
+    commands: TELEGRAM_BOT_COMMANDS,
   }))
 }
 

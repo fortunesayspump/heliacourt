@@ -12,6 +12,38 @@ type TelegramAlert = {
 
 const telegramApiBase = 'https://api.telegram.org'
 
+export const TELEGRAM_BOT_COMMANDS = [
+  { command: 'cases', description: 'Latest public cases' },
+  { command: 'case', description: 'Case status and verdict' },
+  { command: 'transcript', description: 'Latest transcript turns' },
+  { command: 'receipts', description: 'Arc receipt summary' },
+  { command: 'file', description: 'Prepare a filing from a market URL' },
+  { command: 'connect', description: 'Link Telegram to your wallet' },
+  { command: 'me', description: 'Linked wallet account summary' },
+  { command: 'mycases', description: 'Cases tied to your linked wallet' },
+  { command: 'notifications', description: 'Wallet account notifications' },
+  { command: 'subscribe', description: 'Receive case alerts in this chat' },
+  { command: 'unsubscribe', description: 'Stop case alerts in this chat' },
+  { command: 'alerts', description: 'Check alert subscription status' },
+  { command: 'disconnect', description: 'Unlink Telegram from your wallet' },
+] as const
+
+export async function registerTelegramBotCommands() {
+  if (!env.TELEGRAM_BOT_TOKEN) return { ok: false, skipped: true }
+
+  const response = await fetch(`${telegramApiBase}/bot${env.TELEGRAM_BOT_TOKEN}/setMyCommands`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ commands: TELEGRAM_BOT_COMMANDS }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`telegram command registration failed: ${response.status}`)
+  }
+
+  return { ok: true, skipped: false }
+}
+
 export async function sendTelegramAlert(alert: TelegramAlert) {
   const chatIds = await getTelegramChatIds()
   if (!env.TELEGRAM_BOT_TOKEN || !chatIds.length) return { sent: 0, skipped: true }

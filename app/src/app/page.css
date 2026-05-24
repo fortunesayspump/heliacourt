@@ -6113,11 +6113,25 @@ a.registry-row:hover {
 .profile-inline-status {
   grid-column: 1 / -1;
   width: 100%;
-  margin: 0;
-  color: var(--ag-muted);
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(231, 196, 139, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 25, 21, 0.74);
+  color: rgba(244, 239, 227, 0.88);
   font-size: 13px;
-  font-weight: 650;
+  font-weight: 700;
   line-height: 1.35;
+}
+
+.profile-inline-status-success {
+  border-color: rgba(132, 177, 120, 0.36);
+  color: rgba(221, 244, 215, 0.94);
+}
+
+.profile-inline-status-error {
+  border-color: rgba(191, 82, 68, 0.42);
+  color: rgba(255, 218, 212, 0.96);
 }
 
 .profile-edit-trigger {

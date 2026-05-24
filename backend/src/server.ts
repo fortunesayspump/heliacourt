@@ -2,6 +2,7 @@ import cors from '@fastify/cors'
 import Fastify from 'fastify'
 import { startHearingJobWorker } from './agents/hearings/index.js'
 import { env } from './config/env.js'
+import { registerTelegramBotCommands } from './integrations/telegram.js'
 import { agentRoutes } from './routes/agents.js'
 import { caseRoutes } from './routes/cases.js'
 import { circleRoutes } from './routes/circle.js'
@@ -27,6 +28,14 @@ await app.register(agentRoutes)
 await app.register(userRoutes)
 await app.register(telegramRoutes)
 await app.register(x402Routes)
+
+void registerTelegramBotCommands()
+  .then((result) => {
+    if (!result.skipped) app.log.info('telegram bot commands registered')
+  })
+  .catch((error) => {
+    app.log.warn({ err: error }, 'telegram bot command registration failed')
+  })
 
 if (env.HELIA_ENABLE_HEARING_WORKER) {
   startHearingJobWorker()
