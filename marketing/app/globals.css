@@ -756,8 +756,10 @@ a {
   place-items: center;
   margin-left: clamp(-88px, -5.6vw, -50px);
   transform-origin: center bottom;
-  transform: rotate(var(--agent-tilt, 0deg));
-  transition: transform 260ms ease, filter 260ms ease;
+  transform: translateY(clamp(92px, 9vw, 132px)) rotate(var(--agent-tilt, 0deg));
+  transition:
+    transform 860ms cubic-bezier(0.18, 1.62, 0.28, 1);
+  transition-delay: var(--agent-pop-delay, 0ms);
   z-index: var(--agent-z, 1);
 }
 
@@ -765,30 +767,35 @@ a {
   margin-left: 0;
 }
 
-.agent-sticker:nth-child(1) { --agent-tilt: -7deg; --agent-z: 1; }
-.agent-sticker:nth-child(2) { --agent-tilt: 4deg; --agent-z: 2; }
-.agent-sticker:nth-child(3) { --agent-tilt: -5deg; --agent-z: 3; }
-.agent-sticker:nth-child(4) { --agent-tilt: 3deg; --agent-z: 5; }
-.agent-sticker:nth-child(5) { --agent-tilt: -3deg; --agent-z: 4; }
-.agent-sticker:nth-child(6) { --agent-tilt: 3deg; --agent-z: 7; }
-.agent-sticker:nth-child(7) { --agent-tilt: -2deg; --agent-z: 7; }
-.agent-sticker:nth-child(8) { --agent-tilt: -3deg; --agent-z: 8; }
-.agent-sticker:nth-child(9) { --agent-tilt: 4deg; --agent-z: 6; }
-.agent-sticker:nth-child(10) { --agent-tilt: -5deg; --agent-z: 5; }
-.agent-sticker:nth-child(11) { --agent-tilt: 0deg; --agent-z: 10; flex-basis: clamp(238px, 23vw, 376px); }
-.agent-sticker:nth-child(12) { --agent-tilt: -4deg; --agent-z: 9; }
-.agent-sticker:nth-child(13) { --agent-tilt: 5deg; --agent-z: 7; }
-.agent-sticker:nth-child(14) { --agent-tilt: -4deg; --agent-z: 6; }
-.agent-sticker:nth-child(15) { --agent-tilt: 4deg; --agent-z: 5; }
-.agent-sticker:nth-child(16) { --agent-tilt: -5deg; --agent-z: 4; }
-.agent-sticker:nth-child(17) { --agent-tilt: 5deg; --agent-z: 3; }
-.agent-sticker:nth-child(18) { --agent-tilt: -3deg; --agent-z: 2; }
-.agent-sticker:nth-child(19) { --agent-tilt: 4deg; --agent-z: 2; }
-.agent-sticker:nth-child(20) { --agent-tilt: -5deg; --agent-z: 1; }
-.agent-sticker:nth-child(21) { --agent-tilt: 4deg; --agent-z: 1; }
+.agent-sticker:nth-child(1) { --agent-tilt: -7deg; --agent-z: 1; --agent-pop-delay: 160ms; }
+.agent-sticker:nth-child(2) { --agent-tilt: 4deg; --agent-z: 2; --agent-pop-delay: 40ms; }
+.agent-sticker:nth-child(3) { --agent-tilt: -5deg; --agent-z: 3; --agent-pop-delay: 260ms; }
+.agent-sticker:nth-child(4) { --agent-tilt: 3deg; --agent-z: 5; --agent-pop-delay: 110ms; }
+.agent-sticker:nth-child(5) { --agent-tilt: -3deg; --agent-z: 4; --agent-pop-delay: 330ms; }
+.agent-sticker:nth-child(6) { --agent-tilt: 3deg; --agent-z: 7; --agent-pop-delay: 10ms; }
+.agent-sticker:nth-child(7) { --agent-tilt: -2deg; --agent-z: 7; --agent-pop-delay: 210ms; }
+.agent-sticker:nth-child(8) { --agent-tilt: -3deg; --agent-z: 8; --agent-pop-delay: 80ms; }
+.agent-sticker:nth-child(9) { --agent-tilt: 4deg; --agent-z: 6; --agent-pop-delay: 390ms; }
+.agent-sticker:nth-child(10) { --agent-tilt: -5deg; --agent-z: 5; --agent-pop-delay: 150ms; }
+.agent-sticker:nth-child(11) { --agent-tilt: 0deg; --agent-z: 10; --agent-pop-delay: 0ms; flex-basis: clamp(238px, 23vw, 376px); }
+.agent-sticker:nth-child(12) { --agent-tilt: -4deg; --agent-z: 9; --agent-pop-delay: 120ms; }
+.agent-sticker:nth-child(13) { --agent-tilt: 5deg; --agent-z: 7; --agent-pop-delay: 300ms; }
+.agent-sticker:nth-child(14) { --agent-tilt: -4deg; --agent-z: 6; --agent-pop-delay: 60ms; }
+.agent-sticker:nth-child(15) { --agent-tilt: 4deg; --agent-z: 5; --agent-pop-delay: 430ms; }
+.agent-sticker:nth-child(16) { --agent-tilt: -5deg; --agent-z: 4; --agent-pop-delay: 190ms; }
+.agent-sticker:nth-child(17) { --agent-tilt: 5deg; --agent-z: 3; --agent-pop-delay: 350ms; }
+.agent-sticker:nth-child(18) { --agent-tilt: -3deg; --agent-z: 2; --agent-pop-delay: 30ms; }
+.agent-sticker:nth-child(19) { --agent-tilt: 4deg; --agent-z: 2; --agent-pop-delay: 250ms; }
+.agent-sticker:nth-child(20) { --agent-tilt: -5deg; --agent-z: 1; --agent-pop-delay: 90ms; }
+.agent-sticker:nth-child(21) { --agent-tilt: 4deg; --agent-z: 1; --agent-pop-delay: 370ms; }
+
+.agent-sticker-stage.is-visible .agent-sticker {
+  transform: translateY(0) rotate(var(--agent-tilt, 0deg));
+}
 
 .agent-sticker:hover {
   transform: translateY(-10px) rotate(var(--agent-tilt, 0deg)) scale(1.035);
+  transition-delay: 0ms;
 }
 
 .agent-sticker img {
@@ -1548,6 +1555,7 @@ a {
   .hero-center h1 span,
   .hero-center p,
   .actions,
+  .agent-sticker,
   .reveal,
   .reveal::before {
     opacity: 1;
