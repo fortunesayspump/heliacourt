@@ -10995,6 +10995,47 @@ a:focus-visible,
     padding: 12px !important;
   }
 
+  .dashboard-grid .case-table .case-row {
+    grid-template-columns: 74px minmax(0, 1fr) !important;
+    grid-template-areas:
+      "image copy"
+      "image status"
+      "image meta"
+      "action action" !important;
+    align-items: center !important;
+  }
+
+  .dashboard-grid .case-table .case-row .market-row-image {
+    grid-area: image;
+    align-self: start !important;
+    width: 74px !important;
+    height: 74px !important;
+  }
+
+  .dashboard-grid .case-table .case-row > div:nth-child(2) {
+    grid-area: copy;
+  }
+
+  .dashboard-grid .case-table .case-row > .state-dot {
+    grid-area: status;
+    width: max-content !important;
+    max-width: 100% !important;
+    justify-self: start !important;
+  }
+
+  .dashboard-grid .case-table .case-row > strong {
+    justify-self: start !important;
+  }
+
+  .dashboard-grid .case-table .case-row > strong:nth-of-type(1) {
+    grid-area: meta;
+  }
+
+  .dashboard-grid .case-table .case-row > strong:nth-of-type(2) {
+    grid-area: meta;
+    justify-self: end !important;
+  }
+
   .dashboard-grid .case-table .case-row h3 {
     min-height: 0 !important;
     font-size: 14.5px !important;
@@ -11006,14 +11047,13 @@ a:focus-visible,
     flex-wrap: wrap !important;
   }
 
-  .market-row-image {
+  .case-row:not(.dashboard-grid .case-table .case-row) .market-row-image {
     width: 100% !important;
     height: 128px !important;
   }
 
-  .dashboard-grid .case-table .case-row > .state-dot,
-  .dashboard-grid .case-table .case-row > strong,
   .dashboard-grid .case-table .case-row > a {
+    grid-area: action;
     justify-self: stretch !important;
   }
 
