@@ -162,6 +162,16 @@ export async function telegramRoutes(app: FastifyInstance) {
       .set({ wallet, consumedAt: now })
       .where(eq(telegramLinkRequests.id, linkRequest.id))
 
+    await sendTelegramReply(
+      linkRequest.chatId,
+      `Telegram linked to wallet ${shortWallet(wallet)}. Send /me to view your account or /mycases to inspect your cases.`,
+    ).catch((error) => {
+      request.log.warn({
+        err: error,
+        telegramUserId: linkRequest.telegramUserId,
+      }, 'telegram link confirmation failed')
+    })
+
     return { ok: true, wallet, telegramUserId: linkRequest.telegramUserId }
   })
 

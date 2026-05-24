@@ -6110,6 +6110,16 @@ a.registry-row:hover {
   color: var(--bronze);
 }
 
+.profile-inline-status {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin: 0;
+  color: var(--ag-muted);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
 .profile-edit-trigger {
   justify-self: end;
   white-space: nowrap;

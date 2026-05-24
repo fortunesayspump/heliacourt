@@ -155,7 +155,15 @@ export function ProfileAccountPanel() {
   }
 
   const linkTelegram = async () => {
-    if (!address || !telegramLinkToken || telegramLinking) return
+    if (telegramLinking) return
+    if (!telegramLinkToken) {
+      setStatus('Telegram link token is missing. Open the latest /connect link from Telegram.')
+      return
+    }
+    if (!address) {
+      setStatus('Connect the wallet you want to link with Telegram first.')
+      return
+    }
 
     setTelegramLinking(true)
     setStatus('Preparing Telegram link signature...')
@@ -193,7 +201,7 @@ export function ProfileAccountPanel() {
         return
       }
 
-      setStatus('Telegram linked. You can return to the bot.')
+      setStatus('Telegram linked. Return to the bot and send /me.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Telegram link failed')
     } finally {
@@ -264,6 +272,7 @@ export function ProfileAccountPanel() {
             {telegramLinking ? 'Linking Telegram' : 'Link Telegram'}
           </button>
         ) : null}
+        {status ? <p className="profile-inline-status">{status}</p> : null}
       </section>
 
       <section className="app-summary-grid profile-stat-grid" aria-label="Profile summary">
