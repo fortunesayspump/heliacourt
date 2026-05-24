@@ -2,7 +2,7 @@
 
 import { SealCheck, TelegramLogo, UserCircle, X } from '@phosphor-icons/react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../../lib/backend-data'
@@ -25,6 +25,7 @@ const emptyForm: ProfileForm = {
 
 type VisibilityFilter = 'all' | 'public' | 'private'
 export function ProfileAccountPanel() {
+  const router = useRouter()
   const searchParams = useSearchParams()
   const { address } = useAccount()
   const { signMessageAsync } = useSignMessage()
@@ -51,6 +52,11 @@ export function ProfileAccountPanel() {
   const setPanelStatus = (message: string, tone: ActionStatusTone = 'info') => {
     setStatus(message)
     setStatusTone(tone)
+  }
+  const redirectExpiredTelegramLink = () => {
+    setTelegramPromptOpen(false)
+    setPanelStatus('Telegram link expired. Redirecting to the app...', 'error')
+    window.setTimeout(() => router.replace('/'), 900)
   }
 
   useEffect(() => {
@@ -190,6 +196,10 @@ export function ProfileAccountPanel() {
       })
       const challenge = await challengeResponse.json().catch(() => ({ error: 'Telegram link challenge returned a non-json response' }))
       if (!challengeResponse.ok || !challenge.message) {
+        if (isExpiredTelegramLinkError(challenge.error)) {
+          redirectExpiredTelegramLink()
+          return
+        }
         setPanelStatus(challenge.error ?? 'Telegram link challenge failed', 'error')
         return
       }
@@ -212,6 +222,10 @@ export function ProfileAccountPanel() {
       })
       const payload = await response.json().catch(() => ({ error: 'Telegram link returned a non-json response' }))
       if (!response.ok) {
+        if (isExpiredTelegramLinkError(payload.error)) {
+          redirectExpiredTelegramLink()
+          return
+        }
         setPanelStatus(payload.error ?? 'Telegram link failed', 'error')
         return
       }
@@ -528,6 +542,10 @@ function formatTelegramHandle(telegram: ApiUserAccount['telegram']) {
   if (telegram.username) return `@${telegram.username}`
   if (telegram.firstName) return telegram.firstName
   return `Telegram ${telegram.telegramUserId.slice(-5)}`
+}
+
+function isExpiredTelegramLinkError(value: unknown) {
+  return typeof value === 'string' && /telegram link request expired or not found/i.test(value)
 }
 
 function getWalletAvatarUrl(address: string) {
