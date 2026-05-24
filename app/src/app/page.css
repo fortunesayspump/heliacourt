@@ -10857,6 +10857,21 @@ a:focus-visible,
     width: min(100% - 20px, 1420px) !important;
   }
 
+  .case-detail-hero {
+    background: var(--ag-surface) !important;
+  }
+
+  .case-hero-media .market-preview-image > div:last-child {
+    background: rgb(9, 12, 10) !important;
+    backdrop-filter: none !important;
+  }
+
+  .case-hero-copy h1 {
+    max-width: 100% !important;
+    font-size: 34px !important;
+    line-height: 1.08 !important;
+  }
+
   .case-detail-topbar,
   .case-detail-actions,
   .case-detail-actions > * {
