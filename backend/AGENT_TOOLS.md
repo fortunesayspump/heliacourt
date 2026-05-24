@@ -37,7 +37,7 @@ For a full hearing log, pass a case through the backend hearing runner:
 HELIA_HEARING_CASE_JSON='{"question":"Will the referenced prediction market resolve Yes by its deadline?","type":"prediction-market"}' pnpm --dir backend hearing
 ```
 
-The hearing log is written to `backend/tmp/hearings/*`.
+When the local runner writes a hearing log, it uses ignored runtime output under `backend/tmp/hearings/*`.
 
 ## Aletheia scraping behavior
 

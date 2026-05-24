@@ -61,6 +61,12 @@ pnpm build:backend
 pnpm build:contracts
 ```
 
+Before committing, run the full local check:
+
+```bash
+pnpm check
+```
+
 ## Configuration
 
 Local and production configuration is provided through `.env` / `.env.local` files and deployment platform secrets. These files are intentionally ignored by git.

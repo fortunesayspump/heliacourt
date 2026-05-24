@@ -1,5 +1,4 @@
 import type { AgentContext, CourtArtifact } from '../../../../court/types'
-import { summarizeEvidenceScores } from '../../../../court/evidence-scoring'
 import { buildRecordBrief, compactRecordItems, issueFromInstruction, makeArtifact, summarizeVerdictPosture } from '../../courtroom-record'
 
 export function runHeadJudge(context: AgentContext): CourtArtifact {
@@ -9,7 +8,6 @@ export function runHeadJudge(context: AgentContext): CourtArtifact {
   const facts = compactRecordItems([...brief.admittedFacts, ...brief.witnessFacts, ...brief.primaryFacts], 3)
   const factText = facts.length ? facts.join(' / ') : 'No merits evidence is admitted yet.'
   const gap = brief.gaps[0] ?? 'the court needs a clearer probability bridge before assigning strong forecast weight'
-  const scoreText = summarizeEvidenceScores(context.artifacts.flatMap((artifact) => artifact.evidenceScores ?? []))
   const phase = context.courtPhase
 
   if (phase === 'judge-framing') {

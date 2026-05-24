@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getBackendCases, getPreviewUserAccount, type ApiUserAccount } from '../../../../lib/backend-data'
-
-const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+import { fetchBackendJson, proxyBackendJson, readJsonBody } from '../../../../lib/backend-proxy'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ wallet: string }> }) {
   const { wallet } = await params
 
   try {
-    const response = await fetch(`${backendUrl}/users/${encodeURIComponent(wallet)}`, { cache: 'no-store' })
-    const payload = await response.json().catch(() => ({ error: 'No profile data returned.' }))
+    const { response, payload } = await fetchBackendJson(`/users/${encodeURIComponent(wallet)}`, {
+      cache: 'no-store',
+      jsonFallback: { error: 'No profile data returned.' },
+      unavailableMessage: 'Profile data is unavailable.',
+    })
     const preview = getPreviewUserAccount(wallet)
 
     if (!response.ok) {
@@ -61,22 +63,11 @@ function isEmptyAccount(payload: unknown) {
 
 export async function PUT(request: Request, { params }: { params: Promise<{ wallet: string }> }) {
   const { wallet } = await params
-  const body = await request.json().catch(() => ({}))
 
-  try {
-    const response = await fetch(`${backendUrl}/users/${encodeURIComponent(wallet)}`, {
-      method: 'PUT',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-    const payload = await response.json().catch(() => ({ error: 'No profile data returned.' }))
-
-    return NextResponse.json(payload, { status: response.status })
-  } catch (error) {
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Profile data is unavailable.',
-    }, { status: 502 })
-  }
+  return proxyBackendJson(`/users/${encodeURIComponent(wallet)}`, {
+    method: 'PUT',
+    body: await readJsonBody(request),
+    jsonFallback: { error: 'No profile data returned.' },
+    unavailableMessage: 'Profile data is unavailable.',
+  })
 }

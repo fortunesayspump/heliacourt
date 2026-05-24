@@ -1,4 +1,4 @@
-import type { AgentContext, CourtArtifact, ToolEvidence } from '../../../../court/types'
+import type { AgentContext, CourtArtifact } from '../../../../court/types'
 import { buildWitnessSpeech, compactRecordItems } from '../../courtroom-record'
 
 export function runSophiaResearchWitness(context: AgentContext): CourtArtifact {

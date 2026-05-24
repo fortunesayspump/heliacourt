@@ -5,8 +5,6 @@ export function runBearCounsel(context: AgentContext): CourtArtifact {
   const brief = buildRecordBrief(context)
   const issue = issueFromInstruction(context)
   const facts = compactRecordItems([...brief.admittedFacts, ...brief.witnessFacts, ...brief.primaryFacts], 3)
-  const support = facts[0] ?? 'no forecast-relevant fact has been admitted'
-  const secondSupport = facts[1]
   const gap = brief.gaps[0] ?? 'the record lacks a strong bridge from admitted clues to the claimed forecast'
   const yesDriver = brief.affirmativeArguments.at(-1)?.claims?.[0] ?? facts[0] ?? 'the affirmative has not identified a concrete admitted Yes driver yet'
   const scraperRequest = getScraperRequest(context)

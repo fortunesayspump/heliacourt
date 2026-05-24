@@ -21,8 +21,11 @@ src/app/
   x402/         x402 explainer and playground page
 src/lib/
   arc.ts        Arc testnet chain and wallet config
-  backend-data.ts  App-facing backend fetchers and preview fallback data
+  backend-data.ts  App-facing backend fetchers and response shaping
+  backend-url.ts   Shared backend origin resolver
+  backend-proxy.ts Shared Next API proxy helper for backend routes
   contracts.ts Contract addresses and ABI fragments
+  fixtures/     Preview/demo fallback data kept away from live API code
   market-images.ts Market metadata, Open Graph, and image adapters
 ```
 

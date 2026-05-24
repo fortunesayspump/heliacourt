@@ -3,6 +3,7 @@ import { AppFooter } from '../components/layout/AppFooter'
 import { AppHeader } from '../components/layout/AppHeader'
 import { GatewayPanel } from '../components/wallet/GatewayPanel'
 import { X402PaidReadTester } from '../components/x402/X402PaidReadTester'
+import { backendUrl } from '../../lib/backend-url'
 import '../page.css'
 
 export const dynamic = 'force-dynamic'
@@ -162,7 +163,6 @@ type X402Activity = {
 }
 
 async function getX402Status(): Promise<X402Status> {
-  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   try {
     const response = await fetch(`${backendUrl}/x402/status`, { cache: 'no-store' })
     if (!response.ok) return emptyX402Status()
@@ -178,7 +178,6 @@ async function getX402Status(): Promise<X402Status> {
 }
 
 async function getX402Activity(): Promise<X402Activity> {
-  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   try {
     const response = await fetch(`${backendUrl}/x402/activity`, { cache: 'no-store' })
     if (!response.ok) return emptyX402Activity()

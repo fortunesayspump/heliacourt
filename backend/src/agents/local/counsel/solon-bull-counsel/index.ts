@@ -6,9 +6,7 @@ export function runBullCounsel(context: AgentContext): CourtArtifact {
   const issue = issueFromInstruction(context)
   const facts = compactRecordItems([...brief.admittedFacts, ...brief.witnessFacts, ...brief.primaryFacts], 3)
   const support = facts[0] ?? 'no admitted Yes driver yet'
-  const secondSupport = facts[1]
   const gap = brief.gaps[0] ?? 'the court still needs a clearer bridge from admitted clues to a Yes forecast'
-  const noBlocker = brief.negativeArguments.at(-1)?.risks?.[0] ?? brief.negativeArguments.at(-1)?.claims?.[0] ?? gap
   const isQuestion = context.courtPhase === 'direct' || context.courtPhase === 'redirect'
   const scraperRequest = getScraperRequest(context)
   const message = isQuestion

@@ -322,7 +322,7 @@ export function buildMagistrateDirectionTurn(
 
 export function applyProcedureHandoff(artifact: CourtArtifact, step: CourtProcedureStep) {
   if (step.phase === 'opening') {
-    applyOpeningBoundary(artifact, step)
+    applyOpeningBoundary(artifact)
   }
 
   if (step.targetAgentId) {
@@ -347,7 +347,7 @@ export function applyProcedureHandoff(artifact: CourtArtifact, step: CourtProced
   return artifact
 }
 
-function applyOpeningBoundary(artifact: CourtArtifact, step: CourtProcedureStep) {
+function applyOpeningBoundary(artifact: CourtArtifact) {
   artifact.claims = []
   artifact.confidence = Math.min(artifact.confidence ?? 0.5, 0.45)
   artifact.notes = [...(artifact.notes ?? []), 'Opening boundary: no factual claims are admitted before witness testimony.']

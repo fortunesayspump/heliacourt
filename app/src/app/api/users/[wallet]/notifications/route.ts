@@ -1,14 +1,16 @@
 import { NextResponse } from 'next/server'
 import { getPreviewUserNotifications, type ApiUserAccount } from '../../../../../lib/backend-data'
-
-const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+import { fetchBackendJson } from '../../../../../lib/backend-proxy'
 
 export async function GET(_request: Request, { params }: { params: Promise<{ wallet: string }> }) {
   const { wallet } = await params
 
   try {
-    const response = await fetch(`${backendUrl}/users/${encodeURIComponent(wallet)}/notifications`, { cache: 'no-store' })
-    const payload = await response.json().catch(() => ({ error: 'No notification data returned.' }))
+    const { response, payload } = await fetchBackendJson(`/users/${encodeURIComponent(wallet)}/notifications`, {
+      cache: 'no-store',
+      jsonFallback: { error: 'No notification data returned.' },
+      unavailableMessage: 'Notification data is unavailable.',
+    })
     const preview = getPreviewUserNotifications(wallet)
 
     if (!response.ok) {
@@ -31,10 +33,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ wal
 }
 
 async function getNotificationsFromAccount(wallet: string) {
-  const response = await fetch(`${backendUrl}/users/${encodeURIComponent(wallet)}`, { cache: 'no-store' }).catch(() => undefined)
-  if (!response?.ok) return undefined
+  const result = await fetchBackendJson(`/users/${encodeURIComponent(wallet)}`, {
+    cache: 'no-store',
+    jsonFallback: undefined,
+    unavailableMessage: 'Profile data is unavailable.',
+  }).catch(() => undefined)
+  if (!result?.response.ok) return undefined
 
-  const account = await response.json().catch(() => undefined) as ApiUserAccount | undefined
+  const account = result.payload as ApiUserAccount | undefined
   if (!account?.profile) return undefined
 
   const notifications = [

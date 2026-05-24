@@ -685,36 +685,6 @@ async function discoverScrapeSources(marketCase: MarketCase) {
     .slice(0, maxPages)
 }
 
-async function discoverOfficialHostSources(marketCase: MarketCase, suppliedUrls: string[]) {
-  const hosts = suppliedUrls
-    .map(getHostname)
-    .filter(isString)
-    .filter((host, index, hosts) => hosts.indexOf(host) === index)
-    .slice(0, 4)
-
-  if (!hosts.length) return []
-
-  const caseText = `${marketCase.question} ${marketCase.context ?? ''}`
-  const terms = getSearchTerms(caseText).slice(0, 10).join(' ')
-  const searches = await Promise.allSettled(hosts.map(async (host) => {
-    const evidence = await getNewsEvidence({
-      ...marketCase,
-      question: `${marketCase.question} site:${host} ${terms}`,
-      context: marketCase.context,
-    })
-
-    return evidence.sources
-      .filter((source) => source.url && isScrapableUrl(source.url) && getHostname(source.url) === host)
-      .filter((source) => scoreScrapeSource(source, caseText) > 0)
-      .map((source) => ({
-        ...source,
-        value: source.value ? `official-host-search:${source.value}` : 'official-host-search',
-      }))
-  }))
-
-  return searches.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
-}
-
 async function discoverBlockedPageRecoveryTargets(blockedUrl: string, marketCase: MarketCase): Promise<ScrapeTarget[]> {
   const host = getHostname(blockedUrl)
   if (!host) return []
@@ -826,10 +796,6 @@ function dedupeTargets(targets: ScrapeTarget[]) {
   }
 
   return output
-}
-
-function isScrapeTarget(value: ScrapeTarget | undefined): value is ScrapeTarget {
-  return Boolean(value?.url)
 }
 
 function extractOutboundSourceUrls(page: ExtractedPage, terms: string[]): OutboundSourceLink[] {
@@ -950,10 +916,6 @@ function isLikelyUtilityUrl(url: string, label = '') {
 
   return /\b(login|signup|sign-in|share|sharearticle|privacy|terms|advertise|subscribe|newsletter|mailto|javascript:|facebook\.com|linkedin\.com|twitter\.com|x\.com|instagram\.com|threads\.net|bsky\.app|bluesky)\b/.test(haystack)
     || /\/(login|signup|privacy|terms|share)(\/|$)/i.test(url)
-}
-
-function isString(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0
 }
 
 function extractReadableArticle(html: string, url: string) {
@@ -1150,7 +1112,7 @@ function classifySourceQuality(url: string, siteName = '') {
   return 'unclassified'
 }
 
-function getLimitation(page: ExtractedPage, snippets: string[]) {
+function getLimitation(_page: ExtractedPage, snippets: string[]) {
   if (!snippets.length) return 'Does not prove: the page did not expose a case-specific passage matching the market terms.'
   return 'Does not prove: extracted text supports only the quoted page content; it does not by itself resolve a future market outcome.'
 }

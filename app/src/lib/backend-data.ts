@@ -1,5 +1,6 @@
 import { resolveMarketImageUrl } from './market-images'
 import { getPreviewAgents, getPreviewCaseDetail, getPreviewCases, getPreviewLedgerRows, hydrateAgentAvatar } from './fixtures/preview-data'
+import { backendUrl } from './backend-url'
 export { getPreviewUserAccount, getPreviewUserNotifications } from './fixtures/preview-data'
 
 export type ApiCase = {
@@ -242,7 +243,6 @@ export type ApiUserNotifications = {
   }>
 }
 
-const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
 const backendTimeoutMs = Number(process.env.BACKEND_TIMEOUT_MS ?? 5000)
 const backendResponseCache = new Map<string, {
   expiresAt: number

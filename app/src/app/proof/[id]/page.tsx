@@ -4,6 +4,7 @@ import { ArrowSquareOut } from '@phosphor-icons/react/ssr'
 import { AppFooter } from '../../components/layout/AppFooter'
 import { AppHeader } from '../../components/layout/AppHeader'
 import { getBackendCaseDetail, type ApiCourtArtifact } from '../../../lib/backend-data'
+import { backendUrl } from '../../../lib/backend-url'
 import '../../page.css'
 
 export const dynamic = 'force-dynamic'
@@ -148,7 +149,6 @@ type X402CaseActivity = {
 }
 
 async function getX402Activity(caseId: string): Promise<X402CaseActivity> {
-  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   try {
     const response = await fetch(`${backendUrl}/x402/activity?caseId=${encodeURIComponent(caseId)}`, { cache: 'no-store' })
     if (!response.ok) return { totalPaidReads: 0, totalUsdc: '0', latest: null }

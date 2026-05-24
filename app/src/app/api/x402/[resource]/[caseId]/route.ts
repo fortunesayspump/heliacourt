@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { backendUrl } from '../../../../../lib/backend-proxy'
 
 const allowedResources = new Set(['price', 'transcript', 'receipts', 'proof'])
 const forwardedHeaders = ['accept-payment', 'payment-required', 'payment-response', 'x-payment-challenge']
@@ -12,7 +13,6 @@ export async function GET(
     return NextResponse.json({ error: 'Unsupported x402 resource.' }, { status: 404 })
   }
 
-  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   const headers = new Headers()
   const paymentSignature = request.headers.get('payment-signature')
   const legacyPayment = request.headers.get('x-payment')

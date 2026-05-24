@@ -1,6 +1,6 @@
 import type { MarketCase, ToolEvidence } from '../../court/types'
 import { fetchJson } from './http'
-import { getCaseSearchQuery, getSportsSearchQuery } from './text'
+import { getSportsSearchQuery } from './text'
 
 type OddsSport = {
   key?: string

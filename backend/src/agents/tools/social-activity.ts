@@ -656,33 +656,6 @@ async function getTikTokPublicCounterProfile(handle: string) {
   }
 }
 
-let xUserByScreenNameQueryIdCache: string | undefined
-
-async function getXUserByScreenNameQueryId() {
-  if (xUserByScreenNameQueryIdCache) return xUserByScreenNameQueryIdCache
-
-  const html = await fetch('https://x.com/home', {
-    signal: AbortSignal.timeout(12_000),
-    headers: {
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    },
-  }).then((response) => response.text())
-  const mainScript = html.match(/https:\/\/abs\.twimg\.com\/responsive-web\/client-web\/main\.[^"']+\.js/)?.[0]
-  if (!mainScript) throw new Error('X main script was not discovered')
-
-  const script = await fetch(mainScript, {
-    signal: AbortSignal.timeout(12_000),
-    headers: {
-      'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
-    },
-  }).then((response) => response.text())
-  const queryId = script.match(/queryId:"([^"]+)",operationName:"UserByScreenName"/)?.[1]
-  if (!queryId) throw new Error('UserByScreenName query id was not found in X main script')
-
-  xUserByScreenNameQueryIdCache = queryId
-  return queryId
-}
-
 async function fetchPublicProfileSnapshot(target: SocialTarget) {
   const response = await fetch(target.url, {
     headers: {

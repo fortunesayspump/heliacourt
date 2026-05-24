@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { AppHeader } from '../components/layout/AppHeader'
 import { AppFooter } from '../components/layout/AppFooter'
 import { getBackendLedgerRows, type ApiLedgerRow } from '../../lib/backend-data'
+import { backendUrl } from '../../lib/backend-url'
 import '../page.css'
 
 export default function LedgerPage() {
@@ -337,7 +338,6 @@ type X402Activity = {
 }
 
 async function getX402Activity(): Promise<X402Activity> {
-  const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
   try {
     const response = await fetch(`${backendUrl}/x402/activity`, { cache: 'no-store' })
     if (!response.ok) return emptyX402Activity()

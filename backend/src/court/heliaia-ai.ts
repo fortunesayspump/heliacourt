@@ -452,7 +452,6 @@ function planAdaptiveFollowUp(
   const scores = artifact.evidenceScores ?? []
   if (!scores.length) return undefined
 
-  const calledAgents = new Set(artifacts.map((item) => item.agentId))
   const agentCallCount = (agentId: string) => artifacts.filter((item) => item.agentId === agentId).length
   const hasMissing = scores.some((score) => score.tag === 'missing' && score.weight >= 0.5)
   const hasSourceDispute = scores.some((score) => score.tag === 'source-quality' && score.weight >= 0.45)

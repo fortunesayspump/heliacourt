@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
+import { backendUrl } from './backend-url'
 
-export const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+export { backendUrl }
 
 type ProxyOptions = {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'PUT'
   body?: unknown
   cache?: RequestCache
   jsonFallback: unknown
@@ -16,29 +17,32 @@ export async function readJsonBody(request: Request) {
   return request.json().catch(() => ({}))
 }
 
-export async function proxyBackendJson(path: string, {
+export async function fetchBackendJson(path: string, {
   method = 'GET',
   body,
   cache,
   jsonFallback,
-  unavailableMessage,
-  unavailablePayload,
-  unavailableStatus = 502,
 }: ProxyOptions) {
+  const response = await fetch(`${backendUrl}${path}`, {
+    method,
+    cache,
+    headers: body === undefined ? undefined : { 'content-type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const payload = await response.json().catch(() => jsonFallback)
+
+  return { response, payload }
+}
+
+export async function proxyBackendJson(path: string, options: ProxyOptions) {
   try {
-    const response = await fetch(`${backendUrl}${path}`, {
-      method,
-      cache,
-      headers: body === undefined ? undefined : { 'content-type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    })
-    const payload = await response.json().catch(() => jsonFallback)
+    const { response, payload } = await fetchBackendJson(path, options)
 
     return NextResponse.json(payload, { status: response.status })
   } catch (error) {
     return NextResponse.json({
-      ...unavailablePayload,
-      error: error instanceof Error ? error.message : unavailableMessage,
-    }, { status: unavailableStatus })
+      ...options.unavailablePayload,
+      error: error instanceof Error ? error.message : options.unavailableMessage,
+    }, { status: options.unavailableStatus ?? 502 })
   }
 }

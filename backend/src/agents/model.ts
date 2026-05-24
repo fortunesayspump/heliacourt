@@ -287,20 +287,6 @@ function parseRawJson<T>(content: string): T {
   }
 }
 
-function parseCourtJson(content: string): CourtModelJson {
-  try {
-    return normalizeCourtJson(JSON.parse(content) as CourtModelJson)
-  } catch {
-    const match = content.match(/\{[\s\S]*\}/)
-
-    if (!match) {
-      throw new Error('Model response was not JSON')
-    }
-
-    return normalizeCourtJson(JSON.parse(match[0]) as CourtModelJson)
-  }
-}
-
 type NormalizedCourtModelJson = Omit<CourtModelJson, 'argumentNodes' | 'testimony'> & {
   testimony?: TestimonyFinding
   argumentNodes?: ArgumentNode[]

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { proxyBackendJson } from '../../../../lib/backend-proxy'
 
 type HearingRequest = {
   id?: string
@@ -17,29 +18,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'question is required' }, { status: 400 })
   }
 
-  const backendUrl = process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000'
-  const response = await fetch(`${backendUrl.replace(/\/$/, '')}/agents/hearing`, {
+  return proxyBackendJson('/agents/hearing', {
     method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify({
+    body: {
       id: body.id?.trim(),
       question,
       context: body.context?.trim() || undefined,
       links: body.links?.map((link) => link.trim()).filter(Boolean),
       type: body.type ?? 'prediction-market',
       filer: body.filer,
-    }),
+    },
+    jsonFallback: { error: 'No hearing data returned.' },
+    unavailableMessage: 'Hearing data is unavailable.',
   })
-
-  const payload = await response.json().catch(() => ({
-    error: 'No hearing data returned.',
-  }))
-
-  if (!response.ok) {
-    return NextResponse.json(payload, { status: response.status })
-  }
-
-  return NextResponse.json(payload)
 }
