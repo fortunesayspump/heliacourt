@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { TelegramLogo } from '@phosphor-icons/react/ssr'
 import { MarketLogo } from './MarketLogo'
 
 const supportedMarkets = [
@@ -6,6 +7,8 @@ const supportedMarkets = [
   { market: 'kalshi', url: 'https://kalshi.com' },
   { market: 'manifold', url: 'https://manifold.markets' },
 ] as const
+
+const telegramUrl = process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL ?? 'https://t.me/heliacourtbot'
 
 export function AppFooter() {
   return (
@@ -24,8 +27,14 @@ export function AppFooter() {
               </a>
             ))}
           </div>
+          <div className="footer-network-row">
+            <a className="footer-telegram-link" href={telegramUrl} target="_blank" rel="noreferrer">
+              <TelegramLogo size={16} weight="fill" />
+              Telegram
+            </a>
+            <span className="footer-network-line">Arc Testnet · USDC receipts</span>
+          </div>
           <span className="footer-copyright">© 2026 Helia Court</span>
-          <span className="footer-network-line">Arc Testnet · USDC receipts</span>
         </div>
       </div>
     </footer>

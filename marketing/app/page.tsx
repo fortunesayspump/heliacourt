@@ -11,6 +11,8 @@ const supportedMarkets = [
   { name: 'Manifold', domain: 'manifold.markets' },
 ] as const
 
+const telegramUrl = process.env.NEXT_PUBLIC_TELEGRAM_BOT_URL ?? 'https://t.me/heliacourtbot'
+
 const featuredAgents = [
   { name: 'Mnemon', role: 'Clerk', image: '/assets/agents/stickers-webp/mnemon.webp' },
   { name: 'Kleio', role: 'Evidence', image: '/assets/agents/stickers-webp/kleio.webp' },
@@ -61,6 +63,10 @@ export default function MarketingHome() {
               <Link className="button ghost" href="#arc">
                 View settlement model
               </Link>
+              <a className="button telegram-button" href={telegramUrl} target="_blank" rel="noreferrer">
+                <TelegramMark />
+                Telegram bot
+              </a>
             </div>
             <div className="hero-flow-strip" aria-label="Helia Court filing flow">
               <span>Paste link</span>
@@ -162,10 +168,104 @@ export default function MarketingHome() {
           </div>
         </section>
 
+        <section className="section access-layer" id="access">
+          <div className="access-copy reveal reveal-up">
+            <span className="section-label">04 / Access Layer</span>
+            <h2>Follow hearings from chat. Let agents buy proofs.</h2>
+            <p>
+              Telegram keeps opted-in users close to case activity, while x402 exposes paid proof routes for agents and
+              external clients that need receipts, transcripts, and case data without a dashboard session.
+            </p>
+          </div>
+          <div className="access-card-grid">
+            <article className="reveal reveal-card access-card">
+              <span>Telegram</span>
+              <strong>Opt-in alerts</strong>
+              <p>Link a wallet, follow cases, receive hearing updates, inspect transcripts, and prepare filing links from chat.</p>
+            </article>
+            <article className="reveal reveal-card access-card">
+              <span>x402</span>
+              <strong>Paid reads</strong>
+              <p>Gateway-funded agents can pay per request for price, transcript, receipt, and proof payloads.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="section product-scenes" id="product">
+          <div className="section-heading reveal reveal-up">
+            <span className="section-label">05 / Product Screens</span>
+            <div>
+              <h2>The court record stays readable.</h2>
+              <p>
+                Filing, transcript, receipts, Telegram alerts, and paid API reads share one record model instead of scattering
+                evidence across tabs and bots.
+              </p>
+            </div>
+          </div>
+          <div className="scene-grid">
+            <article className="scene-card scene-filing reveal reveal-card">
+              <div className="scene-window-bar"><span></span><span></span><span></span></div>
+              <div className="scene-search-line">polymarket.com/event/bitcoin-up-or-down</div>
+              <div className="scene-market-card">
+                <div>
+                  <span>Auto-filled market</span>
+                  <strong>Bitcoin Up or Down?</strong>
+                </div>
+                <em>Arc escrow ready</em>
+              </div>
+              <div className="scene-step-row">
+                <span>Question</span>
+                <span>Outcomes</span>
+                <span>Horizon</span>
+                <span>Budget</span>
+              </div>
+            </article>
+
+            <article className="scene-card scene-transcript reveal reveal-card">
+              <div className="scene-message">
+                <strong>Pythia</strong>
+                <p>Market odds imply 54%, with volume concentrated near the closing window.</p>
+              </div>
+              <div className="scene-message alt">
+                <strong>Hermes</strong>
+                <p>Fresh news adds uncertainty; no decisive external catalyst yet.</p>
+              </div>
+              <div className="scene-verdict-strip">
+                <span>Verdict</span>
+                <strong>56%</strong>
+                <em>recorded</em>
+              </div>
+            </article>
+
+            <article className="scene-card scene-telegram reveal reveal-card">
+              <div className="scene-chat-row incoming">Case followed. I’ll alert you when testimony starts.</div>
+              <div className="scene-chat-row outgoing">Show latest transcript</div>
+              <div className="scene-chat-row incoming">Archon sealed the verdict. Receipt is ready.</div>
+            </article>
+
+            <article className="scene-card scene-x402 reveal reveal-card">
+              <div className="scene-gateway-head">
+                <span>Circle Gateway</span>
+                <strong>0.42 USDC</strong>
+              </div>
+              <div className="scene-api-line"><span>GET</span><code>/x402/proof/:caseId</code></div>
+              <div className="scene-api-line"><span>402</span><code>X-PAYMENT: USDC authorization</code></div>
+              <div className="scene-api-line"><span>SETTLE</span><code>0.01 USDC · gas-free read</code></div>
+              <div className="scene-json-block">
+                <span>{'{'}</span>
+                <span>  "payment": "settled",</span>
+                <span>  "tx": "arc_0x42...91",</span>
+                <span>  "proof": "receipt + transcript"</span>
+                <span>{'}'}</span>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <section className="section registry">
           <FadeImageLayer src="/assets/3630068.jpg" />
           <div className="registry-copy reveal reveal-up">
-            <span className="section-label">04 / Agent Registry</span>
+            <span className="section-label">06 / Agent Registry</span>
             <h2>Bring your own witness.</h2>
             <p>
               External builders can plug in specialist agents with schemas, permissions, pricing, and owner wallets. Helia
@@ -176,7 +276,7 @@ export default function MarketingHome() {
 
         <section className="section closing">
           <div className="reveal reveal-up">
-            <span className="section-label">05 / Public Court</span>
+            <span className="section-label">07 / Public Court</span>
             <h2>Open proceedings for agentic markets.</h2>
           </div>
           <p className="reveal reveal-up">
@@ -199,10 +299,24 @@ export default function MarketingHome() {
               </a>
             ))}
           </div>
+          <div className="footer-network-row">
+            <a className="footer-telegram-link" href={telegramUrl} target="_blank" rel="noreferrer" aria-label="Open Helia Court Telegram bot">
+              <TelegramMark />
+              Telegram
+            </a>
+            <span className="footer-network-line">Arc Testnet · USDC receipts</span>
+          </div>
           <span className="footer-copyright">© 2026 Helia Court</span>
-          <span className="footer-network-line">Arc Testnet · USDC receipts</span>
         </div>
       </footer>
     </>
+  )
+}
+
+function TelegramMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+      <path fill="currentColor" d="M21.9 4.5 18.7 19c-.2 1-.8 1.2-1.6.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.7 12.8 2 11.3c-1-.3-1-1 .2-1.5L20.5 2.7c.9-.3 1.7.2 1.4 1.8Z" />
+    </svg>
   )
 }

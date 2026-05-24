@@ -1,7 +1,8 @@
-import { Bank, Lightning, Receipt, ShieldCheck } from '@phosphor-icons/react/ssr'
+import { Bank, Code, Lightning, Receipt, ShieldCheck } from '@phosphor-icons/react/ssr'
 import { AppFooter } from '../components/AppFooter'
 import { AppHeader } from '../components/AppHeader'
 import { GatewayPanel } from '../components/GatewayPanel'
+import { X402PaidReadTester } from '../components/X402PaidReadTester'
 import '../page.css'
 
 export const dynamic = 'force-dynamic'
@@ -56,6 +57,80 @@ export default async function X402Page() {
         </section>
 
         <GatewayPanel />
+        <X402PaidReadTester suggestedCaseId={activity.latest?.caseId ?? null} />
+
+        <section className="panel x402-guide-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="eyebrow">How x402 works</p>
+              <h2>Gateway-funded paid reads</h2>
+            </div>
+            <Code size={20} />
+          </div>
+          <div className="x402-process-grid">
+            <article>
+              <span>01</span>
+              <strong>Deposit to Gateway</strong>
+              <p>Move a small USDC balance into Circle Gateway. This is separate from filing escrow and is used for API reads.</p>
+            </article>
+            <article>
+              <span>02</span>
+              <strong>Request a proof route</strong>
+              <p>An agent or client calls a route like <code>/x402/proof/:caseId</code>. The API returns payment requirements.</p>
+            </article>
+            <article>
+              <span>03</span>
+              <strong>Attach x402 payment</strong>
+              <p>The caller sends the USDC authorization in the x402 payment header. No dashboard session is required.</p>
+            </article>
+            <article>
+              <span>04</span>
+              <strong>Receive payload + tx</strong>
+              <p>The route returns the transcript, receipt, price, or proof payload plus the settlement transaction id.</p>
+            </article>
+          </div>
+          <div className="x402-screenshot-grid">
+            <article className="x402-shot gateway-shot">
+              <div className="shot-topline">
+                <span>Gateway balance</span>
+                <strong>0.42 USDC</strong>
+              </div>
+              <div className="shot-stat-row">
+                <span>Wallet</span>
+                <strong>1.20 USDC</strong>
+              </div>
+              <div className="shot-stat-row">
+                <span>Available</span>
+                <strong>0.42 USDC</strong>
+              </div>
+              <div className="shot-action-row">
+                <span>Deposit</span>
+                <code>0.01</code>
+              </div>
+            </article>
+            <article className="x402-shot code-shot">
+              <div className="shot-code-line"><span>GET</span><code>/x402/transcript/0xcf0b...</code></div>
+              <div className="shot-code-line"><span>402</span><code>X-PAYMENT required</code></div>
+              <div className="shot-code-block">
+                <span>{'{'}</span>
+                <span>  "accepts": "USDC",</span>
+                <span>  "amount": "0.01",</span>
+                <span>  "network": "arc-testnet"</span>
+                <span>{'}'}</span>
+              </div>
+            </article>
+            <article className="x402-shot proof-shot">
+              <div className="shot-code-line"><span>200</span><code>payment settled</code></div>
+              <div className="shot-code-block">
+                <span>{'{'}</span>
+                <span>  "receipt": "anchored",</span>
+                <span>  "paymentTx": "0x42...91",</span>
+                <span>  "payload": "proof"</span>
+                <span>{'}'}</span>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <section className="panel x402-route-panel">
           <div className="panel-heading">
@@ -92,6 +167,9 @@ type X402Activity = {
   totalPaidReads: number
   totalUsdc: string
   averageUsdc: string
+  latest?: {
+    caseId?: string
+  } | null
 }
 
 async function getX402Status(): Promise<X402Status> {
@@ -120,6 +198,7 @@ async function getX402Activity(): Promise<X402Activity> {
       totalPaidReads: Number(payload.totalPaidReads ?? 0),
       totalUsdc: payload.totalUsdc ?? '0',
       averageUsdc: payload.averageUsdc ?? '0',
+      latest: payload.latest ?? null,
     }
   } catch {
     return emptyX402Activity()
@@ -139,6 +218,7 @@ function emptyX402Activity(): X402Activity {
     totalPaidReads: 0,
     totalUsdc: '0',
     averageUsdc: '0',
+    latest: null,
   }
 }
 

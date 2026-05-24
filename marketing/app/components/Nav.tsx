@@ -12,7 +12,7 @@ export function HeaderNav({ className = '', showCourtButton = false }: { classNa
       <Link href="/#how">How it works</Link>
       <Link href="/#agents">Agents</Link>
       <Link href="/#arc">Arc</Link>
-      <Link href="/docs">Docs</Link>
+      <Link href="/help">Help</Link>
       {showCourtButton ? (
         <Link className="nav-court-button" href={APP_URL}>
           File a Case

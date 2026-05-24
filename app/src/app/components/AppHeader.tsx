@@ -15,7 +15,7 @@ const navItems = [
   { key: 'agents', label: 'Agents', href: '/agents', icon: UsersThree },
   { key: 'ledger', label: 'Ledger', href: '/ledger', icon: Receipt },
   { key: 'x402', label: 'x402', href: '/x402', icon: CurrencyCircleDollar },
-  { key: 'docs', label: 'Help', href: '/docs', icon: Question },
+  { key: 'docs', label: 'Help', href: '/help', icon: Question },
 ] as const
 
 export function AppHeader({ active }: AppHeaderProps) {
