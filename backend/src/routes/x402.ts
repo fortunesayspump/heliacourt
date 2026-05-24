@@ -16,6 +16,9 @@ import { x402Receipts } from '../db/schema.js'
 const arcUsdcAddress = '0x3600000000000000000000000000000000000000'
 const gatewayWalletTestnet = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9'
 const maxTimeoutSeconds = GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS
+const facilitatorMaxConcurrency = 3
+const facilitatorMaxAttempts = 4
+const facilitatorRetryBaseMs = 350
 
 type Challenge = {
   nonce: string
@@ -43,6 +46,8 @@ type X402PaymentRequirements = {
 
 let paymentRequirementsCache: X402PaymentRequirements | undefined
 let paymentRequirementsCacheExpiresAt = 0
+let facilitatorInFlight = 0
+const facilitatorQueue: Array<() => void> = []
 
 export async function x402Routes(app: FastifyInstance) {
   app.get('/x402/status', async () => ({
@@ -279,29 +284,74 @@ function parsePayment(raw: string) {
 }
 
 async function settlePayment(payment: Record<string, any>, requirements: X402PaymentRequirements): Promise<{ ok: true; payer?: string; txHash?: string } | { ok: false; error: string }> {
-  try {
-    const facilitator = createFacilitatorClient()
-    const verify = await facilitator.verify(payment as any, requirements)
-    if (!verify.isValid) {
-      return { ok: false, error: verify.invalidReason ?? 'x402 payment verification failed' }
+  return withFacilitatorSlot(async () => {
+    let lastError = 'x402 facilitator settlement failed'
+    for (let attempt = 1; attempt <= facilitatorMaxAttempts; attempt += 1) {
+      try {
+        const facilitator = createFacilitatorClient()
+        const verify = await facilitator.verify(payment as any, requirements)
+        if (!verify.isValid) {
+          const reason = verify.invalidReason ?? 'x402 payment verification failed'
+          if (!isRetryableFacilitatorError(reason) || attempt === facilitatorMaxAttempts) {
+            return { ok: false, error: reason }
+          }
+          lastError = reason
+          await sleep(facilitatorRetryDelay(attempt))
+          continue
+        }
+
+        const settled = await facilitator.settle(payment as any, requirements)
+        if (!settled.success) {
+          const reason = settled.errorReason ?? 'x402 payment settlement failed'
+          if (!isRetryableFacilitatorError(reason) || attempt === facilitatorMaxAttempts) {
+            return { ok: false, error: reason }
+          }
+          lastError = reason
+          await sleep(facilitatorRetryDelay(attempt))
+          continue
+        }
+
+        return {
+          ok: true,
+          payer: settled.payer ?? verify.payer,
+          txHash: settled.transaction,
+        }
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'x402 facilitator settlement failed'
+        if (!isRetryableFacilitatorError(lastError) || attempt === facilitatorMaxAttempts) {
+          return { ok: false, error: lastError }
+        }
+        await sleep(facilitatorRetryDelay(attempt))
+      }
     }
 
-    const settled = await facilitator.settle(payment as any, requirements)
-    if (!settled.success) {
-      return { ok: false, error: settled.errorReason ?? 'x402 payment settlement failed' }
-    }
+    return { ok: false, error: lastError }
+  })
+}
 
-    return {
-      ok: true,
-      payer: settled.payer ?? verify.payer,
-      txHash: settled.transaction,
-    }
-  } catch (error) {
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : 'x402 facilitator settlement failed',
-    }
+async function withFacilitatorSlot<T>(work: () => Promise<T>): Promise<T> {
+  if (facilitatorInFlight >= facilitatorMaxConcurrency) {
+    await new Promise<void>((resolve) => facilitatorQueue.push(resolve))
   }
+  facilitatorInFlight += 1
+  try {
+    return await work()
+  } finally {
+    facilitatorInFlight = Math.max(0, facilitatorInFlight - 1)
+    facilitatorQueue.shift()?.()
+  }
+}
+
+function facilitatorRetryDelay(attempt: number) {
+  return facilitatorRetryBaseMs * 2 ** (attempt - 1) + Math.floor(Math.random() * 120)
+}
+
+function isRetryableFacilitatorError(value: string) {
+  return /timeout|timed out|temporar|rate|429|5\\d\\d|html|unexpected token|fetch failed|network|econnreset|gateway/i.test(value)
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 async function getPublicJob(caseId: string, reply: FastifyReply) {
