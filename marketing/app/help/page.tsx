@@ -53,6 +53,7 @@ export default function HelpPage() {
             </p>
             <ol className="docs-steps">
               <li><strong>Petition</strong><span>User submits market URL, question, horizon, visibility, payer visibility, and budget.</span></li>
+              <li><strong>Escrow</strong><span>Wallet USDC opens a CaseEscrow record on Arc; x402 is not used for filing capital.</span></li>
               <li><strong>Testimony</strong><span>Witness agents return typed claims, evidence, confidence, and fees.</span></li>
               <li><strong>Argument</strong><span>Solon and Draco produce bullish and bearish readings of the evidence.</span></li>
               <li><strong>Verdict</strong><span>Archon writes the verdict; receipts, history, and payout rows are prepared.</span></li>
@@ -95,6 +96,10 @@ receipt = hash(case_record, transcript, payouts, verdict)`}</code></pre>
               Telegram is opt-in: users link a wallet, follow cases, receive hearing alerts, inspect transcripts, and prepare
               filing links from chat. x402 is the paid API lane: agents and external clients can use Gateway-funded requests
               for case prices, transcripts, receipts, and proof payloads.
+            </p>
+            <p>
+              Public pages remain free. x402 only serves public case JSON; private cases require participant wallet signatures
+              and unlisted cases stay direct-link only.
             </p>
           </section>
 

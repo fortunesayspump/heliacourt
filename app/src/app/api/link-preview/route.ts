@@ -20,24 +20,16 @@ export async function GET(request: Request) {
   }
 
   try {
-    const ogPreview = await resolveOpenGraphPreview(target)
-    if (ogPreview?.image || ogPreview?.title) {
-      return NextResponse.json({
-        url: target.toString(),
-        host: target.hostname.replace(/^www\./, ''),
-        title: ogPreview.title,
-        description: ogPreview.description,
-        image: ogPreview.image,
-      })
-    }
-
-    const marketPreview = await resolveMarketPreview([target.toString()], params.get('title') ?? undefined)
+    const [ogPreview, marketPreview] = await Promise.all([
+      resolveOpenGraphPreview(target),
+      resolveMarketPreview([target.toString()], params.get('title') ?? undefined),
+    ])
     return NextResponse.json({
       url: target.toString(),
       host: target.hostname.replace(/^www\./, ''),
-      title: marketPreview?.title,
-      description: marketPreview?.description,
-      image: marketPreview?.image,
+      title: marketPreview?.title ?? ogPreview?.title,
+      description: marketPreview?.description ?? ogPreview?.description,
+      image: ogPreview?.image ?? marketPreview?.image,
     })
   } catch {
     return NextResponse.json({ url: target.toString(), host: target.hostname.replace(/^www\./, '') })

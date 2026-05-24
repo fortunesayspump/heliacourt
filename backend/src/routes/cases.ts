@@ -623,17 +623,24 @@ async function summarizeCaseDetail(
   job: Awaited<ReturnType<typeof listHearingJobs>>[number],
   result: { artifacts?: CourtArtifact[]; transcript?: unknown[]; recordHash?: string; partial?: boolean; onchainSettlement?: unknown } | undefined,
 ) {
-  const extraReceipts = await getCaseRecordedReceipts(job.marketCase.id)
+  const resultMarketCase = (result as { marketCase?: MarketCase } | undefined)?.marketCase
+  const marketCase = resultMarketCase ?? job.marketCase
+  const extraReceipts = await getCaseRecordedReceipts(marketCase.id, shouldExposePayerWallet(marketCase))
   const settlement = isSettlementObject(result?.onchainSettlement) ? result.onchainSettlement : undefined
+  const settlementReceipts = Array.isArray(settlement?.receipts)
+    ? settlement.receipts.map((receipt) => redactPayerReceipt(receipt, shouldExposePayerWallet(marketCase)))
+    : []
   const onchainSettlement = extraReceipts.length
     ? {
         ...(settlement ?? {}),
         receipts: [
-          ...(Array.isArray(settlement?.receipts) ? settlement.receipts : []),
+          ...settlementReceipts,
           ...extraReceipts,
         ],
       }
-    : result?.onchainSettlement
+    : settlement
+      ? { ...settlement, receipts: settlementReceipts }
+      : result?.onchainSettlement
 
   return {
     case: summarizeCase(job, extraReceipts),
@@ -649,7 +656,7 @@ function isSettlementObject(value: unknown): value is { status?: string; receipt
   return Boolean(value && typeof value === 'object')
 }
 
-async function getCaseRecordedReceipts(caseId: string) {
+async function getCaseRecordedReceipts(caseId: string, exposePayerWallet = true) {
   if (!isDatabaseConfigured) return []
 
   const receipts = await db!
@@ -667,9 +674,21 @@ async function getCaseRecordedReceipts(caseId: string) {
         chainId: receipt.chainId,
         caseId,
         amountUsdc: payload?.amountUsdc ?? payload?.refundUsdc,
-        wallet: payload?.wallet,
+        wallet: exposePayerWallet ? payload?.wallet : undefined,
+        payerRedacted: exposePayerWallet ? undefined : true,
       }
     })
+}
+
+function redactPayerReceipt(receipt: unknown, exposePayerWallet: boolean) {
+  if (!receipt || typeof receipt !== 'object') return receipt
+  const typed = receipt as { type?: string; wallet?: string; payerRedacted?: boolean }
+  if (exposePayerWallet || !isPayerReceiptType(typed.type)) return receipt
+  return {
+    ...typed,
+    wallet: undefined,
+    payerRedacted: true,
+  }
 }
 
 function isPublicListCase(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
@@ -1117,6 +1136,7 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
     }
   } | undefined
   const marketCase = result?.marketCase ?? job.marketCase
+  const exposePayerWallet = shouldExposePayerWallet(marketCase)
   const settlement = findLastArtifact(result?.artifacts, (artifact) => artifact.agentId === 'settlement-clerk')
   const verdict = findLastArtifact(result?.artifacts, (artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
   const rows = []
@@ -1177,7 +1197,8 @@ function summarizeLedgerRows(job: Awaited<ReturnType<typeof listHearingJobs>>[nu
       txHash: receipt.txHash,
       receiptType: receipt.type,
       agentId: receipt.agentId,
-      wallet: receipt.wallet,
+      wallet: isPayerReceiptType(receipt.type) && !exposePayerWallet ? undefined : receipt.wallet,
+      payerRedacted: isPayerReceiptType(receipt.type) && !exposePayerWallet ? true : undefined,
     })
   }
 
@@ -1211,6 +1232,7 @@ async function getRecordedReceiptLedgerRows(publicJobs: Awaited<ReturnType<typeo
 
     const payload = receipt.payload as { amountUsdc?: string; refundUsdc?: string; wallet?: string } | null
     const isCancel = receipt.receiptType === 'case-cancel'
+    const exposePayerWallet = shouldExposePayerWallet(job.marketCase)
     return [{
       caseId: job.marketCase.id,
       title: job.marketCase.question,
@@ -1224,9 +1246,18 @@ async function getRecordedReceiptLedgerRows(publicJobs: Awaited<ReturnType<typeo
       chainId: receipt.chainId,
       txHash: receipt.txHash,
       receiptType: receipt.receiptType,
-      wallet: payload?.wallet,
+      wallet: exposePayerWallet ? payload?.wallet : undefined,
+      payerRedacted: exposePayerWallet ? undefined : true,
     }]
   })
+}
+
+function shouldExposePayerWallet(marketCase: MarketCase) {
+  return (marketCase.payerVisibility ?? 'private') === 'public'
+}
+
+function isPayerReceiptType(type?: string) {
+  return type === 'case-funding' || type === 'case-added-funding' || type === 'case-cancel'
 }
 
 function formatProtocolFee(budgetUsdc: string) {

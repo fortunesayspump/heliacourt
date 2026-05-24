@@ -1,14 +1,20 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Helia Court",
-  "description": "Multi-agent forecasting court for prediction-market questions. Helia Court runs paid AI counsel, witnesses, risk review, judging, and settlement records on Arc.",
+  "version": "0.2.0",
+  "active": true,
+  "agent_type": "service",
+  "description": "Multi-agent forecasting court for prediction-market questions. Users file funded Arc escrow cases from Polymarket, Kalshi, or Manifold links; Helia Court runs evidence witnesses, counsel, verdicts, receipts, Telegram alerts, and x402 paid proof APIs.",
   "image": "https://heliacourt.xyz/icon-temple-512.png",
   "logo": "https://heliacourt.xyz/icon-temple-512.png",
   "avatar": "https://heliacourt.xyz/icon-temple-192.png",
-  "active": true,
-  "version": "0.1.0",
+  "operatorWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
   "x402Support": true,
-  "agent_type": "service",
+  "supportedMarkets": [
+    "Polymarket",
+    "Kalshi",
+    "Manifold"
+  ],
   "tags": [
     "forecasting",
     "prediction-markets",
@@ -18,91 +24,262 @@
     "arc",
     "usdc",
     "x402",
-    "erc-8004"
+    "erc-8004",
+    "telegram",
+    "circle-gateway"
   ],
+  "identity": {
+    "erc8004": {
+      "agentId": 20245,
+      "chainId": 5042002,
+      "caip2": "eip155:5042002",
+      "identityRegistry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
+      "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
+      "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
+      "registrationTx": "https://testnet.arcscan.app/tx/0xb0aa3a9ef0d05878def0523c730c018d85c8b0bc8cf45d47c0a0262b35444ea3",
+      "latestURIUpdateTx": "https://testnet.arcscan.app/tx/0xd571d5bf8937d74b64c8ad2bc17fe9c3e58b67dd7f59566a96fba9800eb5f204",
+      "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+    }
+  },
+  "contracts": {
+    "chain": "Arc Testnet",
+    "chainId": 5042002,
+    "usdc": "0x3600000000000000000000000000000000000000",
+    "circleGatewayWallet": "0x0077777d7EBA4688BDeF3E311b846F25870A19B9",
+    "caseEscrow": "0x93F3be6c7d12FbF37FF4C621902240e686E28ea8"
+  },
+  "productModel": {
+    "publicBrowsing": "Free human-readable public case pages, public proof pages, docket, agents, ledger, and help pages.",
+    "filingAndFunding": "Wallet signs normal Arc USDC approvals and CaseEscrow transactions. x402 does not file or fund cases.",
+    "x402PaidReads": "Circle Gateway-funded machine/API access for structured price, transcript, receipt, and proof JSON on public cases.",
+    "visibility": {
+      "public": "Listed publicly, readable by URL, eligible for x402 paid reads.",
+      "unlisted": "Hidden from browse lists, direct URL readable, blocked from x402 public paid reads.",
+      "private": "Hidden from public routes and x402; readable only after participant wallet challenge/signature.",
+      "payerVisibility": "Private payer mode redacts payer wallet display in app/API receipt surfaces while onchain transactions remain publicly auditable."
+    },
+    "telegram": "Opt-in wallet-linked bot for case lookup, transcript/receipt checks, follow alerts, and filing links."
+  },
   "services": [
     {
-      "name": "file-case",
-      "description": "File a funded prediction-market case for agent hearing and verdict generation.",
-      "endpoint": "https://app.heliacourt.xyz/cases/new",
+      "name": "marketing",
+      "description": "Product overview and feature tour.",
+      "endpoint": "https://heliacourt.xyz",
       "method": "GET",
-      "paymentRequired": true
+      "protocol": "Web"
     },
     {
-      "name": "case-ledger",
-      "description": "Inspect court receipts, agent payouts, and settlement records.",
-      "endpoint": "https://app.heliacourt.xyz/ledger",
-      "method": "GET"
-    },
-    {
-      "name": "x402-status",
-      "description": "Discover Helia Court x402 configuration, Arc USDC amount, receiver, and paid resource paths.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/status",
-      "method": "GET",
-      "protocol": "x402"
-    },
-    {
-      "name": "x402-price",
-      "description": "Paid case summary, verdict, confidence, record hash, and app link.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/price/:caseId",
-      "method": "GET",
-      "protocol": "x402",
-      "paymentRequired": true
-    },
-    {
-      "name": "x402-transcript",
-      "description": "Paid transcript turns for a public case.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/transcript/:caseId",
-      "method": "GET",
-      "protocol": "x402",
-      "paymentRequired": true
-    },
-    {
-      "name": "x402-receipts",
-      "description": "Paid onchain settlement receipts for a public case.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/receipts/:caseId",
-      "method": "GET",
-      "protocol": "x402",
-      "paymentRequired": true
-    },
-    {
-      "name": "x402-proof",
-      "description": "Paid proof bundle with record hash, transcript/artifact counts, receipts, and proof URL.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/proof/:caseId",
-      "method": "GET",
-      "protocol": "x402",
-      "paymentRequired": true
-    },
-    {
-      "name": "x402-activity",
-      "description": "Inspect paid-read receipt activity and transaction IDs.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/activity?caseId=:caseId",
-      "method": "GET",
-      "protocol": "x402"
-    },
-    {
-      "name": "web",
-      "description": "Helia Court web application.",
+      "name": "web-app",
+      "description": "Helia Court app: file cases, inspect hearings, manage Gateway, run browser x402 reads.",
       "endpoint": "https://app.heliacourt.xyz",
       "method": "GET",
       "protocol": "Web"
     },
     {
+      "name": "file-case",
+      "description": "Start the normal app flow for supported market links. Requires wallet and Arc USDC escrow funding.",
+      "endpoint": "https://app.heliacourt.xyz/cases/new",
+      "method": "GET",
+      "paymentRequired": true,
+      "paymentRail": "Arc CaseEscrow USDC"
+    },
+    {
+      "name": "case-docket",
+      "description": "Browse public live cases, verdicts, and market records.",
+      "endpoint": "https://app.heliacourt.xyz/cases",
+      "method": "GET"
+    },
+    {
+      "name": "ledger",
+      "description": "Inspect court receipts, agent payouts, protocol fees, x402 activity, and settlement records.",
+      "endpoint": "https://app.heliacourt.xyz/ledger",
+      "method": "GET"
+    },
+    {
+      "name": "gateway",
+      "description": "Manage Circle Gateway balance for x402 paid API reads.",
+      "endpoint": "https://app.heliacourt.xyz/x402",
+      "method": "GET",
+      "protocol": "Web + x402"
+    },
+    {
+      "name": "proof-page",
+      "description": "Human-readable proof page for a public case.",
+      "endpoint": "https://app.heliacourt.xyz/proof/:caseId",
+      "method": "GET"
+    },
+    {
+      "name": "help",
+      "description": "User help for case filing, visibility, private unlocks, Telegram, and x402.",
+      "endpoint": "https://app.heliacourt.xyz/help",
+      "method": "GET"
+    },
+    {
       "name": "docs",
-      "description": "Helia Court documentation for cases, agents, Arc identity, x402, and builder integration.",
+      "description": "Technical docs for case flow, ERC-8004 identity, x402, Gateway, and builder integration.",
       "endpoint": "https://docs.heliacourt.xyz",
       "method": "GET",
       "protocol": "Web"
+    },
+    {
+      "name": "telegram-bot",
+      "description": "Opt-in Helia Court Telegram bot.",
+      "endpoint": "https://t.me/heliacourtbot",
+      "method": "GET",
+      "protocol": "Telegram"
+    },
+    {
+      "name": "api-cases",
+      "description": "Public case list; excludes unlisted/private records.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/cases",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
+      "name": "api-case-detail",
+      "description": "Public or unlisted case detail by id; private records return 404 unless unlocked through signed private access.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/cases/:caseId",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
+      "name": "api-private-challenge",
+      "description": "Issue a one-use wallet challenge for participant-only private case reads.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/cases/:caseId/challenge",
+      "method": "POST",
+      "protocol": "HTTP signature challenge"
+    },
+    {
+      "name": "api-private-unlock",
+      "description": "Return private case detail after valid participant wallet signature.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/cases/:caseId/private",
+      "method": "POST",
+      "protocol": "HTTP signature challenge"
+    },
+    {
+      "name": "x402-status",
+      "description": "Discover x402 receiver, Arc USDC price, network, and paid resource paths.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/status",
+      "method": "GET",
+      "protocol": "x402 discovery"
+    },
+    {
+      "name": "x402-activity",
+      "description": "Inspect paid-read activity and x402 transaction IDs globally or per case.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/activity?caseId=:caseId",
+      "method": "GET",
+      "protocol": "x402 accounting"
+    },
+    {
+      "name": "x402-price",
+      "description": "Paid public case summary, verdict, confidence, record hash, and app link.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/price/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true,
+      "paymentRail": "Circle Gateway USDC"
+    },
+    {
+      "name": "x402-transcript",
+      "description": "Paid public transcript turns.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/transcript/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true,
+      "paymentRail": "Circle Gateway USDC"
+    },
+    {
+      "name": "x402-receipts",
+      "description": "Paid public settlement receipt payload.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/receipts/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true,
+      "paymentRail": "Circle Gateway USDC"
+    },
+    {
+      "name": "x402-proof",
+      "description": "Paid public proof bundle: record hash, transcript/artifact counts, receipts, market URL, and proof URL.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/proof/:caseId",
+      "method": "GET",
+      "protocol": "x402",
+      "paymentRequired": true,
+      "paymentRail": "Circle Gateway USDC"
     }
+  ],
+  "x402": {
+    "baseUrl": "https://helia-courtbackend-production.up.railway.app",
+    "network": "eip155:5042002",
+    "asset": "Arc testnet USDC",
+    "currentPrice": "0.01 USDC per paid read",
+    "flow": [
+      "Call paid resource without payment",
+      "Read 402 payment-required, accept-payment, and x-payment-challenge headers",
+      "Sign/attach exact x402 payment from Gateway balance",
+      "Retry request with payment header",
+      "Receive JSON payload and PAYMENT-RESPONSE settlement data"
+    ],
+    "resources": [
+      "/x402/price/:caseId",
+      "/x402/transcript/:caseId",
+      "/x402/receipts/:caseId",
+      "/x402/proof/:caseId"
+    ]
+  },
+  "testedFlow": {
+    "date": "2026-05-24",
+    "backend": "https://helia-courtbackend-production.up.railway.app",
+    "app": "https://app.heliacourt.xyz",
+    "publicCase": "0x45cdb93167b201a1d4990b360684daba2504edf014261c2f33be750a119c104d",
+    "unlistedCase": "0x310b2fb8d0a40d72be2f98e67ec60c365897952b97ed565f286b6f4d22ac81cb",
+    "privateCase": "0xb0e7eee7cc782a7b2c17a6ec72fb5cd4d553e53d42d77a7eea862d01fd08d5d1",
+    "cancelledCase": "0x77c9d766deedac28359875610dac614f3da5941c20fe09f8a055ff66d16d6a61",
+    "results": [
+      "Public/unlisted/private/cancel cases opened on Arc",
+      "Funding top-up registered",
+      "Cancel/refund registered",
+      "Private direct read 404, wrong wallet 403, wrong signature 401, owner unlock 200",
+      "x402 no payment 402, bad payment 402, paid price/proof/transcript/receipts 200",
+      "120 mixed endpoint stress requests produced only expected 200/402/404",
+      "12 concurrent x402 paid stress reads succeeded"
+    ]
+  },
+  "supportedTools": [
+    "file_case",
+    "run_hearing",
+    "gather_evidence",
+    "submit_testimony",
+    "submit_argument",
+    "risk_review",
+    "issue_verdict",
+    "settle_case",
+    "view_ledger",
+    "x402_paid_read",
+    "telegram_alerts",
+    "private_case_unlock"
+  ],
+  "taskCategories": [
+    "prediction-market-research",
+    "evidence-analysis",
+    "multi-agent-deliberation",
+    "risk-review",
+    "verdict-generation",
+    "usdc-settlement",
+    "paid-proof-api",
+    "agent-integration"
+  ],
+  "supportedTrust": [
+    "reputation",
+    "crypto-economic"
+  ],
+  "trustTypes": [
+    "reputation",
+    "crypto-economic"
   ],
   "registrations": [
     {
       "agentId": 20245,
       "agentRegistry": "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
     }
-  ],
-  "supportedTrust": [
-    "reputation",
-    "crypto-economic"
   ]
 }

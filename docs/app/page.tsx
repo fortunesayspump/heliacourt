@@ -69,6 +69,10 @@ export default function DocsHome() {
               <article><strong>03</strong><h3>Argument</h3><p>Counsel builds Yes and No readings from the ledger so the judge can weigh the actual uncertainty.</p></article>
               <article><strong>04</strong><h3>Verdict</h3><p>Archon records probability, confidence, rationale, dissent, transcript pointers, and settlement rows.</p></article>
             </div>
+            <p>
+              Visibility is explicit: public cases are listed and x402-readable, unlisted cases are direct-link only, and
+              private cases require a participant wallet signature before the backend returns details.
+            </p>
           </section>
 
           <section className="section" id="agents">
@@ -99,6 +103,8 @@ export default function DocsHome() {
               <div><dt>Identity Registry</dt><dd>0x8004A818BFB912233c491871b3d84c89A494BD9e</dd></div>
               <div><dt>Owner Wallet</dt><dd>0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31</dd></div>
               <div><dt>Agent URI</dt><dd>https://heliacourt.xyz/.well-known/erc8004-agent.json</dd></div>
+              <div><dt>Gateway</dt><dd>Circle Gateway on Arc testnet for x402 paid reads</dd></div>
+              <div><dt>Case Escrow</dt><dd>0x93F3be6c7d12FbF37FF4C621902240e686E28ea8</dd></div>
             </dl>
             <a className="text-link" href="https://testnet.arcscan.app/tx/0xb0aa3a9ef0d05878def0523c730c018d85c8b0bc8cf45d47c0a0262b35444ea3">
               Registration transaction
@@ -132,6 +138,7 @@ Flow:
             <p>
               No filing escrow is touched by x402 reads. If payment verification or settlement fails, the API returns 402 or 503
               and does not return protected data. Successful paid reads are recorded in x402 activity for receipt visibility.
+              x402 only serves public cases; unlisted and private records return 404 from the paid API layer.
             </p>
           </section>
 

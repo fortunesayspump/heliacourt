@@ -31,7 +31,7 @@ const quickAnswers = [
   ['How do rehearings work?', 'A rehearing is a new funded child case linked to the original. It keeps the old verdict immutable while letting fresh evidence create a new transcript and verdict.'],
   ['How do private cases work?', 'Private forks are linked child cases with private visibility. The backend should only return full details after a wallet signature from an allowed wallet.'],
   ['What makes a verdict auditable?', 'Each verdict keeps the market URL, question, transcript, source embeds, confidence, history, receipt rows, and Arc testnet settlement trail together.'],
-  ['Where does x402 fit?', 'The main app uses normal wallet USDC for Arc escrow. x402 uses Circle Gateway balance for tiny paid API calls so bots can buy price, transcript, receipt, and proof lookups without touching the filing escrow flow.'],
+  ['Where does x402 fit?', 'Public pages are free for people. x402 uses Circle Gateway balance for paid machine-readable price, transcript, receipt, and proof API calls without touching the filing escrow flow.'],
   ['What does Telegram do?', 'The bot can list cases, inspect a case, fetch transcript turns, show receipts, and prepare filing links from chat. Alerts are available when bot credentials are configured.'],
 ]
 

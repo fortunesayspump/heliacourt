@@ -170,7 +170,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Arc OSS flow</p>
-          <h2>Browser x402 paid read</h2>
+          <h2>Browser x402 API read</h2>
         </div>
         <Lightning size={20} />
       </div>
@@ -226,6 +226,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
             {busy ? 'Working' : 'Pay and read'}
           </button>
           <p className="gateway-status">{status}</p>
+          <p className="gateway-explainer">Use this when a browser agent or external app needs structured JSON. Public case pages stay free to read.</p>
         </div>
 
         <div className="x402-live-result">

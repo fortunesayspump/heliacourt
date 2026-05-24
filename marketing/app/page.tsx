@@ -102,7 +102,7 @@ export default function MarketingHome() {
                 <span>01</span>
                 <div>
                   <strong>Petition</strong>
-                  <p>Market URL, question, image, outcomes, horizon, visibility, payer setting, and budget enter the docket.</p>
+                  <p>Market URL, question, image, outcomes, horizon, public/unlisted/private visibility, payer privacy, and budget enter the docket.</p>
                 </div>
               </article>
               <article className="record-row">
@@ -153,12 +153,12 @@ export default function MarketingHome() {
 
         <section className="section arc" id="arc">
           <div className="arc-panel reveal reveal-up">
-            <span className="section-label">03 / Arc Settlement</span>
-            <h2>Stablecoin-native court economics.</h2>
-            <p>
-              Cases are priced like paid research. A funded case pays witnesses, counsel, settlement, and protocol fees.
-              Joining adds budget to an open hearing; rehearings open linked child records after a verdict.
-            </p>
+              <span className="section-label">03 / Arc Settlement</span>
+              <h2>Stablecoin-native court economics.</h2>
+              <p>
+              Cases are priced like paid research. Filing and joining use CaseEscrow USDC; x402 reads use separate Circle
+              Gateway balance so agents can buy proof data without touching case capital.
+              </p>
           </div>
           <div className="ledger">
             <article className="reveal reveal-card"><span>Typical case</span><strong>USDC</strong></article>
@@ -171,11 +171,11 @@ export default function MarketingHome() {
         <section className="section access-layer" id="access">
           <div className="access-copy reveal reveal-up">
             <span className="section-label">04 / Access Layer</span>
-            <h2>Follow hearings from chat. Let agents buy proofs.</h2>
-            <p>
+              <h2>Follow hearings from chat. Let agents buy proofs.</h2>
+              <p>
               Telegram keeps opted-in users close to case activity, while x402 exposes paid proof routes for agents and
-              external clients that need receipts, transcripts, and case data without a dashboard session.
-            </p>
+              external clients that need structured receipts, transcripts, and case data without a dashboard session.
+              </p>
           </div>
           <div className="access-card-grid">
             <article className="reveal reveal-card access-card">
@@ -266,10 +266,10 @@ export default function MarketingHome() {
           <FadeImageLayer src="/assets/3630068.jpg" />
           <div className="registry-copy reveal reveal-up">
             <span className="section-label">06 / Agent Registry</span>
-            <h2>Bring your own witness.</h2>
+            <h2>Registered court identity, open witness path.</h2>
             <p>
-              External builders can plug in specialist agents with schemas, permissions, pricing, and owner wallets. Helia
-              Court becomes a network of market experts, not one black-box bot.
+              Helia Court is registered on Arc ERC-8004 as a service agent, with metadata for app routes, docs, Telegram,
+              x402 resources, Gateway payments, and the path for external specialist witnesses.
             </p>
           </div>
         </section>

@@ -19,9 +19,9 @@ export default async function X402Page() {
       <section className="workspace x402-workspace">
         <section className="panel x402-hero-panel">
           <div>
-            <p className="eyebrow">Agent payments</p>
-            <h1>x402 Gateway</h1>
-            <p>Gateway balance is for tiny paid proof, transcript, receipt, and price reads. Case filing and join funding stay on normal wallet USDC through Arc escrow.</p>
+            <p className="eyebrow">Agent API payments</p>
+            <h1>x402 proof desk</h1>
+            <p>Public pages stay free for people. x402 is the paid machine-readable layer for agents, integrations, and external apps that need structured proof, transcript, receipt, and price JSON.</p>
           </div>
         </section>
 
@@ -71,12 +71,12 @@ export default async function X402Page() {
             <article>
               <span>01</span>
               <strong>Deposit to Gateway</strong>
-              <p>Move a small USDC balance into Circle Gateway. This is separate from filing escrow and is used for API reads.</p>
+              <p>Move a small USDC balance into Circle Gateway. This balance is separate from case escrow and only pays API reads.</p>
             </article>
             <article>
               <span>02</span>
               <strong>Request a proof route</strong>
-              <p>An agent or client calls a route like <code>/x402/proof/:caseId</code>. The API returns payment requirements.</p>
+              <p>An agent, script, or partner app calls a route like <code>/x402/proof/:caseId</code>. Public case pages remain readable without this step.</p>
             </article>
             <article>
               <span>03</span>
@@ -86,7 +86,7 @@ export default async function X402Page() {
             <article>
               <span>04</span>
               <strong>Receive payload + tx</strong>
-              <p>The route returns the transcript, receipt, price, or proof payload plus the settlement transaction id.</p>
+              <p>The route returns structured JSON plus the x402 settlement transaction id for audit and accounting.</p>
             </article>
           </div>
           <div className="x402-screenshot-grid">
@@ -148,7 +148,7 @@ export default async function X402Page() {
             ))}
           </div>
           <p className="gateway-explainer">
-            Agents can pay from Gateway balance and receive the payment transaction id with the returned proof payload.
+            Agents and integrations pay from Gateway balance to fetch structured data. Human browsing, case filing, and join funding use the normal app and Arc escrow.
           </p>
         </section>
       </section>

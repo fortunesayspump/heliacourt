@@ -38,6 +38,8 @@ Implemented now:
 - Existing-case funding joins. The upgraded CaseEscrow exposes `addFunding`, the frontend records wallet-funded top-ups, and the backend verifies the `CaseFunded` event before writing the backer/receipt row.
 - Circle Gateway x402 proof APIs. Public browsing stays free, app filing/funding uses normal wallet USDC, and agent-facing x402 reads use Gateway balance for tiny paid transcript, receipt, price, and proof calls.
 - Stuck-case recovery. Failed onchain hearings can cancel the escrow and record a `case-cancel` receipt so refunded cases show as `Refunded` instead of unresolved failures.
+- ERC-8004 service identity. Helia Court is registered as agent `20245` on Arc testnet with canonical metadata at `https://heliacourt.xyz/.well-known/erc8004-agent.json`.
+- Telegram opt-in alerts and account linking. Users link Telegram to a wallet through a one-use wallet signature challenge, then inspect/follow case activity from chat.
 
 ## x402 Agent API
 
@@ -66,13 +68,26 @@ GET /x402/proof/:caseId
 Safety model:
 
 - x402 reads never touch filing escrow funds.
+- x402 paid resources only serve public cases. Unlisted and private cases return `404` from the x402 layer.
 - A request without payment returns `402` with `payment-required`, `accept-payment`, and `x-payment-challenge`.
 - Invalid, expired, underpriced, or unsettled payments return `402` or `503` and do not reveal protected data.
 - Successful reads return `PAYMENT-RESPONSE` and a `paid` object containing the payer, transaction hash, amount, and network.
 - Paid read receipts are stored in `/x402/activity` when the database is configured.
 
-Still missing before the full product flow is complete:
+## Visibility and Wallet Privacy
 
-- Deploy/upgrade the production CaseEscrow proxy to the implementation that includes `addFunding`.
+Case visibility:
+
+- `public`: shown in public lists, direct-readable, x402-readable after payment.
+- `unlisted`: hidden from browse lists, direct-readable by URL, not x402-readable.
+- `private`: hidden from browse lists and direct public reads; participant wallets unlock through a one-use signed challenge.
+
+Payer visibility:
+
+- `public`: app/API receipt surfaces may show the payer wallet.
+- `private`: app/API receipt surfaces redact payer wallet fields. The underlying Arc transaction is still publicly auditable onchain.
+
+Remaining product work:
+
 - External agent-builder registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.

@@ -367,18 +367,49 @@ function buildKalshiPreview(seriesPayload: unknown, market: JsonRecord | undefin
     ambiguousEvent ? `This Kalshi event contains ${contracts.length} tradable contracts. File it as one event-level case; the contract horizons are preserved below.` : undefined,
     relatedMarkets.length ? `Event contracts:\n${relatedMarkets.join('\n')}` : undefined,
   ].filter(Boolean).join('\n\n') || undefined
+  const previewTitle = ambiguousEvent ? deriveKalshiEventQuestion(contracts) ?? stringValue(series?.title) : stringValue(market?.title) ?? stringValue(series?.title)
+  const category = stringValue(series?.category)
 
   return {
-    title: ambiguousEvent ? deriveKalshiEventQuestion(contracts) ?? stringValue(series?.title) : stringValue(market?.title) ?? stringValue(series?.title),
+    title: previewTitle,
     description,
     rules: ambiguousEvent ? undefined : marketRules,
     endDate: ambiguousEvent
       ? relatedHorizons.length ? `Multiple Kalshi contract horizons: ${relatedHorizons.join('; ')}` : undefined
       : stringValue(market?.close_time) ?? stringValue(market?.expected_expiration_time) ?? stringValue(series?.last_updated_ts),
-    image: findImageUrl(seriesPayload, new URL('https://kalshi.com')) ?? findImageUrl(market, new URL('https://kalshi.com')),
+    image: findImageUrl(seriesPayload, new URL('https://kalshi.com')) ?? findImageUrl(market, new URL('https://kalshi.com')) ?? buildKalshiCardImage({
+      title: previewTitle ?? stringValue(series?.title) ?? 'Kalshi market',
+      category,
+      contracts,
+    }),
     contracts: contracts.length ? contracts : undefined,
     multipleContracts: ambiguousEvent,
   }
+}
+
+function buildKalshiCardImage({ title, category, contracts }: { title: string; category?: string; contracts: MarketPreviewContract[] }) {
+  const subtitle = category ? `${category} event` : 'Kalshi event'
+  const contractLine = contracts.length > 1
+    ? `${contracts.length} contracts preserved`
+    : contracts[0]?.price ? `Last ${contracts[0].price}` : 'Market details preserved'
+  const safeTitle = escapeSvg(truncateForSvg(title, 92))
+  const safeSubtitle = escapeSvg(subtitle)
+  const safeContractLine = escapeSvg(contractLine)
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="${safeTitle}"><rect width="1200" height="630" fill="#151515"/><rect x="54" y="54" width="1092" height="522" rx="34" fill="#f4f0e6"/><rect x="86" y="86" width="1028" height="458" rx="26" fill="#ffffff"/><circle cx="158" cy="148" r="28" fill="#1f5f4a"/><path d="M146 147h24M158 135v25M149 159c10 9 22 9 32 0" stroke="#ffffff" stroke-width="8" stroke-linecap="round" fill="none"/><text x="210" y="158" fill="#1d211f" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700">Kalshi</text><text x="88" y="255" fill="#6f6a60" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" letter-spacing="2">${safeSubtitle.toUpperCase()}</text><foreignObject x="86" y="284" width="1010" height="164"><div xmlns="http://www.w3.org/1999/xhtml" style="font-family: Arial, Helvetica, sans-serif; color: #161616; font-size: 56px; line-height: 1.08; font-weight: 800; letter-spacing: 0; overflow: hidden;">${safeTitle}</div></foreignObject><rect x="88" y="474" width="420" height="46" rx="23" fill="#e7f2ea"/><text x="116" y="506" fill="#1f5f4a" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="700">${safeContractLine}</text><text x="886" y="506" fill="#6f6a60" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700">helia court</text></svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function truncateForSvg(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}...` : value
+}
+
+function escapeSvg(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
 }
 
 function formatKalshiContract(value: JsonRecord): MarketPreviewContract | undefined {
