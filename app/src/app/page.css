@@ -90,6 +90,7 @@
   flex: 0 0 auto;
   min-height: 38px;
   align-items: center;
+  gap: 7px;
   padding: 0;
   border: 0;
   color: var(--ink);
@@ -98,6 +99,11 @@
   white-space: nowrap;
   text-decoration: none;
   transition: color 160ms ease, transform 180ms var(--ease-out);
+}
+
+.app-nav-icon {
+  display: none;
+  flex: 0 0 auto;
 }
 
 .app-nav a.active,
@@ -10805,7 +10811,7 @@ a:focus-visible,
 /* Mobile product pass: readable cards, no clipped rows, thumb-first filing flow. */
 @media (max-width: 640px) {
   .app-shell {
-    padding-bottom: calc(114px + env(safe-area-inset-bottom, 0px)) !important;
+    padding-bottom: calc(68px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .app-topnav-inner {
@@ -10821,15 +10827,53 @@ a:focus-visible,
   }
 
   .app-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    grid-auto-rows: 38px !important;
+    position: fixed !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    z-index: 70 !important;
+    display: grid !important;
+    grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+    grid-auto-rows: 54px !important;
+    gap: 0 !important;
+    width: 100% !important;
+    padding: 0 max(6px, env(safe-area-inset-left, 0px)) env(safe-area-inset-bottom, 0px) max(6px, env(safe-area-inset-right, 0px)) !important;
+    border: 0 !important;
+    border-top: 1px solid rgba(241, 211, 170, 0.2) !important;
+    border-radius: 0 !important;
+    background: rgba(12, 12, 10, 0.98) !important;
+    box-shadow: 0 -10px 24px rgba(0, 0, 0, 0.24) !important;
+    backdrop-filter: blur(14px) !important;
   }
 
   .app-nav a,
   .app-topnav .app-nav a {
-    min-height: 38px !important;
-    font-size: 12px !important;
+    min-width: 0 !important;
+    min-height: 54px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    color: rgba(255, 250, 242, 0.62) !important;
+    font-size: 0 !important;
     line-height: 1 !important;
+    transform: none !important;
+  }
+
+  .app-nav a.active,
+  .app-topnav .app-nav a.active {
+    color: var(--ag-cream) !important;
+    background: rgba(241, 211, 170, 0.07) !important;
+  }
+
+  .app-nav-icon {
+    display: block !important;
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  .app-nav-label {
+    display: none !important;
   }
 
   .workspace > :not(.page-title) {
