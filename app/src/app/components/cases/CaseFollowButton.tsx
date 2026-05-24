@@ -3,13 +3,14 @@
 import { Bell, BellSlash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
+import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
 export function CaseFollowButton({ caseId }: { caseId: string }) {
   const { address, isConnected } = useAccount()
   const { signMessageAsync } = useSignMessage()
   const [following, setFollowing] = useState<boolean | undefined>()
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<ActionStatusState | undefined>()
   const [pending, setPending] = useState(false)
 
   useEffect(() => {
@@ -38,7 +39,7 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
     if (!address || pending) return
 
     setPending(true)
-    setStatus('Preparing wallet signature...')
+    setStatus({ text: 'Preparing wallet signature...', tone: 'loading' })
     try {
       const challengeResponse = await fetch(`/api/cases/${encodeURIComponent(caseId)}/follow-challenge`, {
         method: 'POST',
@@ -49,18 +50,18 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
       })
       const challenge = await challengeResponse.json().catch(() => ({ error: 'challenge API returned a non-json response' }))
       if (!challengeResponse.ok || !challenge.message) {
-        setStatus(challenge.error ?? 'Follow challenge failed')
+        setStatus({ text: challenge.error ?? 'Follow challenge failed', tone: 'error' })
         return
       }
 
       const currentFollowing = typeof following === 'boolean' ? following : Boolean(challenge.following)
       const nextFollowing = !currentFollowing
 
-      setStatus(nextFollowing ? 'Sign to follow this case...' : 'Sign to unfollow this case...')
+      setStatus({ text: nextFollowing ? 'Sign to follow this case...' : 'Sign to unfollow this case...', tone: 'loading' })
       const signature = await signMessageAsync({ message: challenge.message })
 
       setFollowing(nextFollowing)
-      setStatus(nextFollowing ? 'Following case...' : 'Removing from watchlist...')
+      setStatus({ text: nextFollowing ? 'Following case...' : 'Removing from watchlist...', tone: 'loading' })
       const response = await fetch(`/api/cases/${encodeURIComponent(caseId)}/follow`, {
         method: 'POST',
         headers: {
@@ -78,14 +79,14 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
       const payload = await response.json().catch(() => ({ error: 'follow API returned a non-json response' }))
       if (!response.ok) {
         setFollowing(currentFollowing)
-        setStatus(payload.error ?? 'Follow update failed')
+        setStatus({ text: payload.error ?? 'Follow update failed', tone: 'error' })
         return
       }
 
       setFollowing(payload.following)
-      setStatus(payload.following ? 'Following case' : 'Removed from watchlist')
+      setStatus({ text: payload.following ? 'Following case' : 'Removed from watchlist', tone: 'success' })
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Follow update failed')
+      setStatus({ text: error instanceof Error ? error.message : 'Follow update failed', tone: 'error' })
     } finally {
       setPending(false)
     }
@@ -101,7 +102,7 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
         {(following ?? false) ? <BellSlash size={16} /> : <Bell size={16} />}
         {(following ?? false) ? 'Unfollow' : 'Follow'}
       </button>
-      {status ? <span>{status}</span> : null}
+      <ActionStatus status={status} compact />
     </div>
   )
 }

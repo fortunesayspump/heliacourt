@@ -4,18 +4,19 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiCaseDetail } from '../../../lib/backend-data'
+import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
 export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
   const { address, isConnected } = useAccount()
   const { signMessageAsync } = useSignMessage()
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<ActionStatusState | undefined>()
   const [detail, setDetail] = useState<ApiCaseDetail | undefined>()
 
   const unlock = async () => {
     if (!address) return
 
-    setStatus('Preparing private-case signature...')
+    setStatus({ text: 'Preparing private-case signature...', tone: 'loading' })
     const challengeResponse = await fetch(`/api/cases/${encodeURIComponent(caseId)}/challenge`, {
       method: 'POST',
       headers: {
@@ -25,20 +26,20 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
     })
     const challenge = await challengeResponse.json().catch(() => ({ error: 'challenge API returned a non-json response' }))
     if (!challengeResponse.ok || !challenge.message) {
-      setStatus(challenge.error ?? 'Private-case challenge failed')
+      setStatus({ text: challenge.error ?? 'Private-case challenge failed', tone: 'error' })
       return
     }
 
     let signature: `0x${string}`
     try {
-      setStatus('Sign in your wallet to unlock this private case...')
+      setStatus({ text: 'Sign in your wallet to unlock this private case...', tone: 'loading' })
       signature = await signMessageAsync({ message: challenge.message })
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Wallet signature was rejected')
+      setStatus({ text: error instanceof Error ? error.message : 'Wallet signature was rejected', tone: 'error' })
       return
     }
 
-    setStatus('Unlocking private case...')
+    setStatus({ text: 'Unlocking private case...', tone: 'loading' })
     const response = await fetch(`/api/cases/${encodeURIComponent(caseId)}/private`, {
       method: 'POST',
       headers: {
@@ -54,12 +55,12 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
     })
     const payload = await response.json().catch(() => ({ error: 'private case API returned a non-json response' }))
     if (!response.ok || !payload.case) {
-      setStatus(payload.error ?? 'Private case unlock failed')
+      setStatus({ text: payload.error ?? 'Private case unlock failed', tone: 'error' })
       return
     }
 
     setDetail(payload)
-    setStatus('Private case unlocked')
+    setStatus({ text: 'Private case unlocked', tone: 'success' })
   }
 
   if (detail) {
@@ -118,7 +119,7 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
       ) : (
         <WalletButton className="primary-button" label="Connect wallet" />
       )}
-      {status ? <p>{status}</p> : null}
+      <ActionStatus status={status} />
       <Link className="secondary-button compact-back" href="/cases">Back to docket</Link>
     </section>
   )

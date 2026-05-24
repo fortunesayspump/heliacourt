@@ -5,6 +5,7 @@ import { formatUnits, parseUnits, zeroAddress } from 'viem'
 import { useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
 import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../../lib/contracts'
+import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 
 const usdcDecimals = 6
 const zero = BigInt(0)
@@ -15,7 +16,7 @@ export function GatewayPanel() {
   const { writeContractAsync } = useWriteContract()
   const [depositAmount, setDepositAmount] = useState('0.01')
   const [withdrawAmount, setWithdrawAmount] = useState('0.01')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<ActionStatusState | undefined>()
   const [busy, setBusy] = useState(false)
 
   const allowance = useReadContract({
@@ -47,24 +48,24 @@ export function GatewayPanel() {
 
   async function deposit() {
     if (!isConnected || !address || !publicClient) {
-      setStatus('Connect wallet first.')
+      setStatus({ text: 'Connect wallet first.', tone: 'error' })
       return
     }
 
     const amount = parseSafeAmount(depositAmount)
     if (amount <= zero) {
-      setStatus('Enter a USDC amount to deposit.')
+      setStatus({ text: 'Enter a USDC amount to deposit.', tone: 'error' })
       return
     }
     if (walletBalance < amount) {
-      setStatus(`Wallet balance is ${formatUnits(walletBalance, usdcDecimals)} USDC.`)
+      setStatus({ text: `Wallet balance is ${formatUnits(walletBalance, usdcDecimals)} USDC.`, tone: 'error' })
       return
     }
 
     setBusy(true)
     try {
       if (getBigint(allowance.data) < amount) {
-        setStatus('Approving Gateway wallet...')
+        setStatus({ text: 'Approving Gateway wallet...', tone: 'loading' })
         const approvalHash = await writeContractAsync({
           abi: erc20Abi,
           address: contractAddresses.usdc,
@@ -74,7 +75,7 @@ export function GatewayPanel() {
         await publicClient.waitForTransactionReceipt({ hash: approvalHash })
       }
 
-      setStatus('Depositing to Gateway...')
+      setStatus({ text: 'Depositing to Gateway...', tone: 'loading' })
       const depositHash = await writeContractAsync({
         abi: gatewayWalletAbi,
         address: contractAddresses.gatewayWallet,
@@ -82,10 +83,10 @@ export function GatewayPanel() {
         args: [contractAddresses.usdc, amount],
       })
       await publicClient.waitForTransactionReceipt({ hash: depositHash })
-      setStatus(`Deposited ${formatUnits(amount, usdcDecimals)} USDC to Gateway.`)
+      setStatus({ text: `Deposited ${formatUnits(amount, usdcDecimals)} USDC to Gateway.`, tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Gateway deposit failed.')
+      setStatus({ text: error instanceof Error ? error.message : 'Gateway deposit failed.', tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -93,22 +94,22 @@ export function GatewayPanel() {
 
   async function requestWithdraw() {
     if (!isConnected || !address || !publicClient) {
-      setStatus('Connect wallet first.')
+      setStatus({ text: 'Connect wallet first.', tone: 'error' })
       return
     }
     const amount = parseSafeAmount(withdrawAmount)
     if (amount <= zero) {
-      setStatus('Enter a USDC amount to withdraw.')
+      setStatus({ text: 'Enter a USDC amount to withdraw.', tone: 'error' })
       return
     }
     if (gatewayAvailable < amount) {
-      setStatus(`Gateway available balance is ${formatUnits(gatewayAvailable, usdcDecimals)} USDC.`)
+      setStatus({ text: `Gateway available balance is ${formatUnits(gatewayAvailable, usdcDecimals)} USDC.`, tone: 'error' })
       return
     }
 
     setBusy(true)
     try {
-      setStatus('Requesting Gateway withdrawal...')
+      setStatus({ text: 'Requesting Gateway withdrawal...', tone: 'loading' })
       const hash = await writeContractAsync({
         abi: gatewayWalletAbi,
         address: contractAddresses.gatewayWallet,
@@ -116,10 +117,10 @@ export function GatewayPanel() {
         args: [contractAddresses.usdc, amount],
       })
       await publicClient.waitForTransactionReceipt({ hash })
-      setStatus('Withdrawal requested. Complete it when the withdrawable balance is ready.')
+      setStatus({ text: 'Withdrawal requested. Complete it when the withdrawable balance is ready.', tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Gateway withdrawal request failed.')
+      setStatus({ text: error instanceof Error ? error.message : 'Gateway withdrawal request failed.', tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -127,17 +128,17 @@ export function GatewayPanel() {
 
   async function completeWithdraw() {
     if (!isConnected || !address || !publicClient) {
-      setStatus('Connect wallet first.')
+      setStatus({ text: 'Connect wallet first.', tone: 'error' })
       return
     }
     if (gatewayWithdrawable <= zero) {
-      setStatus('No withdrawable Gateway balance yet.')
+      setStatus({ text: 'No withdrawable Gateway balance yet.', tone: 'error' })
       return
     }
 
     setBusy(true)
     try {
-      setStatus('Completing Gateway withdrawal...')
+      setStatus({ text: 'Completing Gateway withdrawal...', tone: 'loading' })
       const hash = await writeContractAsync({
         abi: gatewayWalletAbi,
         address: contractAddresses.gatewayWallet,
@@ -145,10 +146,10 @@ export function GatewayPanel() {
         args: [contractAddresses.usdc],
       })
       await publicClient.waitForTransactionReceipt({ hash })
-      setStatus('Gateway withdrawal completed.')
+      setStatus({ text: 'Gateway withdrawal completed.', tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Gateway withdrawal failed.')
+      setStatus({ text: error instanceof Error ? error.message : 'Gateway withdrawal failed.', tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -193,8 +194,8 @@ export function GatewayPanel() {
       <p className="gateway-explainer">
         Case filing and join funding spend wallet USDC through CaseEscrow. Paid agent/API reads use Gateway balance for gas-free x402 settlement.
       </p>
-      {status ? <p className="gateway-status">{status}</p> : null}
-      {!isConnected ? <p className="gateway-status">Connect wallet to manage Gateway funds.</p> : null}
+      <ActionStatus status={status} />
+      {!isConnected ? <ActionStatus status={{ text: 'Connect wallet to manage Gateway funds.', tone: 'info' }} /> : null}
     </section>
   )
 }

@@ -197,6 +197,13 @@ export type ApiUserProfile = {
 
 export type ApiUserAccount = {
   profile: ApiUserProfile
+  telegram?: {
+    telegramUserId: string
+    username?: string | null
+    firstName?: string | null
+    linkedAt?: string
+    updatedAt?: string
+  } | null
   cases: Array<{
     id: string
     title: string

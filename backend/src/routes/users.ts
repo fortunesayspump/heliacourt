@@ -5,7 +5,7 @@ import { verifyMessage } from 'viem'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, users } from '../db/schema.js'
+import { authChallenges, caseFollows, caseParticipants, cases, onchainReceipts, telegramAccounts, users } from '../db/schema.js'
 
 const walletSchema = z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value))
 const profileFieldsSchema = z.object({
@@ -114,7 +114,7 @@ export async function userRoutes(app: FastifyInstance) {
 
     const wallet = normalizeWallet(parsed.data.wallet)
     const profile = await ensureUser(wallet)
-    const [participatedCases, followedCases, payoutRows] = await Promise.all([
+    const [participatedCases, followedCases, payoutRows, linkedTelegram] = await Promise.all([
       db!
         .select({
           caseId: cases.id,
@@ -144,6 +144,17 @@ export async function userRoutes(app: FastifyInstance) {
         .from(onchainReceipts)
         .where(eq(onchainReceipts.receiptType, 'agent-payout'))
         .orderBy(desc(onchainReceipts.createdAt)),
+      db!
+        .select({
+          telegramUserId: telegramAccounts.telegramUserId,
+          username: telegramAccounts.username,
+          firstName: telegramAccounts.firstName,
+          linkedAt: telegramAccounts.linkedAt,
+          updatedAt: telegramAccounts.updatedAt,
+        })
+        .from(telegramAccounts)
+        .where(eq(telegramAccounts.wallet, wallet))
+        .limit(1),
     ])
 
     const walletPayouts = payoutRows
@@ -154,6 +165,13 @@ export async function userRoutes(app: FastifyInstance) {
 
     return {
       profile: formatProfile(profile),
+      telegram: linkedTelegram[0] ? {
+        telegramUserId: linkedTelegram[0].telegramUserId,
+        username: linkedTelegram[0].username,
+        firstName: linkedTelegram[0].firstName,
+        linkedAt: linkedTelegram[0].linkedAt.toISOString(),
+        updatedAt: linkedTelegram[0].updatedAt.toISOString(),
+      } : null,
       cases: participatedCases
         .filter((item) => item.role === 'filer')
         .map((item) => ({

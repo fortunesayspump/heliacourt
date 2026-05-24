@@ -1,11 +1,12 @@
 'use client'
 
-import { SealCheck, UserCircle, X } from '@phosphor-icons/react'
+import { SealCheck, TelegramLogo, UserCircle, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../../lib/backend-data'
+import { ActionStatus, type ActionStatusTone } from '../ui/ActionStatus'
 import { GatewayBalance } from '../wallet/GatewayBalance'
 import { WalletBalance } from '../wallet/WalletBalance'
 import { WalletButton } from '../wallet/WalletButton'
@@ -23,8 +24,6 @@ const emptyForm: ProfileForm = {
 }
 
 type VisibilityFilter = 'all' | 'public' | 'private'
-type StatusTone = 'info' | 'success' | 'error'
-
 export function ProfileAccountPanel() {
   const searchParams = useSearchParams()
   const { address } = useAccount()
@@ -32,12 +31,13 @@ export function ProfileAccountPanel() {
   const [account, setAccount] = useState<ApiUserAccount | undefined>()
   const [form, setForm] = useState<ProfileForm>(emptyForm)
   const [status, setStatus] = useState('')
-  const [statusTone, setStatusTone] = useState<StatusTone>('info')
+  const [statusTone, setStatusTone] = useState<ActionStatusTone>('info')
   const [loading, setLoading] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [telegramLinking, setTelegramLinking] = useState(false)
   const [telegramLinked, setTelegramLinked] = useState(false)
+  const [telegramPromptOpen, setTelegramPromptOpen] = useState(false)
   const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
   const telegramLinkToken = searchParams.get('telegramLink')
   const requestedWallet = normalizeWalletParam(
@@ -48,10 +48,16 @@ export function ProfileAccountPanel() {
   )
   const targetWallet = requestedWallet ?? address
   const isOwnProfile = Boolean(address && targetWallet && address.toLowerCase() === targetWallet.toLowerCase())
-  const setPanelStatus = (message: string, tone: StatusTone = 'info') => {
+  const setPanelStatus = (message: string, tone: ActionStatusTone = 'info') => {
     setStatus(message)
     setStatusTone(tone)
   }
+
+  useEffect(() => {
+    if (telegramLinkToken && isOwnProfile && !telegramLinked) {
+      setTelegramPromptOpen(true)
+    }
+  }, [isOwnProfile, telegramLinkToken, telegramLinked])
 
   useEffect(() => {
     if (!targetWallet) {
@@ -96,6 +102,7 @@ export function ProfileAccountPanel() {
   const profileName = account?.profile.displayName || account?.profile.username || 'No display name'
   const profileHandle = account?.profile.username ? `@${account.profile.username}` : 'No username'
   const profileBio = account?.profile.bio || 'No public profile note yet.'
+  const telegramHandle = formatTelegramHandle(account?.telegram)
   const filedCases = account?.cases ?? []
   const followedCases = account?.follows ?? []
   const filteredFiledCases = filedCases.filter((item) => visibilityFilter === 'all' || item.visibility === visibilityFilter)
@@ -105,7 +112,7 @@ export function ProfileAccountPanel() {
     if (!address || !isOwnProfile || saving) return
 
     setSaving(true)
-    setStatus('Preparing wallet signature...')
+    setPanelStatus('Preparing wallet signature...', 'loading')
     const previousAccount = account
     try {
       const challengeResponse = await fetch(`/api/users/${address}/challenge`, {
@@ -113,11 +120,11 @@ export function ProfileAccountPanel() {
       })
       const challenge = await challengeResponse.json().catch(() => ({ error: 'challenge API returned a non-json response' }))
       if (!challengeResponse.ok || !challenge.message) {
-        setStatus(challenge.error ?? 'Profile signature challenge failed')
+        setPanelStatus(challenge.error ?? 'Profile signature challenge failed', 'error')
         return
       }
 
-      setStatus('Sign the profile update in your wallet...')
+      setPanelStatus('Sign the profile update in your wallet...', 'loading')
       const signature = await signMessageAsync({ message: challenge.message })
 
       setAccount((current) => current ? {
@@ -129,7 +136,7 @@ export function ProfileAccountPanel() {
           bio: form.bio.trim() || null,
         },
       } : current)
-      setStatus('Saving profile...')
+      setPanelStatus('Saving profile...', 'loading')
       const response = await fetch(`/api/users/${address}`, {
         method: 'PUT',
         headers: {
@@ -146,16 +153,16 @@ export function ProfileAccountPanel() {
       const payload = await response.json().catch(() => ({ error: 'profile API returned a non-json response' }))
       if (!response.ok) {
         setAccount(previousAccount)
-        setStatus(payload.error ?? 'Profile save failed')
+        setPanelStatus(payload.error ?? 'Profile save failed', 'error')
         return
       }
 
       setAccount((current) => current ? { ...current, profile: payload.profile } : current)
-      setStatus('Profile saved')
+      setPanelStatus('Profile saved', 'success')
       setEditOpen(false)
     } catch (error) {
       setAccount(previousAccount)
-      setStatus(error instanceof Error ? error.message : 'Profile save failed')
+      setPanelStatus(error instanceof Error ? error.message : 'Profile save failed', 'error')
     } finally {
       setSaving(false)
     }
@@ -174,7 +181,7 @@ export function ProfileAccountPanel() {
 
     setTelegramLinked(false)
     setTelegramLinking(true)
-    setPanelStatus('Preparing Telegram link signature...')
+    setPanelStatus('Preparing Telegram link signature...', 'loading')
     try {
       const challengeResponse = await fetch('/api/telegram/link-challenge', {
         method: 'POST',
@@ -187,9 +194,9 @@ export function ProfileAccountPanel() {
         return
       }
 
-      setPanelStatus('Sign the Telegram link in your wallet...')
+      setPanelStatus('Sign the Telegram link in your wallet...', 'loading')
       const signature = await signMessageAsync({ message: challenge.message })
-      setPanelStatus('Linking Telegram...')
+      setPanelStatus('Linking Telegram...', 'loading')
 
       const response = await fetch('/api/telegram/link', {
         method: 'POST',
@@ -209,6 +216,9 @@ export function ProfileAccountPanel() {
         return
       }
 
+      if ('telegram' in payload && payload.telegram) {
+        setAccount((current) => current ? { ...current, telegram: payload.telegram } : current)
+      }
       setTelegramLinked(true)
       setPanelStatus('Telegram linked. Return to the bot and send /me.', 'success')
     } catch (error) {
@@ -265,6 +275,12 @@ export function ProfileAccountPanel() {
             {isOwnProfile ? <WalletBalance label="Wallet" /> : null}
             {isOwnProfile ? <GatewayBalance /> : null}
             {isOwnProfile ? <WalletButton className="secondary-button compact-back" label="Wallet" /> : null}
+            {telegramHandle ? (
+              <span className="profile-telegram-chip">
+                <TelegramLogo size={15} weight="fill" />
+                {telegramHandle}
+              </span>
+            ) : null}
           </div>
         </div>
         <div className="profile-status-pill">
@@ -276,12 +292,11 @@ export function ProfileAccountPanel() {
             Edit profile
           </button>
         ) : null}
-        {isOwnProfile && telegramLinkToken ? (
-          <button className="primary-button compact-back profile-edit-trigger" type="button" onClick={linkTelegram} disabled={telegramLinking || telegramLinked}>
-            {telegramLinking ? 'Linking Telegram' : telegramLinked ? 'Telegram linked' : 'Link Telegram'}
-          </button>
+        {status ? (
+          <div className="profile-inline-status">
+            <ActionStatus status={{ text: status, tone: statusTone }} />
+          </div>
         ) : null}
-        {status ? <p className={`profile-inline-status profile-inline-status-${statusTone}`} role="status" aria-live="polite">{status}</p> : null}
       </section>
 
       <section className="app-summary-grid profile-stat-grid" aria-label="Profile summary">
@@ -444,7 +459,41 @@ export function ProfileAccountPanel() {
               <button className="secondary-button compact-back" disabled={saving} type="button" onClick={saveProfile}>
                 {saving ? 'Saving...' : 'Save profile'}
               </button>
-              {status ? <p>{status}</p> : null}
+              <ActionStatus status={status ? { text: status, tone: statusTone } : undefined} compact />
+            </div>
+          </section>
+        </div>
+      ) : null}
+      {telegramPromptOpen && telegramLinkToken ? (
+        <div className="profile-modal-backdrop" role="presentation" onMouseDown={() => {
+          if (!telegramLinking) setTelegramPromptOpen(false)
+        }}>
+          <section
+            aria-modal="true"
+            className="profile-modal profile-telegram-modal panel"
+            role="dialog"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="profile-modal-head">
+              <div className="profile-panel-heading">
+                <SealCheck size={18} />
+                <div>
+                  <h3>Link Telegram</h3>
+                  <p>Sign once to connect this Telegram chat to your court wallet.</p>
+                </div>
+              </div>
+              <button aria-label="Close Telegram linker" className="profile-modal-close" disabled={telegramLinking} type="button" onClick={() => setTelegramPromptOpen(false)}>
+                <X size={18} />
+              </button>
+            </div>
+            <ActionStatus status={status ? { text: status, tone: statusTone } : { text: 'Ready to link this Telegram chat.', tone: 'info' }} />
+            <div className="profile-action-row">
+              <button className="primary-button compact-back" disabled={telegramLinking || telegramLinked} type="button" onClick={linkTelegram}>
+                {telegramLinking ? 'Linking Telegram' : telegramLinked ? 'Telegram linked' : 'Link Telegram'}
+              </button>
+              <button className="secondary-button compact-back" disabled={telegramLinking} type="button" onClick={() => setTelegramPromptOpen(false)}>
+                Not now
+              </button>
             </div>
           </section>
         </div>
@@ -472,6 +521,13 @@ function normalizeWalletParam(value: string | null) {
 
 function shortHash(hash: string) {
   return `${hash.slice(0, 8)}...${hash.slice(-6)}`
+}
+
+function formatTelegramHandle(telegram: ApiUserAccount['telegram']) {
+  if (!telegram) return undefined
+  if (telegram.username) return `@${telegram.username}`
+  if (telegram.firstName) return telegram.firstName
+  return `Telegram ${telegram.telegramUserId.slice(-5)}`
 }
 
 function getWalletAvatarUrl(address: string) {

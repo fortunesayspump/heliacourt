@@ -1942,6 +1942,59 @@ button {
   font-weight: 700;
 }
 
+.action-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(231, 196, 139, 0.18);
+  border-radius: 8px;
+  background: rgba(18, 25, 21, 0.74);
+  color: rgba(244, 239, 227, 0.88);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.action-status-compact {
+  width: auto;
+  padding: 7px 9px;
+  font-size: 12px;
+}
+
+.action-status-success {
+  border-color: rgba(132, 177, 120, 0.36);
+  color: rgba(221, 244, 215, 0.94);
+}
+
+.action-status-error {
+  border-color: rgba(191, 82, 68, 0.42);
+  color: rgba(255, 218, 212, 0.96);
+}
+
+.action-status-loading {
+  border-color: rgba(212, 170, 109, 0.34);
+}
+
+.action-status-spinner {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: action-status-spin 760ms linear infinite;
+}
+
+@keyframes action-status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .x402-workspace {
   display: grid;
   gap: 24px;
@@ -6110,28 +6163,28 @@ a.registry-row:hover {
   color: var(--bronze);
 }
 
+.profile-telegram-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(212, 170, 109, 0.24);
+  border-radius: 999px;
+  background: rgba(111, 78, 55, 0.16);
+  color: var(--ag-ink);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.profile-telegram-chip svg {
+  color: var(--bronze);
+}
+
 .profile-inline-status {
   grid-column: 1 / -1;
   width: 100%;
   margin: 2px 0 0;
-  padding: 10px 12px;
-  border: 1px solid rgba(231, 196, 139, 0.18);
-  border-radius: 8px;
-  background: rgba(18, 25, 21, 0.74);
-  color: rgba(244, 239, 227, 0.88);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.profile-inline-status-success {
-  border-color: rgba(132, 177, 120, 0.36);
-  color: rgba(221, 244, 215, 0.94);
-}
-
-.profile-inline-status-error {
-  border-color: rgba(191, 82, 68, 0.42);
-  color: rgba(255, 218, 212, 0.96);
 }
 
 .profile-edit-trigger {

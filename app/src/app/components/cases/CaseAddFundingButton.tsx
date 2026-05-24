@@ -6,6 +6,7 @@ import { formatUnits, parseEventLogs, parseUnits } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../../lib/arc'
 import { caseEscrowAbi, contractAddresses, erc20Abi } from '../../../lib/contracts'
+import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
 type CaseOnchain = {
@@ -23,7 +24,7 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain()
   const { writeContractAsync, isPending } = useWriteContract()
   const [amount, setAmount] = useState('')
-  const [status, setStatus] = useState('')
+  const [status, setStatus] = useState<ActionStatusState | undefined>()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
@@ -54,34 +55,34 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
 
   const addFunding = async () => {
     if (!onchain || !escrowAddress) {
-      setStatus('This case does not have an Arc escrow record.')
+      setStatus({ text: 'This case does not have an Arc escrow record.', tone: 'error' })
       return
     }
     if (!isConnected || !address) {
-      setStatus('Connect a wallet first.')
+      setStatus({ text: 'Connect a wallet first.', tone: 'error' })
       return
     }
     if (!publicClient) {
-      setStatus('Arc RPC client is not ready.')
+      setStatus({ text: 'Arc RPC client is not ready.', tone: 'error' })
       return
     }
     if (wrongChain) {
-      setStatus('Switching wallet to Arc testnet...')
+      setStatus({ text: 'Switching wallet to Arc testnet...', tone: 'loading' })
       await switchChainAsync({ chainId: arcTestnet.id })
       return
     }
     if (amountUnits <= zero) {
-      setStatus('Enter a USDC amount to add.')
+      setStatus({ text: 'Enter a USDC amount to add.', tone: 'error' })
       return
     }
     if (balanceValue < amountUnits) {
-      setStatus(`Wallet balance is ${formatUnits(balanceValue, usdcDecimals)} USDC.`)
+      setStatus({ text: `Wallet balance is ${formatUnits(balanceValue, usdcDecimals)} USDC.`, tone: 'error' })
       return
     }
 
     try {
       if (needsApproval) {
-        setStatus('Approving USDC for CaseEscrow...')
+        setStatus({ text: 'Approving USDC for CaseEscrow...', tone: 'loading' })
         const approveHash = await writeContractAsync({
           abi: erc20Abi,
           address: contractAddresses.usdc,
@@ -91,7 +92,7 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
         await publicClient.waitForTransactionReceipt({ hash: approveHash })
       }
 
-      setStatus('Adding funding to the escrow...')
+      setStatus({ text: 'Adding funding to the escrow...', tone: 'loading' })
       const txHash = await writeContractAsync({
         abi: caseEscrowAbi,
         address: escrowAddress,
@@ -122,11 +123,11 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
       if (!response.ok) throw new Error(payload.error ?? 'funding receipt was not recorded')
 
       setAmount('')
-      setStatus(`Added ${payload.amountUsdc} USDC to this case.`)
+      setStatus({ text: `Added ${payload.amountUsdc} USDC to this case.`, tone: 'success' })
       void balance.refetch()
       void allowance.refetch()
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'Funding failed.')
+      setStatus({ text: error instanceof Error ? error.message : 'Funding failed.', tone: 'error' })
     }
   }
 
@@ -158,7 +159,7 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
         <CurrencyDollar size={16} />
         {wrongChain ? 'Switch to Arc' : needsApproval ? 'Approve + join' : 'Join funding'}
       </button>
-      {status ? <span>{status}</span> : null}
+      <ActionStatus status={status} compact />
     </div>
   )
 }

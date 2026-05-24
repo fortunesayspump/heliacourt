@@ -48,7 +48,6 @@ export async function telegramRoutes(app: FastifyInstance) {
 
     if (!chatId || !text) return { ok: true }
 
-    const jobs = (await listHearingJobs()).filter((job) => (job.marketCase.visibility ?? 'public') === 'public')
     const responseText = await buildTelegramReply({
       text,
       chatId: String(chatId),
@@ -57,7 +56,13 @@ export async function telegramRoutes(app: FastifyInstance) {
       telegramUserId: from?.id ? String(from.id) : String(chatId),
       username: from?.username,
       firstName: from?.first_name,
-      jobs,
+    }).catch((error) => {
+      request.log.error({
+        err: error,
+        chatId: String(chatId),
+        telegramUserId: from?.id ? String(from.id) : String(chatId),
+      }, 'telegram command failed')
+      return 'Something went wrong while handling that command. Try again in a moment, or send /help for the command list.'
     })
     await sendTelegramReply(String(chatId), responseText).catch((error) => {
       request.log.warn({
@@ -172,7 +177,17 @@ export async function telegramRoutes(app: FastifyInstance) {
       }, 'telegram link confirmation failed')
     })
 
-    return { ok: true, wallet, telegramUserId: linkRequest.telegramUserId }
+    return {
+      ok: true,
+      wallet,
+      telegram: {
+        telegramUserId: linkRequest.telegramUserId,
+        username: linkRequest.username,
+        firstName: linkRequest.firstName,
+        linkedAt: now.toISOString(),
+        updatedAt: now.toISOString(),
+      },
+    }
   })
 
   app.get('/telegram/commands', async () => ({
@@ -188,7 +203,6 @@ async function buildTelegramReply({
   telegramUserId,
   username,
   firstName,
-  jobs,
 }: {
   text: string
   chatId: string
@@ -197,8 +211,8 @@ async function buildTelegramReply({
   telegramUserId: string
   username?: string
   firstName?: string
-  jobs: Awaited<ReturnType<typeof listHearingJobs>>
 }) {
+  const jobs = (await listHearingJobs()).filter((job) => (job.marketCase.visibility ?? 'public') === 'public')
   const [command = ''] = text.trim().split(/\s+/)
   const name = command.toLowerCase().replace(/@\w+$/, '')
 

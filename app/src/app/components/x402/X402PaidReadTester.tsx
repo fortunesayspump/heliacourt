@@ -6,6 +6,7 @@ import { x402Client, x402HTTPClient } from '@x402/core/client'
 import { useEffect, useMemo, useState } from 'react'
 import { type Address } from 'viem'
 import { useAccount, useWalletClient } from 'wagmi'
+import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 
 type X402Resource = 'price' | 'transcript' | 'receipts' | 'proof'
 
@@ -22,7 +23,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
   const [resource, setResource] = useState<X402Resource>('proof')
   const [caseId, setCaseId] = useState(suggestedCaseId ?? '')
   const [busy, setBusy] = useState(false)
-  const [status, setStatus] = useState('Ready to request a paid proof route.')
+  const [status, setStatus] = useState<ActionStatusState>({ text: 'Ready to request a paid proof route.', tone: 'info' })
   const [responseBody, setResponseBody] = useState('')
   const [settlement, setSettlement] = useState('')
   const [policyEnabled, setPolicyEnabled] = useState(false)
@@ -75,11 +76,11 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
 
   async function runPaidRead() {
     if (!isConnected || !address || !walletClient.data) {
-      setStatus('Connect wallet first.')
+      setStatus({ text: 'Connect wallet first.', tone: 'error' })
       return
     }
     if (!trimmedCaseId) {
-      setStatus('Paste a case id first.')
+      setStatus({ text: 'Paste a case id first.', tone: 'error' })
       return
     }
 
@@ -89,12 +90,12 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
 
     try {
       const endpoint = `/api/x402/${resource}/${encodeURIComponent(trimmedCaseId)}`
-      setStatus('Requesting payment requirements...')
+      setStatus({ text: 'Requesting payment requirements...', tone: 'loading' })
       const challengeResponse = await fetch(endpoint, { cache: 'no-store' })
       const challengeBody = await readJson(challengeResponse)
 
       if (challengeResponse.status !== 402) {
-        setStatus(`Expected 402 payment request, got ${challengeResponse.status}.`)
+        setStatus({ text: `Expected 402 payment request, got ${challengeResponse.status}.`, tone: 'error' })
         setResponseBody(formatJson(challengeBody))
         return
       }
@@ -131,18 +132,18 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
         readsUsed: policyReadsUsed,
       })
       if (policyError) {
-        setStatus(policyError)
+        setStatus({ text: policyError, tone: 'error' })
         setResponseBody(formatJson(paymentRequired))
         return
       }
 
-      setStatus('Signing Gateway x402 authorization...')
+      setStatus({ text: 'Signing Gateway x402 authorization...', tone: 'loading' })
       const paymentPayload = await httpClient.createPaymentPayload(paymentRequired)
       const paymentHeaders: Record<string, string> = httpClient.encodePaymentSignatureHeader(paymentPayload)
       const challengeToken = challengeResponse.headers.get('x-payment-challenge')
       if (challengeToken) paymentHeaders['x-payment-challenge'] = challengeToken
 
-      setStatus('Submitting paid read...')
+      setStatus({ text: 'Submitting paid read...', tone: 'loading' })
       const paidResponse = await fetch(endpoint, {
         cache: 'no-store',
         headers: paymentHeaders,
@@ -151,7 +152,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
       setResponseBody(formatJson(paidBody))
 
       if (!paidResponse.ok) {
-        setStatus(`Paid read failed with ${paidResponse.status}.`)
+        setStatus({ text: `Paid read failed with ${paidResponse.status}.`, tone: 'error' })
         return
       }
 
@@ -161,9 +162,9 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
         setPolicySpentMicroUsdc((value) => value + amountMicroUsdc)
         setPolicyReadsUsed((value) => value + 1)
       }
-      setStatus('Paid read settled and returned.')
+      setStatus({ text: 'Paid read settled and returned.', tone: 'success' })
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : 'x402 paid read failed.')
+      setStatus({ text: error instanceof Error ? error.message : 'x402 paid read failed.', tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -229,7 +230,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
             {busy ? <ArrowClockwise size={16} /> : <ShieldCheck size={16} />}
             {busy ? 'Working' : 'Pay and read'}
           </button>
-          <p className="gateway-status">{status}</p>
+          <ActionStatus status={status} />
           <p className="gateway-explainer">Use this when a browser agent or external app needs structured JSON. Public case pages stay free to read.</p>
         </div>
 
