@@ -10998,8 +10998,8 @@ a:focus-visible,
   }
 
   .dashboard-case-list {
-    max-height: none !important;
-    overflow: visible !important;
+    max-height: min(58vh, 440px) !important;
+    overflow-y: auto !important;
   }
 
   .dashboard-grid .case-table .case-row,
@@ -11017,10 +11017,10 @@ a:focus-visible,
     grid-template-columns: 74px minmax(0, 1fr) !important;
     grid-template-areas:
       "image copy"
-      "stats stats"
-      "action action" !important;
+      "stats stats" !important;
     align-items: start !important;
     min-height: 0 !important;
+    position: relative !important;
   }
 
   .dashboard-grid .case-table .case-row .market-row-image {
@@ -11073,15 +11073,21 @@ a:focus-visible,
   }
 
   .dashboard-grid .case-table .case-row > a {
-    grid-area: action;
-    justify-self: stretch !important;
-    margin-top: 2px !important;
+    position: absolute !important;
+    inset: 0 !important;
+    z-index: 2 !important;
+    width: auto !important;
+    height: auto !important;
+    border: 0 !important;
+    border-radius: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: transparent !important;
+    opacity: 0 !important;
   }
 
-  .dashboard-grid .case-table .case-row > a {
-    width: 100% !important;
-    height: 38px !important;
-    border-radius: var(--radius-sm) !important;
+  .dashboard-grid .case-table .case-row > a svg {
+    display: none !important;
   }
 
   .dashboard-receipts-panel .compact-receipt-card {
