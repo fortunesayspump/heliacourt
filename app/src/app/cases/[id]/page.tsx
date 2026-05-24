@@ -466,12 +466,12 @@ async function CaseRecordData({
               </div>
               <div className="bench-agent-list">
                 {seatedAgents.length ? seatedAgents.map((agent) => (
-                  <article className="bench-agent-row" key={agent.id}>
+                  <article className={`bench-agent-row${agent.roleColorClass ? ` ${agent.roleColorClass}` : ''}`} key={agent.id}>
                     <span className="bench-agent-avatar" aria-hidden="true">
                       {agent.avatarUrl ? <img alt="" src={agent.avatarUrl} /> : agent.name.slice(0, 1).toUpperCase()}
                     </span>
                     <div className="bench-agent-copy">
-                      <h3>{agent.name}</h3>
+                      <h3 className="agent-role-name">{agent.name}</h3>
                       <p>{formatAgentLabel(agent.seat)} · {agent.turns} turn{agent.turns === 1 ? '' : 's'}</p>
                     </div>
                   </article>

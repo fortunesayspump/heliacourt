@@ -1,5 +1,6 @@
 import type { ApiCaseDetail, ApiCourtArtifact, ApiTranscriptTurn } from '../../../lib/backend-data'
 import { getAgentAvatarUrl } from '../../../lib/agent-images'
+import { getAgentRoleColorClass } from '../../../lib/agent-role-colors'
 
 export type TranscriptSourceCard = {
   url: string
@@ -197,7 +198,7 @@ export function shortReceiptHash(value?: string) {
 }
 
 export function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {
-  const byAgent = new Map<string, { id: string; name: string; seat: string; turns: number; avatarUrl?: string }>()
+  const byAgent = new Map<string, { id: string; name: string; seat: string; turns: number; avatarUrl?: string; roleColorClass?: string }>()
 
   for (const turn of transcript) {
     const current = byAgent.get(turn.agentId)
@@ -210,6 +211,7 @@ export function summarizeSeatedAgents(transcript: ApiTranscriptTurn[]) {
         seat: turn.seat,
         turns: 1,
         avatarUrl: getAgentAvatarUrl(turn.agentId, turn.agentName),
+        roleColorClass: getAgentRoleColorClass(turn),
       })
     }
   }

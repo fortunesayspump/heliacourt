@@ -11273,6 +11273,40 @@ a:focus-visible,
   line-height: 1.2 !important;
 }
 
+.agent-role-solon {
+  --agent-role-color: #83c67a;
+}
+
+.agent-role-draco {
+  --agent-role-color: #e06f64;
+}
+
+.agent-role-archon {
+  --agent-role-color: #f1d3aa;
+}
+
+.agent-role-jury {
+  --agent-role-color: #9db5ff;
+}
+
+.agent-role-risk {
+  --agent-role-color: #f0a85f;
+}
+
+.agent-role-settlement {
+  --agent-role-color: #74d6bd;
+}
+
+.agent-role-clerk {
+  --agent-role-color: #c6b6ff;
+}
+
+.transcript-entry .agent-role-name,
+.transcript-reply .agent-role-name,
+.case-detail-right .bench-agent-row .agent-role-name {
+  color: var(--agent-role-color, var(--ag-on-dark)) !important;
+}
+
 .case-detail-right .bench-agent-copy p {
   color: var(--ag-muted) !important;
   font-size: 12px !important;

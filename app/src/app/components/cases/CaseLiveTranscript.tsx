@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SourceEmbedCard } from './SourceEmbedCard'
 import { getAgentAvatarUrl } from '../../../lib/agent-images'
+import { getAgentRoleColorClass } from '../../../lib/agent-role-colors'
 import type { ApiCourtArtifact, ApiTranscriptTurn } from '../../../lib/backend-data'
 
 type TranscriptSourceCard = {
@@ -134,13 +135,15 @@ export function CaseLiveTranscript({
           const sourceCards = getTurnSourceCards(turn, artifact)
           const hasContext = Boolean(replyTurn)
           const avatarUrl = getAgentAvatarUrl(turn.agentId, turn.agentName)
+          const roleColorClass = getAgentRoleColorClass(turn)
+          const replyRoleColorClass = replyTurn ? getAgentRoleColorClass(replyTurn) : undefined
 
           return (
-            <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
+            <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${roleColorClass ? ` ${roleColorClass}` : ''}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
               {replyTurn ? (
                 <div className="transcript-contexts">
-                  <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
-                    <strong>{replyTurn.agentName}</strong>
+                  <a className={`transcript-reply${replyRoleColorClass ? ` ${replyRoleColorClass}` : ''}`} href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
+                    <strong className="agent-role-name">{replyTurn.agentName}</strong>
                     <span>{summarizeTurn(replyTurn)}</span>
                   </a>
                 </div>
@@ -151,7 +154,7 @@ export function CaseLiveTranscript({
               <div className="transcript-message">
                 <div className="transcript-meta">
                   <div>
-                    <strong>{turn.agentName}</strong>
+                    <strong className="agent-role-name">{turn.agentName}</strong>
                     <span>{turn.stage}</span>
                     {typeof turn.confidence === 'number' && <span>{formatConfidence(turn.confidence)}</span>}
                     {turn.createdAt ? <time dateTime={turn.createdAt}>{formatTurnTime(turn.createdAt)}</time> : null}
