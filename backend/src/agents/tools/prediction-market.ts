@@ -5,10 +5,15 @@ import { getCaseSearchQuery, getCryptoAssetIds, getSearchTerms, getStockSymbols,
 type PolymarketMarket = {
   question?: string
   slug?: string
+  eventSlug?: string
   endDate?: string
   liquidity?: string
   volume?: string
   outcomePrices?: string
+  outcomes?: string
+  description?: string
+  rules?: string
+  sourceUrl?: string
 }
 
 type PolymarketPageMarket = PolymarketMarket & {
@@ -23,27 +28,45 @@ type PolymarketPageMarket = PolymarketMarket & {
 type KalshiMarketsResponse = {
   markets?: Array<{
     ticker?: string
+    event_ticker?: string
     title?: string
     subtitle?: string
+    yes_sub_title?: string
     close_time?: string
+    expected_expiration_time?: string
     liquidity?: number
+    liquidity_dollars?: string
     volume?: number
+    volume_fp?: string
     yes_bid?: number
     yes_ask?: number
     last_price?: number
     last_price_dollars?: string
+    rules_primary?: string
+    rules_secondary?: string
+    status?: string
   }>
 }
+
+type KalshiMarket = NonNullable<KalshiMarketsResponse['markets']>[number]
 
 type ManifoldMarket = {
   question?: string
   url?: string
+  slug?: string
   closeTime?: number
   probability?: number
   totalLiquidity?: number
   volume?: number
   volume24Hours?: number
   isResolved?: boolean
+  answers?: Array<{
+    id?: string
+    text?: string
+    name?: string
+    probability?: number
+  }>
+  sourceUrl?: string
 }
 
 type RequiredMarketTerms = {
@@ -62,6 +85,8 @@ type CoinGeckoSimplePrice = Record<
   }
 >
 
+type JsonRecord = Record<string, unknown>
+
 export async function getPredictionMarketEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
   const query = getCaseSearchQuery(marketCase.question)
   const fetchedAt = new Date().toISOString()
@@ -73,30 +98,40 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const stockSymbols = getStockSymbols(marketCase.question)
     const usdTarget = cryptoIds.length || stockSymbols.length ? getUsdTarget(marketCase.question) : undefined
     const searchQueries = getPredictionSearchQueries(query, cryptoIds, usdTarget)
-    const [markets, kalshiMarkets, manifoldMarkets] = await Promise.all([
+    const [searchPolymarketMarkets, directPolymarketLinkMarkets, kalshiSearchMarkets, directKalshiMarkets, searchManifoldMarkets, directManifoldLinkMarkets] = await Promise.all([
       fetchPolymarketMarkets(searchQueries),
+      fetchPolymarketMarketsFromLinks(marketCase.links),
       fetchKalshiMarkets(searchQueries),
+      fetchKalshiMarketsFromLinks(marketCase.links),
       fetchManifoldMarkets(searchQueries),
+      fetchManifoldMarketsFromLinks(marketCase.links),
     ])
+    const directPolymarketKeys = new Set(directPolymarketLinkMarkets.map(getPolymarketKey).filter((key): key is string => Boolean(key)))
+    const directManifoldKeys = new Set(directManifoldLinkMarkets.map(getManifoldKey).filter((key): key is string => Boolean(key)))
+    const markets = dedupeByQuestion([...directPolymarketLinkMarkets, ...searchPolymarketMarkets], getPolymarketKey)
+    const manifoldMarkets = dedupeByQuestion([...directManifoldLinkMarkets, ...searchManifoldMarkets], getManifoldKey)
+    const kalshiMarkets = { markets: dedupeKalshiMarkets([...(directKalshiMarkets.markets ?? []), ...(kalshiSearchMarkets.markets ?? [])]) }
 
     const searchTerms = getSearchTerms(marketCase.question)
     const requiredTerms = getRequiredMarketTerms(marketCase.question, cryptoIds, stockSymbols, usdTarget)
     const relevantMarkets = markets
-      .filter((market) => market.question && hasMarketRelevance(searchTerms, market.question, requiredTerms))
-      .slice(0, 5)
+      .filter((market) => directPolymarketKeys.has(getPolymarketKey(market) ?? '') || (market.question && hasMarketRelevance(searchTerms, getPolymarketMarketText(market), requiredTerms)))
+      .filter((market) => !isPlaceholderMarketText(getPolymarketMarketText(market)))
+      .slice(0, directPolymarketKeys.size ? 12 : 5)
 
     for (const market of relevantMarkets) {
       const liquidity = market.liquidity ? Number(market.liquidity).toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'unknown'
-      observations.push(`Polymarket: ${market.question} has about ${liquidity} liquidity.`)
+      const sourceKind = directPolymarketKeys.has(getPolymarketKey(market) ?? '') ? 'direct linked market/event' : 'search match'
+      observations.push(`Polymarket ${sourceKind}: ${market.question} has about ${liquidity} liquidity.${formatPolymarketOutcomes(market)}`)
       sources.push({
         title: market.question ?? 'Polymarket market',
-        url: market.slug ? `https://polymarket.com/event/${market.slug}` : undefined,
+        url: market.sourceUrl ?? (market.eventSlug && market.slug ? `https://polymarket.com/event/${market.eventSlug}/${market.slug}` : market.slug ? `https://polymarket.com/event/${market.slug}` : undefined),
         observedAt: market.endDate,
         value: market.outcomePrices,
       })
     }
 
-    const directPolymarketMarkets = !relevantMarkets.length ? await fetchPolymarketEventPageFallbacks(marketCase.question) : []
+    const directPolymarketMarkets = !relevantMarkets.length && !directPolymarketLinkMarkets.length ? await fetchPolymarketEventPageFallbacks(marketCase.question) : []
     for (const market of directPolymarketMarkets) {
       const yesPrice = getYesPrice(market)
       const volume = market.volume ? Number(market.volume).toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'unknown'
@@ -124,6 +159,7 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
 
     const broaderPolymarketMarkets = markets
       .filter((market) => market.question)
+      .filter((market) => !directPolymarketKeys.has(getPolymarketKey(market) ?? ''))
       .filter((market) => hasAssetRelevance(market.question, cryptoIds, stockSymbols))
       .filter((market) => !hasMarketRelevance(searchTerms, market.question, requiredTerms))
       .filter((market) => !isUnrelatedConditionalMarket(market.question, marketCase.question))
@@ -141,18 +177,21 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
       })
     }
 
+    const directKalshiTickers = new Set((directKalshiMarkets.markets ?? []).map((market) => market.ticker).filter(Boolean))
     const relevantKalshiMarkets = (kalshiMarkets.markets ?? [])
-      .filter((market) => hasMarketRelevance(searchTerms, `${market.title ?? ''} ${market.subtitle ?? ''}`, requiredTerms))
-      .slice(0, 5)
+      .filter((market) => directKalshiTickers.has(market.ticker) || hasMarketRelevance(searchTerms, getKalshiMarketText(market), requiredTerms))
+      .filter((market) => !isPlaceholderMarketText(getKalshiMarketText(market)))
+      .slice(0, directKalshiTickers.size ? 12 : 5)
 
     for (const market of relevantKalshiMarkets) {
       const price = market.last_price_dollars ?? (typeof market.last_price === 'number' ? `${market.last_price} cents` : 'unknown price')
-      observations.push(`Kalshi: ${market.title ?? market.ticker ?? 'market'} last traded around ${price}.`)
+      const sourceKind = directKalshiTickers.has(market.ticker) ? 'direct linked market' : 'search match'
+      observations.push(`Kalshi ${sourceKind}: ${market.title ?? market.ticker ?? 'market'} last traded around ${price}.`)
       sources.push({
         title: market.title ?? market.ticker ?? 'Kalshi market',
-        url: market.ticker ? `https://kalshi.com/markets/${market.ticker}` : 'https://kalshi.com/markets',
-        observedAt: market.close_time,
-        value: price,
+        url: market.ticker && market.event_ticker ? `https://kalshi.com/markets/${market.event_ticker.split('-')[0]?.toLowerCase()}/${market.event_ticker.toLowerCase()}` : 'https://kalshi.com/markets',
+        observedAt: market.close_time ?? market.expected_expiration_time,
+        value: [price, market.rules_primary].filter(Boolean).join(' | '),
       })
     }
 
@@ -165,9 +204,10 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     }
 
     const broaderKalshiMarkets = (kalshiMarkets.markets ?? [])
-      .filter((market) => hasAssetRelevance(`${market.title ?? ''} ${market.subtitle ?? ''}`, cryptoIds, stockSymbols))
-      .filter((market) => !hasMarketRelevance(searchTerms, `${market.title ?? ''} ${market.subtitle ?? ''}`, requiredTerms))
-      .filter((market) => !isUnrelatedConditionalMarket(`${market.title ?? ''} ${market.subtitle ?? ''}`, marketCase.question))
+      .filter((market) => !directKalshiTickers.has(market.ticker))
+      .filter((market) => hasAssetRelevance(getKalshiMarketText(market), cryptoIds, stockSymbols))
+      .filter((market) => !hasMarketRelevance(searchTerms, getKalshiMarketText(market), requiredTerms))
+      .filter((market) => !isUnrelatedConditionalMarket(getKalshiMarketText(market), marketCase.question))
       .sort((a, b) => getKalshiMarketScore(b, cryptoIds, usdTarget) - getKalshiMarketScore(a, cryptoIds, usdTarget))
       .slice(0, 3)
 
@@ -185,7 +225,8 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const shortHorizonHours = getShortHorizonHours(marketCase.question)
     const manifoldCandidates = manifoldMarkets
       .filter((market) => !market.isResolved)
-      .filter((market) => hasMarketRelevance(searchTerms, market.question, requiredTerms))
+      .filter((market) => directManifoldKeys.has(getManifoldKey(market) ?? '') || hasMarketRelevance(searchTerms, getManifoldMarketText(market), requiredTerms))
+      .filter((market) => !isPlaceholderMarketText(getManifoldMarketText(market)))
       .filter((market) => !isUnrelatedConditionalMarket(market.question, marketCase.question))
       .sort((a, b) => getMarketScore(b, marketCase.question, usdTarget) - getMarketScore(a, marketCase.question, usdTarget))
     const directHorizonManifoldMarkets = shortHorizonHours
@@ -206,10 +247,11 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
           ? market.totalLiquidity.toLocaleString('en-US', { maximumFractionDigits: 0 })
           : 'unknown'
       const horizonLabel = shortHorizonHours && !isWithinHorizon(market.closeTime, shortHorizonHours) ? 'indirect horizon' : 'matching horizon'
-      observations.push(`Manifold (${horizonLabel}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.`)
+      const sourceKind = directManifoldKeys.has(getManifoldKey(market) ?? '') ? 'direct linked market/event' : horizonLabel
+      observations.push(`Manifold (${sourceKind}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.${formatManifoldAnswers(market)}`)
       sources.push({
         title: market.question ?? 'Manifold market',
-        url: market.url ?? 'https://manifold.markets/',
+        url: market.sourceUrl ?? market.url ?? 'https://manifold.markets/',
         observedAt: market.closeTime ? new Date(market.closeTime).toISOString() : fetchedAt,
         value: probability,
       })
@@ -219,6 +261,7 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const broaderManifoldMarkets = manifoldMarkets
       .filter((market) => !market.isResolved)
       .filter((market) => !relevantManifoldQuestions.has(market.question))
+      .filter((market) => !directManifoldKeys.has(getManifoldKey(market) ?? ''))
       .filter((market) => hasAssetRelevance(market.question, cryptoIds, stockSymbols))
       .filter((market) => !hasMarketRelevance(searchTerms, market.question, requiredTerms))
       .filter((market) => !isUnrelatedConditionalMarket(market.question, marketCase.question))
@@ -315,6 +358,19 @@ function hasAssetRelevance(marketQuestion = '', cryptoIds: string[], stockSymbol
   const assetTerms = [...cryptoTerms, ...stockSymbols.map((symbol) => symbol.toLowerCase())]
 
   return assetTerms.length > 0 && assetTerms.some((term) => normalizedQuestion.includes(normalizeSearchText(term)))
+}
+
+function isPlaceholderMarketText(value = '') {
+  const normalized = normalizeSearchText(value)
+  const placeholderPatterns = [
+    /\bparty [a-z]\b/u,
+    /\bcandidate [a-z]\b/u,
+    /\boption [a-z]\b/u,
+    /\boutcome [a-z]\b/u,
+    /\bteam [a-z]\b/u,
+    /\bplayer [a-z]\b/u,
+  ]
+  return placeholderPatterns.some((pattern) => pattern.test(normalized))
 }
 
 function hasEnoughOverlap(searchTerms: string[], marketQuestion = '') {
@@ -416,6 +472,92 @@ async function fetchPolymarketMarkets(queries: string[]) {
   )
 
   return dedupeByQuestion(results.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])))
+}
+
+async function fetchPolymarketMarketsFromLinks(links?: string[]) {
+  const polymarketLinks = (links ?? []).map(parsePolymarketUrl).filter((item): item is PolymarketUrlParts => Boolean(item?.eventSlug || item?.marketSlug))
+  const results = await Promise.allSettled(polymarketLinks.map(fetchPolymarketMarketsFromUrlParts))
+  return dedupeByQuestion(results.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])), getPolymarketKey)
+}
+
+type PolymarketUrlParts = {
+  eventSlug?: string
+  marketSlug?: string
+  sourceUrl: string
+}
+
+function parsePolymarketUrl(value: string): PolymarketUrlParts | undefined {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return undefined
+  }
+  if (!url.hostname.replace(/^www\./, '').endsWith('polymarket.com')) return undefined
+  const segments = url.pathname.split('/').filter(Boolean)
+  const eventIndex = segments.indexOf('event')
+  const eventSlug = eventIndex >= 0 ? segments[eventIndex + 1] : segments[0]
+  const marketSlug = eventIndex >= 0 ? segments[eventIndex + 2] : segments.at(-1)
+  if (!eventSlug && !marketSlug) return undefined
+  return { eventSlug, marketSlug, sourceUrl: url.toString() }
+}
+
+async function fetchPolymarketMarketsFromUrlParts(parts: PolymarketUrlParts): Promise<PolymarketMarket[]> {
+  const marketResults = parts.marketSlug
+    ? await fetchJson<PolymarketMarket[]>(`https://gamma-api.polymarket.com/markets?slug=${encodeURIComponent(parts.marketSlug)}`).catch(() => [])
+    : []
+  const directMarkets = normalizePolymarketMarkets(marketResults, parts)
+  if (parts.marketSlug && directMarkets.length) return directMarkets
+
+  if (!parts.eventSlug) return []
+  const eventPayload = await fetchJson<unknown>(`https://gamma-api.polymarket.com/events?slug=${encodeURIComponent(parts.eventSlug)}`).catch(() => undefined)
+  const eventRecord = firstJsonRecord(eventPayload)
+  const eventMarkets = collectJsonRecords(eventPayload)
+    .filter((record) => record !== eventRecord)
+    .filter((record) => typeof record.question === 'string' || typeof record.outcomePrices === 'string' || Array.isArray(record.outcomePrices))
+    .map((record) => record as PolymarketMarket)
+  return normalizePolymarketMarkets(eventMarkets, parts, eventRecord)
+}
+
+function normalizePolymarketMarkets(markets: PolymarketMarket[] | undefined, parts: PolymarketUrlParts, eventRecord?: Record<string, unknown>) {
+  return (markets ?? [])
+    .map((market) => ({
+      ...market,
+      eventSlug: parts.eventSlug,
+      sourceUrl: parts.marketSlug && market.slug ? `https://polymarket.com/event/${parts.eventSlug ?? market.eventSlug ?? market.slug}/${market.slug}` : parts.sourceUrl,
+      description: market.description ?? stringFromRecord(eventRecord, 'description') ?? stringFromRecord(eventRecord, 'eventDescription'),
+    }))
+    .filter((market) => market.question || market.slug)
+    .filter((market) => !isPlaceholderMarketText(getPolymarketMarketText(market)))
+}
+
+function getPolymarketKey(market: PolymarketMarket) {
+  return market.slug ?? market.question
+}
+
+function getPolymarketMarketText(market: PolymarketMarket) {
+  return [
+    market.question,
+    market.slug,
+    market.eventSlug,
+    market.description,
+    market.rules,
+    parseTextArray(market.outcomes).join(' '),
+  ].filter(Boolean).join(' ')
+}
+
+function formatPolymarketOutcomes(market: PolymarketMarket) {
+  const outcomes = parseTextArray(market.outcomes)
+  const prices = parseTextArray(market.outcomePrices)
+  if (!outcomes.length && !prices.length) return ''
+  const pairs = outcomes.length
+    ? outcomes.map((outcome, index) => {
+        const price = prices[index]
+        return price ? `${outcome} ${formatProbabilityText(price)}` : outcome
+      })
+    : prices.map(formatProbabilityText)
+  const realPairs = pairs.filter((pair) => !isPlaceholderMarketText(pair))
+  return realPairs.length ? ` Outcomes: ${realPairs.slice(0, 8).join(', ')}.` : ''
 }
 
 async function fetchPolymarketEventPageFallbacks(question: string) {
@@ -623,6 +765,44 @@ function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+function isJsonRecord(value: unknown): value is JsonRecord {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value))
+}
+
+function collectJsonRecords(value: unknown, depth = 0): JsonRecord[] {
+  if (!value || depth > 6) return []
+  if (Array.isArray(value)) return value.flatMap((item) => collectJsonRecords(item, depth + 1))
+  if (!isJsonRecord(value)) return []
+  return [value, ...Object.values(value).flatMap((item) => collectJsonRecords(item, depth + 1))]
+}
+
+function firstJsonRecord(value: unknown): JsonRecord | undefined {
+  if (Array.isArray(value)) return value.map(firstJsonRecord).find(Boolean)
+  return isJsonRecord(value) ? value : undefined
+}
+
+function stringFromRecord(record: JsonRecord | undefined, key: string) {
+  const value = record?.[key]
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function parseTextArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String).filter(Boolean)
+  if (typeof value !== 'string') return []
+  try {
+    const parsed = JSON.parse(value) as unknown
+    return Array.isArray(parsed) ? parsed.map(String).filter(Boolean) : []
+  } catch {
+    return []
+  }
+}
+
+function formatProbabilityText(value: string) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric)) return value
+  return numeric <= 1 ? `${Math.round(numeric * 100)}%` : `${Math.round(numeric)}%`
+}
+
 async function fetchKalshiMarkets(queries: string[]) {
   const results = await Promise.allSettled(
     queries.map((search) =>
@@ -634,6 +814,66 @@ async function fetchKalshiMarkets(queries: string[]) {
   return { markets: dedupeKalshiMarkets(markets) }
 }
 
+async function fetchKalshiMarketsFromLinks(links?: string[]) {
+  const kalshiLinks = (links ?? []).map(parseKalshiUrl).filter((item): item is KalshiUrlParts => Boolean(item?.seriesTicker))
+  const results = await Promise.allSettled(kalshiLinks.map(fetchKalshiMarketsFromUrlParts))
+  const markets = results.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+  return { markets: dedupeKalshiMarkets(markets) }
+}
+
+async function fetchKalshiMarketsFromUrlParts(parts: KalshiUrlParts): Promise<KalshiMarket[]> {
+  const directMarket = parts.marketTicker
+    ? await fetchJson<{ market?: KalshiMarket }>(`https://external-api.kalshi.com/trade-api/v2/markets/${encodeURIComponent(parts.marketTicker)}`)
+      .then((payload) => payload.market ? [payload.market] : [])
+      .catch(() => [])
+    : []
+  if (directMarket.length) return directMarket
+
+  const payload = await fetchJson<KalshiMarketsResponse>(
+    `https://external-api.kalshi.com/trade-api/v2/markets?limit=100&series_ticker=${encodeURIComponent(parts.seriesTicker)}`,
+  ).catch(() => ({ markets: [] }))
+  const markets = payload.markets ?? []
+  return parts.eventTicker ? markets.filter((market) => market.event_ticker === parts.eventTicker) : markets
+}
+
+type KalshiUrlParts = {
+  seriesTicker: string
+  eventTicker?: string
+  marketTicker?: string
+}
+
+function parseKalshiUrl(value: string): KalshiUrlParts | undefined {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return undefined
+  }
+  if (!url.hostname.replace(/^www\./, '').endsWith('kalshi.com')) return undefined
+  const segments = url.pathname.split('/').filter(Boolean)
+  const marketIndex = segments.indexOf('markets')
+  const seriesTicker = marketIndex >= 0 ? segments[marketIndex + 1]?.toUpperCase() : undefined
+  if (!seriesTicker) return undefined
+  const tailTicker = segments.at(-1)?.toUpperCase()
+  return {
+    seriesTicker,
+    eventTicker: tailTicker && tailTicker !== seriesTicker ? tailTicker : undefined,
+    marketTicker: tailTicker && tailTicker.split('-').length >= 3 ? tailTicker : undefined,
+  }
+}
+
+function getKalshiMarketText(market: KalshiMarket) {
+  return [
+    market.title,
+    market.subtitle,
+    market.yes_sub_title,
+    market.rules_primary,
+    market.rules_secondary,
+    market.ticker,
+    market.event_ticker,
+  ].filter(Boolean).join(' ')
+}
+
 async function fetchManifoldMarkets(queries: string[]) {
   const results = await Promise.allSettled(
     queries.map((search) =>
@@ -642,6 +882,65 @@ async function fetchManifoldMarkets(queries: string[]) {
   )
 
   return dedupeByQuestion(results.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])))
+}
+
+async function fetchManifoldMarketsFromLinks(links?: string[]) {
+  const manifoldLinks = (links ?? []).map(parseManifoldUrl).filter((item): item is ManifoldUrlParts => Boolean(item?.slug))
+  const results = await Promise.allSettled(manifoldLinks.map(fetchManifoldMarketFromUrlParts))
+  return dedupeByQuestion(results.flatMap((result) => (result.status === 'fulfilled' && result.value ? [result.value] : [])), getManifoldKey)
+}
+
+type ManifoldUrlParts = {
+  slug: string
+  sourceUrl: string
+}
+
+function parseManifoldUrl(value: string): ManifoldUrlParts | undefined {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    return undefined
+  }
+  if (!url.hostname.replace(/^www\./, '').endsWith('manifold.markets')) return undefined
+  const segments = url.pathname.split('/').filter(Boolean)
+  const slug = segments.at(-1)
+  return slug ? { slug, sourceUrl: url.toString() } : undefined
+}
+
+async function fetchManifoldMarketFromUrlParts(parts: ManifoldUrlParts): Promise<ManifoldMarket | undefined> {
+  const market = await fetchJson<ManifoldMarket>(`https://api.manifold.markets/v0/slug/${encodeURIComponent(parts.slug)}`).catch(() => undefined)
+  if (!market?.question) return undefined
+  return {
+    ...market,
+    slug: parts.slug,
+    sourceUrl: parts.sourceUrl,
+  }
+}
+
+function getManifoldKey(market: ManifoldMarket) {
+  return market.url ?? market.slug ?? market.question
+}
+
+function getManifoldMarketText(market: ManifoldMarket) {
+  return [
+    market.question,
+    market.slug,
+    market.answers?.map((answer) => answer.text ?? answer.name).filter(Boolean).join(' '),
+  ].filter(Boolean).join(' ')
+}
+
+function formatManifoldAnswers(market: ManifoldMarket) {
+  const answers = market.answers
+    ?.map((answer) => {
+      const title = answer.text ?? answer.name
+      const probability = typeof answer.probability === 'number' ? `${Math.round(answer.probability * 100)}%` : undefined
+      return title ? [title, probability].filter(Boolean).join(' ') : undefined
+    })
+    .filter((item): item is string => Boolean(item))
+    .filter((item) => !isPlaceholderMarketText(item))
+    .slice(0, 8)
+  return answers?.length ? ` Outcomes: ${answers.join(', ')}.` : ''
 }
 
 function dedupeByQuestion<T extends { question?: string }>(items: T[], getKey?: (item: T) => string | undefined) {

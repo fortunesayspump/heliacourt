@@ -3,7 +3,8 @@
 import { BookOpenText, CheckCircle, MagnifyingGlass, Scales, ShieldCheck, Stamp } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import type { CSSProperties } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatUnits, keccak256, parseEventLogs, parseUnits, stringToBytes } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../lib/arc'
@@ -16,6 +17,7 @@ type ExistingCase = {
   title: string
   status: string
   probability?: string
+  imageUrl?: string
   links: string[]
   updated?: string
 }
@@ -26,7 +28,26 @@ type FilingStatus = {
 }
 
 type LinkPreview = {
+  title?: string
   image?: string
+  description?: string
+  rules?: string
+  endDate?: string
+  market?: string
+  multipleContracts?: boolean
+  contracts?: Array<{
+    title: string
+    ticker?: string
+    price?: string
+    horizon?: string
+    rules?: string
+  }>
+}
+
+type AutofilledFields = {
+  question?: string
+  context?: string
+  horizon?: string
 }
 
 const usdcDecimals = 6
@@ -49,6 +70,7 @@ export function CaseFilingFlow({
   const { address, chainId, isConnected } = useAccount()
   const { switchChainAsync, isPending: isSwitching } = useSwitchChain()
   const { writeContractAsync, isPending } = useWriteContract()
+  const filingMainRef = useRef<HTMLElement | null>(null)
 
   const [question, setQuestion] = useState(parentCase?.title ?? '')
   const [context, setContext] = useState(parentCase?.resolution ?? '')
@@ -60,6 +82,9 @@ export function CaseFilingFlow({
   const [status, setStatus] = useState<FilingStatus | undefined>()
   const [lastTx, setLastTx] = useState<`0x${string}` | undefined>()
   const [marketPreview, setMarketPreview] = useState<LinkPreview | undefined>()
+  const [autofilledFields, setAutofilledFields] = useState<AutofilledFields>({})
+  const [autofillStatus, setAutofillStatus] = useState<FilingStatus | undefined>()
+  const [filingMainHeight, setFilingMainHeight] = useState<number | undefined>()
 
   const budgetUnits = useMemo(() => safeBudget(budget), [budget])
   const escrowAddress = contractAddresses.caseEscrow
@@ -102,27 +127,68 @@ export function CaseFilingFlow({
   ].filter(Boolean).join('\n\n')
 
   useEffect(() => {
+    const element = filingMainRef.current
+    if (!element) return
+
+    const updateHeight = () => setFilingMainHeight(Math.ceil(element.getBoundingClientRect().height))
+    updateHeight()
+
+    const observer = new ResizeObserver(updateHeight)
+    observer.observe(element)
+    window.addEventListener('resize', updateHeight)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', updateHeight)
+    }
+  }, [])
+
+  useEffect(() => {
     if (!predictionMarketLink) {
       setMarketPreview(undefined)
+      setAutofillStatus(undefined)
       return
     }
 
     let cancelled = false
+    setAutofillStatus({ tone: 'muted', text: 'Reading market details...' })
     const params = new URLSearchParams({ url: predictionMarketLink })
+    params.set('image', 'og')
     if (question.trim()) params.set('title', question.trim())
     fetch(`/api/market-image?${params.toString()}`, { cache: 'no-store' })
       .then((response) => response.json())
       .then((payload: LinkPreview) => {
-        if (!cancelled) setMarketPreview(payload)
+        if (cancelled) return
+        setMarketPreview(payload)
+
+        const nextQuestion = payload.title?.trim()
+        const nextContext = buildAutofillContext(payload, predictionMarketLink)
+        const nextHorizon = formatMarketHorizon(payload.endDate)
+
+        setQuestion((current) => canAutofill(current, autofilledFields.question) && nextQuestion ? nextQuestion : current)
+        setContext((current) => canAutofill(current, autofilledFields.context) && nextContext ? nextContext : current)
+        setHorizon((current) => canAutofill(current, autofilledFields.horizon) && nextHorizon ? nextHorizon : current)
+        setAutofilledFields({
+          question: nextQuestion,
+          context: nextContext,
+          horizon: nextHorizon,
+        })
+        setAutofillStatus(
+          nextQuestion || nextContext || nextHorizon
+            ? { tone: 'good', text: payload.multipleContracts ? 'Market event bundle filled from the pasted link.' : 'Market details filled from the pasted link.' }
+            : { tone: 'muted', text: 'Market linked. Add any missing details before filing.' },
+        )
       })
       .catch(() => {
-        if (!cancelled) setMarketPreview(undefined)
+        if (!cancelled) {
+          setMarketPreview(undefined)
+          setAutofillStatus({ tone: 'bad', text: 'Could not read that market automatically. You can still fill it manually.' })
+        }
       })
 
     return () => {
       cancelled = true
     }
-  }, [predictionMarketLink, question])
+  }, [predictionMarketLink])
 
   const fileCase = async () => {
     setStatus(undefined)
@@ -254,7 +320,7 @@ export function CaseFilingFlow({
   return (
     <>
       <section className="case-filing-shell">
-        <section className="panel case-filing-main">
+        <section className="panel case-filing-main" ref={filingMainRef}>
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Petition desk</p>
@@ -268,6 +334,14 @@ export function CaseFilingFlow({
             </div>
           ) : null}
           <div className="case-box case-form">
+            <label htmlFor="source-links">Market link</label>
+            <input
+              id="source-links"
+              placeholder="Paste a Polymarket, Kalshi, or Manifold market URL"
+              value={sourceLinks}
+              onChange={(event) => setSourceLinks(event.target.value)}
+            />
+            {autofillStatus ? <p className={`autofill-status ${autofillStatus.tone}`}>{autofillStatus.text}</p> : null}
             <label htmlFor="question">Question</label>
             <input id="question" placeholder="Paste the market question exactly as it appears." value={question} onChange={(event) => setQuestion(event.target.value)} />
             <label htmlFor="case-context">Case context</label>
@@ -276,13 +350,6 @@ export function CaseFilingFlow({
               placeholder="Resolution rules, primary sources, exclusions, and exact contract text the court must preserve."
               value={context}
               onChange={(event) => setContext(event.target.value)}
-            />
-            <label htmlFor="source-links">Market and source links</label>
-            <input
-              id="source-links"
-              placeholder="Supported market URL"
-              value={sourceLinks}
-              onChange={(event) => setSourceLinks(event.target.value)}
             />
             <label htmlFor="horizon">Time horizon</label>
             <input id="horizon" placeholder="e.g. June 30, 2026, 11:59 PM ET" value={horizon} onChange={(event) => setHorizon(event.target.value)} />
@@ -302,7 +369,7 @@ export function CaseFilingFlow({
           </div>
         </section>
 
-        <aside className="case-filing-side">
+        <aside className="case-filing-side" style={filingMainHeight ? { '--filing-main-height': `${filingMainHeight}px` } as CSSProperties : undefined}>
           <section className="panel filing-checklist-panel">
             <div className="panel-heading">
               <div>
@@ -336,6 +403,9 @@ export function CaseFilingFlow({
             <div className="similar-case-list">
               {relatedCases.length ? relatedCases.map((item) => (
                 <Link className="similar-case-row" href={`/cases/${item.id}`} key={item.id}>
+                  <span className={`similar-case-thumb${item.imageUrl ? ' has-image' : ''}`} aria-hidden="true">
+                    {item.imageUrl ? <img alt="" src={item.imageUrl} /> : item.title.trim().slice(0, 1).toUpperCase()}
+                  </span>
                   <div>
                     <strong>{item.title}</strong>
                     <span>{item.status}{item.probability ? ` · ${item.probability}` : ''}</span>
@@ -366,14 +436,28 @@ export function CaseFilingFlow({
           <article className="case-box preview-summary">
             {question.trim() ? (
               <>
+                <div className={`preview-market-image${marketPreview?.image ? ' has-image' : ''}`} aria-hidden="true">
+                  {marketPreview?.image ? <img alt="" src={marketPreview.image} /> : <Scales size={28} />}
+                </div>
                 <p className="eyebrow">Market question</p>
                 <h3>{question.trim()}</h3>
                 <div className="preview-meta-row">
                   <span>{predictionMarketLink ? 'Market linked' : 'Market link missing'}</span>
-                  <span>{horizon.trim() || 'Horizon pending'}</span>
+                  {marketPreview?.multipleContracts ? <span>{marketPreview.contracts?.length ?? 0} contracts</span> : null}
+                  <span>{marketPreview?.multipleContracts ? 'Multiple horizons' : horizon.trim() || 'Horizon pending'}</span>
                   <span>{visibility}</span>
                   <span>{payerVisibility === 'private' ? 'Private payer' : 'Public payer'}</span>
                 </div>
+                {marketPreview?.contracts?.length ? (
+                  <div className="preview-contract-list">
+                    {marketPreview.contracts.map((contract) => (
+                      <div key={contract.ticker ?? `${contract.title}-${contract.horizon ?? ''}`}>
+                        <strong>{contract.title}</strong>
+                        <span>{[contract.horizon, contract.price ? `Last ${contract.price}` : undefined].filter(Boolean).join(' · ')}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
                 {context.trim() ? <p>{context.trim()}</p> : null}
               </>
             ) : (
@@ -424,6 +508,47 @@ function safeBudget(value: string) {
   } catch {
     return zero
   }
+}
+
+function canAutofill(current: string, previousAutofill?: string) {
+  return !current.trim() || Boolean(previousAutofill && current === previousAutofill)
+}
+
+function buildAutofillContext(preview: LinkPreview, marketLink: string) {
+  const contractLines = preview.contracts?.length
+    ? [
+        'Contracts:',
+        ...preview.contracts.map((contract, index) => [
+          `${index + 1}. ${contract.title}`,
+          contract.ticker ? `Ticker: ${contract.ticker}` : '',
+          contract.horizon ? `Horizon: ${contract.horizon}` : '',
+          contract.price ? `Last price: ${contract.price}` : '',
+          contract.rules ? `Rules: ${contract.rules}` : '',
+        ].filter(Boolean).join('\n')),
+      ].join('\n\n')
+    : ''
+  const lines = [
+    preview.market ? `Market: ${preview.market}` : '',
+    preview.description ? `Description: ${preview.description}` : '',
+    contractLines,
+    preview.rules ? `Resolution rules: ${preview.rules}` : '',
+    `Primary market: ${marketLink}`,
+  ]
+  return lines.filter(Boolean).join('\n\n')
+}
+
+function formatMarketHorizon(value?: string) {
+  if (!value?.trim()) return undefined
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value.trim()
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(date)
 }
 
 function isSupportedPredictionMarketLink(link: string) {

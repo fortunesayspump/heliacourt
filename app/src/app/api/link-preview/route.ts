@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { resolveMarketPreview } from '../../../lib/market-images'
+import { resolveMarketPreview, resolveOpenGraphPreview } from '../../../lib/market-images'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,71 +20,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    const marketPreview = await resolveMarketPreview([target.toString()], params.get('title') ?? undefined)
-    if (marketPreview?.image || marketPreview?.title) {
+    const ogPreview = await resolveOpenGraphPreview(target)
+    if (ogPreview?.image || ogPreview?.title) {
       return NextResponse.json({
         url: target.toString(),
         host: target.hostname.replace(/^www\./, ''),
-        title: marketPreview.title,
-        image: marketPreview.image,
+        title: ogPreview.title,
+        description: ogPreview.description,
+        image: ogPreview.image,
       })
     }
 
-    const response = await fetch(target, {
-      headers: {
-        accept: 'text/html,application/xhtml+xml',
-        'user-agent': 'HeliaCourtBot/1.0 (+https://heliacourt.xyz)',
-      },
-      signal: AbortSignal.timeout(5000),
-    })
-    const contentType = response.headers.get('content-type') ?? ''
-    if (!response.ok || !contentType.includes('text/html')) {
-      return NextResponse.json({ url: target.toString(), host: target.hostname.replace(/^www\./, '') })
-    }
-
-    const html = await response.text()
-    const title = readMeta(html, 'og:title') ?? readTitle(html)
-    const description = readMeta(html, 'og:description') ?? readMeta(html, 'description')
-    const image = absolutizeUrl(readMeta(html, 'og:image') ?? readMeta(html, 'twitter:image'), target)
-
+    const marketPreview = await resolveMarketPreview([target.toString()], params.get('title') ?? undefined)
     return NextResponse.json({
       url: target.toString(),
       host: target.hostname.replace(/^www\./, ''),
-      title,
-      description,
-      image,
+      title: marketPreview?.title,
+      description: marketPreview?.description,
+      image: marketPreview?.image,
     })
   } catch {
     return NextResponse.json({ url: target.toString(), host: target.hostname.replace(/^www\./, '') })
-  }
-}
-
-function readMeta(html: string, name: string) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const propertyPattern = new RegExp(`<meta[^>]+(?:property|name)=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i')
-  const contentFirstPattern = new RegExp(`<meta[^>]+content=["']([^"']+)["'][^>]+(?:property|name)=["']${escaped}["'][^>]*>`, 'i')
-  return decodeHtml(propertyPattern.exec(html)?.[1] ?? contentFirstPattern.exec(html)?.[1])
-}
-
-function readTitle(html: string) {
-  return decodeHtml(/<title[^>]*>([^<]+)<\/title>/i.exec(html)?.[1])
-}
-
-function decodeHtml(value?: string) {
-  return value
-    ?.replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .trim()
-}
-
-function absolutizeUrl(value: string | undefined, base: URL) {
-  if (!value) return undefined
-  try {
-    return new URL(value, base).toString()
-  } catch {
-    return undefined
   }
 }

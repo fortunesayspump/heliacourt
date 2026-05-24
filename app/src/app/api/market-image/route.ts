@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { resolveMarketImageUrl } from '../../../lib/market-images'
+import { resolveMarketPreview, resolveOpenGraphPreview } from '../../../lib/market-images'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,10 +19,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'unsupported url protocol' }, { status: 400 })
   }
 
-  const image = await resolveMarketImageUrl([target.toString()], params.get('title') ?? undefined)
+  const imageMode = params.get('image') === 'og' ? 'og' : 'market'
+  const [preview, ogPreview] = await Promise.all([
+    resolveMarketPreview([target.toString()], params.get('title') ?? undefined),
+    resolveOpenGraphPreview(target),
+  ])
+  const image = imageMode === 'og'
+    ? ogPreview?.image ?? preview?.image
+    : preview?.image ?? ogPreview?.image
   return NextResponse.json({
     url: target.toString(),
     host: target.hostname.replace(/^www\./, ''),
+    ...preview,
     image,
   })
 }

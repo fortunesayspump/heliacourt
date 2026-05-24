@@ -44,6 +44,7 @@ async function NewCaseData({
             title: item.title,
             status: item.status,
             probability: item.probability,
+            imageUrl: item.imageUrl,
             links: item.links ?? [],
             updated: item.updated,
           }))}

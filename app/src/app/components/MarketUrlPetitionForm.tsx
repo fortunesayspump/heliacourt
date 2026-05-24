@@ -19,7 +19,7 @@ export function MarketUrlPetitionForm() {
 
     let cancelled = false
     const timeout = window.setTimeout(() => {
-      fetch(`/api/market-image?url=${encodeURIComponent(value)}`, { cache: 'no-store' })
+      fetch(`/api/link-preview?url=${encodeURIComponent(value)}`, { cache: 'no-store' })
         .then((response) => response.ok ? response.json() as Promise<{ image?: string }> : undefined)
         .then((payload) => {
           if (!cancelled) setMarketImage(payload?.image)
