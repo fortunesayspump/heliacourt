@@ -2710,9 +2710,14 @@ body,
 
 .telegram-button {
   gap: 8px;
-  color: #fffaf2;
-  background: #2a8fd8;
-  border-color: rgba(42, 143, 216, 0.34);
+  color: var(--ag-ink);
+  background: rgba(250, 250, 250, 0.74);
+  border-color: var(--ag-border);
+}
+
+.telegram-button:hover {
+  background: var(--ag-surface);
+  border-color: rgba(154, 147, 80, 0.46);
 }
 
 .telegram-button svg,
