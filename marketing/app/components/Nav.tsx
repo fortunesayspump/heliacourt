@@ -17,7 +17,7 @@ export function HeaderNav({ className = '', showCourtButton = false }: { classNa
         <Link href="/docs">Docs</Link>
         {showCourtButton ? (
           <Link className="nav-court-button" href={APP_URL}>
-            Enter Court
+            File a Case
           </Link>
         ) : null}
       </div>
