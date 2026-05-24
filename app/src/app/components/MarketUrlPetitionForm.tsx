@@ -49,10 +49,10 @@ export function MarketUrlPetitionForm() {
         <strong>URL</strong>
       </div>
       <label className="petition-url-field" htmlFor="dashboard-market-url">
-        <span>Paste market URL</span>
+        <span>Polymarket, Kalshi, or Manifold URL</span>
         <input
           id="dashboard-market-url"
-          placeholder="https://..."
+          placeholder="https://polymarket.com/event/..."
           value={marketUrl}
           onChange={(event) => setMarketUrl(event.target.value)}
         />
@@ -64,7 +64,7 @@ export function MarketUrlPetitionForm() {
           <MarketLogo market="manifold" />
         </span>
         <button className="primary-button" type="submit">
-          File case
+          Continue
           <Stamp size={16} />
         </button>
       </div>

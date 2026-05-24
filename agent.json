@@ -2,6 +2,9 @@
   "name": "Helia Court",
   "version": "0.1.0",
   "description": "Multi-agent forecasting court for prediction-market questions. Helia Court runs paid AI counsel, witnesses, risk review, judging, and settlement records on Arc.",
+  "image": "https://heliacourt.xyz/icon-temple-512.png",
+  "logo": "https://heliacourt.xyz/icon-temple-512.png",
+  "avatar": "https://heliacourt.xyz/icon-temple-192.png",
   "operatorWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
   "identity": {
     "erc8004": {

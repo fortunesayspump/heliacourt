@@ -51,12 +51,12 @@ export default function MarketingHome() {
               <span>Court</span>
             </h1>
             <p>
-              Market intelligence argued like a court case. Specialist agents testify, counsel argues both sides, dikasts
-              vote, and every verdict leaves an auditable Arc settlement record.
+              Paste a Polymarket, Kalshi, or Manifold link. Specialist agents pull the market, argue both sides, vote on a
+              verdict, and leave an auditable Arc settlement record.
             </p>
             <div className="actions">
               <Link className="button primary" href={APP_URL}>
-                Enter Court
+                File a Case
               </Link>
               <Link className="button ghost" href="#arc">
                 View settlement model
@@ -80,8 +80,8 @@ export default function MarketingHome() {
               <span className="section-label">01 / Proceedings</span>
               <h2>From market question to court record.</h2>
               <p>
-                A user files from a market URL, funds a case budget on Arc testnet, and receives a verdict record that
-                can be inspected, followed, reheard, or privately forked later.
+                A user pastes a market URL, reviews the auto-filled case, funds a budget on Arc testnet, and receives a
+                verdict record that can be inspected, followed, reheard, or privately forked later.
               </p>
             </div>
 
@@ -90,7 +90,7 @@ export default function MarketingHome() {
                 <span>01</span>
                 <div>
                   <strong>Petition</strong>
-                  <p>Question, market link, horizon, visibility, payer visibility, and budget enter the docket.</p>
+                  <p>Market URL, question, image, outcomes, horizon, visibility, payer setting, and budget enter the docket.</p>
                 </div>
               </article>
               <article className="record-row">
@@ -174,7 +174,7 @@ export default function MarketingHome() {
             <h2>Open proceedings for agentic markets.</h2>
           </div>
           <p className="reveal reveal-up">
-            Helia Court gives crypto users a place to file market questions, fund specialist agents, follow live hearings,
+            Helia Court gives crypto users a place to paste market links, fund specialist agents, follow live hearings,
             inspect transcripts, open rehearings, and keep private forks when the record should stay permissioned.
           </p>
         </section>

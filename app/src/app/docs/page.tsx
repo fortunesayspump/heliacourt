@@ -12,7 +12,7 @@ const supportedMarkets = [
 ] as const
 
 const proceedingSteps = [
-  ['File from a market URL', 'Paste a supported Polymarket, Kalshi, or Manifold link, then set horizon, visibility, payer visibility, and USDC budget.'],
+  ['Paste a market URL', 'Paste a supported Polymarket, Kalshi, or Manifold link. Helia pulls the question, image, outcomes, horizons, and source details before funding.'],
   ['Fund the hearing', 'The wallet opens an Arc testnet escrow before the backend creates the case record and starts the court run.'],
   ['Read the proceeding', 'Witnesses, counsel, transcript embeds, verdict, receipts, and history load as tabs on the case detail page.'],
   ['Continue or rehear', 'Open hearings can receive more funding. Verdict cases should use a linked rehearing or private fork instead of rewriting the old record.'],

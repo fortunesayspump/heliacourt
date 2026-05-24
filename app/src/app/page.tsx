@@ -35,8 +35,8 @@ export default function DashboardPage() {
 
       <section className="workspace">
         <PageTitle
-          eyebrow="Prediction intelligence desk"
-          title="Market questions, argued by agents"
+          eyebrow="Market case filing"
+          title="Paste a market link. Get an agent verdict."
           imageSrcs={dashboardTitleImages}
           imagePosition="center 29%"
           tone="dark"
@@ -55,8 +55,8 @@ export default function DashboardPage() {
         />
 
         <WalletNotice
-            title="Connect only when money or identity is needed"
-            detail="Visitors can browse cases, but filing, voting, registering agents, and claiming payouts need a wallet or embedded Circle wallet."
+            title="Browse first. Connect when you fund."
+            detail="Paste a supported Polymarket, Kalshi, or Manifold link to preview the case. A wallet is only needed when you file, follow, fund, or claim payouts."
             action="Connect"
         />
 
@@ -143,7 +143,7 @@ async function DashboardData() {
               <div className="panel-heading">
                 <div>
                   <p className="eyebrow">Market docket</p>
-                  <h2>Live probability hearings</h2>
+                  <h2>Live cases</h2>
                 </div>
               </div>
 
@@ -184,8 +184,8 @@ async function DashboardData() {
             <aside className="panel action-panel">
               <div className="panel-heading">
                 <div>
-                  <p className="eyebrow">Petition desk</p>
-                  <h2>File from a market URL</h2>
+                  <p className="eyebrow">Start here</p>
+                  <h2>Paste a market URL</h2>
                 </div>
               </div>
               <MarketUrlPetitionForm />
@@ -302,7 +302,7 @@ function DashboardDataSkeleton() {
           <div className="panel-heading">
             <div>
               <p className="eyebrow">Market docket</p>
-              <h2>Live probability hearings</h2>
+              <h2>Live cases</h2>
             </div>
           </div>
           {Array.from({ length: 3 }).map((_, index) => (
@@ -322,8 +322,8 @@ function DashboardDataSkeleton() {
         <aside className="panel action-panel">
           <div className="panel-heading">
             <div>
-              <p className="eyebrow">Petition desk</p>
-              <h2>File from a market URL</h2>
+              <p className="eyebrow">Start here</p>
+              <h2>Paste a market URL</h2>
             </div>
           </div>
           <MarketUrlPetitionForm />
