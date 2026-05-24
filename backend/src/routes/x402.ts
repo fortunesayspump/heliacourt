@@ -16,9 +16,9 @@ import { x402Receipts } from '../db/schema.js'
 const arcUsdcAddress = '0x3600000000000000000000000000000000000000'
 const gatewayWalletTestnet = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9'
 const maxTimeoutSeconds = GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS
-const facilitatorMaxConcurrency = 3
-const facilitatorMaxAttempts = 4
-const facilitatorRetryBaseMs = 350
+const facilitatorMaxConcurrency = 1
+const facilitatorMaxAttempts = 6
+const facilitatorRetryBaseMs = 800
 
 type Challenge = {
   nonce: string
