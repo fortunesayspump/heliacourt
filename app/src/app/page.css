@@ -11034,6 +11034,8 @@ a:focus-visible,
 
   .dashboard-grid .case-table .case-row > div:nth-child(2) {
     grid-area: copy;
+    min-width: 0 !important;
+    overflow: hidden !important;
     gap: 6px !important;
   }
 
@@ -11064,7 +11066,7 @@ a:focus-visible,
     min-height: 0 !important;
     font-size: 14px !important;
     line-height: 1.32 !important;
-    -webkit-line-clamp: 3 !important;
+    -webkit-line-clamp: 2 !important;
   }
 
   .case-row-market-meta {
@@ -11073,7 +11075,15 @@ a:focus-visible,
     overflow: hidden !important;
   }
 
+  .case-row-market-meta .market-logo-chip.with-label {
+    flex: 0 1 auto !important;
+    min-width: 0 !important;
+    max-width: min(46%, 132px) !important;
+    overflow: hidden !important;
+  }
+
   .case-row-market-meta > span:not(.market-logo-chip) {
+    flex: 1 1 0 !important;
     min-width: 0 !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
