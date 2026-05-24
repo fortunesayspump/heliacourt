@@ -10877,7 +10877,7 @@ a:focus-visible,
   }
 
   .workspace > :not(.page-title) {
-    width: min(100% - 16px, 1180px) !important;
+    width: min(100% - 24px, 1180px) !important;
   }
 
   .workspace > .page-title + *,
@@ -10893,6 +10893,53 @@ a:focus-visible,
   .cases-docket-panel {
     padding: 14px !important;
     border-radius: var(--radius-md) !important;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .metrics-grid .metric,
+  .metrics-grid .metric:has(.metric-mini-bars),
+  .metrics-grid .metric:has(.metric-sparkline) {
+    min-height: 112px !important;
+    grid-template-columns: auto minmax(0, 1fr) !important;
+    grid-template-rows: auto minmax(30px, 1fr) !important;
+    gap: 8px 9px !important;
+    padding: 12px !important;
+    border: 1px solid var(--ag-border) !important;
+    border-radius: var(--radius-md) !important;
+    background: var(--ag-inner-surface) !important;
+  }
+
+  .metrics-grid .metric:last-child {
+    border: 1px solid var(--ag-border) !important;
+  }
+
+  .metrics-grid .metric > svg:not(.metric-sparkline) {
+    width: 17px !important;
+    height: 17px !important;
+  }
+
+  .metric span {
+    font-size: 11.5px !important;
+    line-height: 1.15 !important;
+  }
+
+  .metric strong {
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+  }
+
+  .metric-mini-bars,
+  .metric-sparkline {
+    height: 30px !important;
+    margin-top: 0 !important;
   }
 
   .wallet-notice {
