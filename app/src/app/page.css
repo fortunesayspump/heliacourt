@@ -5030,7 +5030,6 @@ a.registry-row:hover {
 
   .header-actions,
   .case-controls,
-  .metrics-grid,
   .court-layout,
   .app-grid,
   .dashboard-grid,
@@ -5062,6 +5061,16 @@ a.registry-row:hover {
     display: grid;
   }
 
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    overflow: visible;
+  }
+
   .workspace > .page-title + * {
     margin-top: 30px;
   }
@@ -5071,13 +5080,15 @@ a.registry-row:hover {
   }
 
   .metric {
-    padding: 18px 0;
-    border-right: 0;
-    border-bottom: 1px solid var(--line);
+    min-height: 112px;
+    padding: 12px;
+    border: 1px solid var(--ag-border);
+    border-radius: var(--radius-md);
+    background: var(--ag-inner-surface);
   }
 
   .metric:last-child {
-    border-bottom: 0;
+    border-bottom: 1px solid var(--ag-border);
   }
 
   .hearing-card {
