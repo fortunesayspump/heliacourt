@@ -13,6 +13,7 @@ type TelegramAlert = {
 const telegramApiBase = 'https://api.telegram.org'
 
 export const TELEGRAM_BOT_COMMANDS = [
+  { command: 'dashboard', description: 'Open the Arc dashboard' },
   { command: 'cases', description: 'Latest public cases' },
   { command: 'case', description: 'Case status and verdict' },
   { command: 'transcript', description: 'Latest transcript turns' },

@@ -11,9 +11,32 @@ import { TELEGRAM_BOT_COMMANDS, buildTelegramBotReply } from '../integrations/te
 
 type TelegramUpdate = {
   message?: {
+    message_id?: number
     chat?: { id?: number | string; type?: string; title?: string; username?: string; first_name?: string }
     from?: { id?: number | string; username?: string; first_name?: string }
     text?: string
+  }
+  callback_query?: {
+    id?: string
+    data?: string
+    from?: { id?: number | string; username?: string; first_name?: string }
+    message?: {
+      message_id?: number
+      chat?: { id?: number | string; type?: string; title?: string; username?: string; first_name?: string }
+    }
+  }
+}
+
+type TelegramInlineKeyboard = Array<Array<{
+  text: string
+  callback_data?: string
+  url?: string
+}>>
+
+type TelegramReply = {
+  text: string
+  replyMarkup?: {
+    inline_keyboard: TelegramInlineKeyboard
   }
 }
 
@@ -41,6 +64,52 @@ export async function telegramRoutes(app: FastifyInstance) {
     }
 
     const update = request.body as TelegramUpdate
+    if (update.callback_query) {
+      const callback = update.callback_query
+      const chatId = callback.message?.chat?.id
+      const messageId = callback.message?.message_id
+      const telegramUserId = callback.from?.id ? String(callback.from.id) : undefined
+      if (!chatId || !telegramUserId) return { ok: true }
+
+      await answerTelegramCallback(callback.id).catch((error) => {
+        request.log.warn({ err: error }, 'telegram callback answer failed')
+      })
+
+      if (callback.data === 'dash:dismiss' && messageId) {
+        await deleteTelegramMessage(String(chatId), messageId).catch((error) => {
+          request.log.warn({ err: error, chatId: String(chatId), messageId }, 'telegram dashboard delete failed')
+        })
+        return { ok: true }
+      }
+
+      const response = await buildTelegramCallbackReply({
+        data: callback.data ?? 'dash:home',
+        chatId: String(chatId),
+        messageId,
+        telegramUserId,
+        username: callback.from?.username,
+        firstName: callback.from?.first_name,
+        chatType: callback.message?.chat?.type,
+        chatTitle: callback.message?.chat?.title ?? callback.message?.chat?.username ?? callback.message?.chat?.first_name,
+      }).catch((error) => {
+        request.log.error({ err: error, chatId: String(chatId), telegramUserId }, 'telegram callback failed')
+        return {
+          text: 'Something went wrong while opening that dashboard action. Try /dashboard again.',
+          replyMarkup: dashboardKeyboard(Boolean(telegramUserId)),
+        }
+      })
+
+      if (messageId) {
+        await editTelegramMessage(String(chatId), messageId, response).catch(async (error) => {
+          request.log.warn({ err: error, chatId: String(chatId), messageId }, 'telegram dashboard edit failed')
+          await sendTelegramReply(String(chatId), response)
+        })
+      } else {
+        await sendTelegramReply(String(chatId), response)
+      }
+      return { ok: true }
+    }
+
     const message = update.message
     const chatId = message?.chat?.id
     const from = message?.from
@@ -62,7 +131,10 @@ export async function telegramRoutes(app: FastifyInstance) {
         chatId: String(chatId),
         telegramUserId: from?.id ? String(from.id) : String(chatId),
       }, 'telegram command failed')
-      return 'Something went wrong while handling that command. Try again in a moment, or send /help for the command list.'
+      return {
+        text: 'Something went wrong while handling that command. Try again in a moment, or open /dashboard.',
+        replyMarkup: dashboardKeyboard(false),
+      }
     })
     await sendTelegramReply(String(chatId), responseText).catch((error) => {
       request.log.warn({
@@ -211,97 +283,226 @@ async function buildTelegramReply({
   telegramUserId: string
   username?: string
   firstName?: string
-}) {
+}): Promise<TelegramReply> {
   const jobs = (await listHearingJobs()).filter((job) => (job.marketCase.visibility ?? 'public') === 'public')
   const [command = ''] = text.trim().split(/\s+/)
   const name = command.toLowerCase().replace(/@\w+$/, '')
+  const account = await getLinkedTelegramAccount(telegramUserId)
+
+  if (name === '/start' || name === '/help' || name === '/dashboard' || name === '/home') {
+    return buildDashboardReply({
+      telegramUserId,
+      firstName,
+      account,
+      jobs,
+      subscribed: await isChatSubscribedToAlerts(chatId),
+    })
+  }
 
   if (name === '/connect' || name === '/link') {
-    if (!isDatabaseConfigured) return 'Account linking is unavailable while the database is not configured.'
+    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
     const token = await createTelegramLinkRequest({ telegramUserId, chatId, username, firstName })
     const url = `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?telegramLink=${encodeURIComponent(token)}`
-    return [
-      'Link this Telegram chat to your Helia Court wallet:',
-      url,
-      '',
-      'Open it, connect your wallet, and sign the message. No transaction or gas is required.',
-    ].join('\n')
+    return buildConnectReply(url)
   }
 
   if (name === '/subscribe' || name === '/alerts_on') {
-    if (!isDatabaseConfigured) return 'Alert subscriptions are unavailable while the database is not configured.'
+    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
     await subscribeChatToAlerts({ chatId, chatType, chatTitle, telegramUserId })
-    return 'This chat is subscribed to Helia Court alerts. Send /unsubscribe to stop them.'
+    return withKeyboard('Alerts are on for this chat. I will post case updates here.', dashboardKeyboard(Boolean(account), true))
   }
 
   if (name === '/unsubscribe' || name === '/alerts_off') {
-    if (!isDatabaseConfigured) return 'Alert subscriptions are unavailable while the database is not configured.'
+    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
     await db!.delete(telegramAlertSubscriptions).where(eq(telegramAlertSubscriptions.chatId, chatId))
-    return 'This chat has been unsubscribed from Helia Court alerts. Send /subscribe to turn them back on.'
+    return withKeyboard('Alerts are off for this chat.', dashboardKeyboard(Boolean(account), false))
   }
 
   if (name === '/alerts') {
     const subscribed = await isChatSubscribedToAlerts(chatId)
-    return subscribed
-      ? 'This chat is subscribed to Helia Court alerts. Send /unsubscribe to stop them.'
-      : 'This chat is not subscribed to Helia Court alerts. Send /subscribe to opt in.'
+    return withKeyboard(
+      subscribed ? 'Alerts are on for this chat.' : 'Alerts are off for this chat.',
+      dashboardKeyboard(Boolean(account), subscribed),
+    )
   }
 
   if (name === '/account' || name === '/me') {
-    const account = await getLinkedTelegramAccount(telegramUserId)
-    if (!account) return 'No wallet linked yet. Send /connect first.'
-    return formatAccountSummary(await getWalletAccount(account.wallet))
+    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    return buildAccountReply(await getWalletAccount(account.wallet))
   }
 
   if (name === '/mycases') {
-    const account = await getLinkedTelegramAccount(telegramUserId)
-    if (!account) return 'No wallet linked yet. Send /connect first.'
+    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
     const summary = await getWalletAccount(account.wallet)
     const items = [...summary.cases, ...summary.follows].slice(0, 8)
-    if (!items.length) return `Linked wallet ${shortWallet(account.wallet)} has no filed or followed cases yet.`
-    return items.map((item, index) => [
-      `${index + 1}. ${item.title}`,
-      `${item.role} - ${item.visibility} - ${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/cases/${encodeURIComponent(item.id)}`,
-    ].join('\n')).join('\n\n')
+    if (!items.length) return withKeyboard(`Wallet ${shortWallet(account.wallet)} has no filed or followed cases yet.`, dashboardKeyboard(true))
+    return {
+      text: [
+        'Arc case desk',
+        '',
+        ...items.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 92)}\n${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}`),
+      ].join('\n\n'),
+      replyMarkup: casesKeyboard(items),
+    }
   }
 
   if (name === '/notifications') {
-    const account = await getLinkedTelegramAccount(telegramUserId)
-    if (!account) return 'No wallet linked yet. Send /connect first.'
+    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
     const notifications = await getWalletNotifications(account.wallet)
-    if (!notifications.length) return `No account notifications for ${shortWallet(account.wallet)} yet.`
-    return notifications.map((item, index) => [
-      `${index + 1}. ${item.title}`,
-      item.detail,
-      `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}${item.href}`,
-    ].join('\n')).join('\n\n')
+    if (!notifications.length) return withKeyboard(`No account notifications for ${shortWallet(account.wallet)} yet.`, dashboardKeyboard(true))
+    return withKeyboard([
+      'Recent account signals',
+      '',
+      ...notifications.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 80)}\n${item.detail}`),
+    ].join('\n\n'), dashboardKeyboard(true))
   }
 
   if (name === '/disconnect' || name === '/unlink') {
-    if (!isDatabaseConfigured) return 'Account linking is unavailable while the database is not configured.'
+    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
     await db!.delete(telegramAccounts).where(eq(telegramAccounts.telegramUserId, telegramUserId))
-    return 'Telegram has been unlinked from Helia Court. Send /connect to link a wallet again.'
+    return withKeyboard('Telegram has been unlinked from your Arc profile.', dashboardKeyboard(false))
   }
 
-  return buildTelegramBotReply(text, jobs)
+  return decorateLegacyReply(buildTelegramBotReply(text, jobs), Boolean(account))
 }
 
-async function sendTelegramReply(chatId: string, text: string) {
+async function buildTelegramCallbackReply({
+  data,
+  chatId,
+  telegramUserId,
+  username,
+  firstName,
+  chatType,
+  chatTitle,
+}: {
+  data: string
+  chatId: string
+  messageId?: number
+  telegramUserId: string
+  username?: string
+  firstName?: string
+  chatType?: string
+  chatTitle?: string
+}): Promise<TelegramReply> {
+  const jobs = (await listHearingJobs()).filter((job) => (job.marketCase.visibility ?? 'public') === 'public')
+  const account = await getLinkedTelegramAccount(telegramUserId)
+
+  if (data === 'dash:home') {
+    return buildDashboardReply({
+      telegramUserId,
+      firstName,
+      account,
+      jobs,
+      subscribed: await isChatSubscribedToAlerts(chatId),
+    })
+  }
+  if (data === 'dash:connect') {
+    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    const token = await createTelegramLinkRequest({ telegramUserId, chatId, username, firstName })
+    const url = `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?telegramLink=${encodeURIComponent(token)}`
+    return buildConnectReply(url)
+  }
+  if (data === 'dash:me') {
+    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    return buildAccountReply(await getWalletAccount(account.wallet))
+  }
+  if (data === 'dash:cases') {
+    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    const summary = await getWalletAccount(account.wallet)
+    const items = [...summary.cases, ...summary.follows].slice(0, 8)
+    if (!items.length) return withKeyboard(`Wallet ${shortWallet(account.wallet)} has no filed or followed cases yet.`, dashboardKeyboard(true))
+    return {
+      text: [
+        'Arc case desk',
+        '',
+        ...items.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 92)}\n${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}`),
+      ].join('\n\n'),
+      replyMarkup: casesKeyboard(items),
+    }
+  }
+  if (data === 'dash:alerts') {
+    const subscribed = await isChatSubscribedToAlerts(chatId)
+    if (subscribed) {
+      await db!.delete(telegramAlertSubscriptions).where(eq(telegramAlertSubscriptions.chatId, chatId))
+      return withKeyboard('Alerts are off for this chat.', dashboardKeyboard(Boolean(account), false))
+    }
+    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    await subscribeChatToAlerts({ chatId, chatType, chatTitle, telegramUserId })
+    return withKeyboard('Alerts are on for this chat. I will post case updates here.', dashboardKeyboard(Boolean(account), true))
+  }
+
+  return withKeyboard('Unknown dashboard action. Open the dashboard below.', dashboardKeyboard(Boolean(account)))
+}
+
+async function sendTelegramReply(chatId: string, reply: TelegramReply | string) {
   const token = env.TELEGRAM_BOT_TOKEN
   if (!token) return
+  const normalized = typeof reply === 'string' ? { text: reply } : reply
 
   const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({
       chat_id: chatId,
-      text,
+      text: normalized.text,
       disable_web_page_preview: true,
+      reply_markup: normalized.replyMarkup,
     }),
   })
 
   if (!response.ok) {
     throw new Error(`telegram reply failed: ${response.status}`)
+  }
+}
+
+async function editTelegramMessage(chatId: string, messageId: number, reply: TelegramReply) {
+  const token = env.TELEGRAM_BOT_TOKEN
+  if (!token) return
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/editMessageText`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      chat_id: chatId,
+      message_id: messageId,
+      text: reply.text,
+      disable_web_page_preview: true,
+      reply_markup: reply.replyMarkup,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`telegram edit failed: ${response.status}`)
+  }
+}
+
+async function deleteTelegramMessage(chatId: string, messageId: number) {
+  const token = env.TELEGRAM_BOT_TOKEN
+  if (!token) return
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`telegram delete failed: ${response.status}`)
+  }
+}
+
+async function answerTelegramCallback(callbackId?: string) {
+  const token = env.TELEGRAM_BOT_TOKEN
+  if (!token || !callbackId) return
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/answerCallbackQuery`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ callback_query_id: callbackId }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`telegram callback answer failed: ${response.status}`)
   }
 }
 
@@ -477,17 +678,121 @@ async function getWalletNotifications(wallet: string) {
     .slice(0, 8)
 }
 
-function formatAccountSummary(summary: Awaited<ReturnType<typeof getWalletAccount>>) {
+function buildDashboardReply({
+  firstName,
+  account,
+  jobs,
+  subscribed,
+}: {
+  telegramUserId: string
+  firstName?: string
+  account?: Awaited<ReturnType<typeof getLinkedTelegramAccount>>
+  jobs: Awaited<ReturnType<typeof listHearingJobs>>
+  subscribed: boolean
+}): TelegramReply {
+  const latest = jobs.slice(0, 3)
+  const lines = [
+    'Arc Court dashboard',
+    '',
+    `${firstName ? `Welcome, ${firstName}.` : 'Welcome.'}`,
+    account ? `Wallet: ${shortWallet(account.wallet)}` : 'Wallet: not linked',
+    `Public cases: ${jobs.length}`,
+    `Alerts: ${subscribed ? 'on' : 'off'}`,
+    '',
+    latest.length ? 'Latest hearings:' : 'No public hearings yet.',
+    ...latest.map((job, index) => `${index + 1}. ${truncateTelegramLine(job.marketCase.question, 82)}\n${formatJobStatus(job)}`),
+  ]
+
+  return {
+    text: lines.filter(Boolean).join('\n'),
+    replyMarkup: dashboardKeyboard(Boolean(account), subscribed),
+  }
+}
+
+function buildConnectReply(url: string): TelegramReply {
+  return {
+    text: [
+      'Connect wallet',
+      '',
+      'Open the secure link, connect your wallet, and sign once.',
+      'No transaction, gas, or private key is required.',
+    ].join('\n'),
+    replyMarkup: {
+      inline_keyboard: [
+        [{ text: 'Open secure link', url }],
+        [{ text: 'Back to dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+      ],
+    },
+  }
+}
+
+function buildAccountReply(summary: Awaited<ReturnType<typeof getWalletAccount>>): TelegramReply {
   const name = summary.profile.displayName || summary.profile.username || shortWallet(summary.wallet)
-  return [
-    `Linked account: ${name}`,
-    `Wallet: ${shortWallet(summary.wallet)}`,
-    `Filed cases: ${summary.cases.length}`,
-    `Followed cases: ${summary.follows.length}`,
-    `Participation: ${summary.participation.length}`,
-    `Payout receipts: ${summary.payouts.length}`,
-    `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?wallet=${encodeURIComponent(summary.wallet)}`,
-  ].join('\n')
+  return {
+    text: [
+      'Arc account',
+      '',
+      `Name: ${name}`,
+      `Wallet: ${shortWallet(summary.wallet)}`,
+      `Filed cases: ${summary.cases.length}`,
+      `Followed cases: ${summary.follows.length}`,
+      `Participation: ${summary.participation.length}`,
+      `Payout receipts: ${summary.payouts.length}`,
+    ].join('\n'),
+    replyMarkup: {
+      inline_keyboard: [
+        [{ text: 'Open profile', url: `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?wallet=${encodeURIComponent(summary.wallet)}` }],
+        [{ text: 'My cases', callback_data: 'dash:cases' }, { text: 'Refresh', callback_data: 'dash:me' }],
+        [{ text: 'Dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+      ],
+    },
+  }
+}
+
+function dashboardKeyboard(linked: boolean, subscribed = false): { inline_keyboard: TelegramInlineKeyboard } {
+  return {
+    inline_keyboard: [
+      linked
+        ? [{ text: 'My wallet', callback_data: 'dash:me' }, { text: 'My cases', callback_data: 'dash:cases' }]
+        : [{ text: 'Connect Wallet', callback_data: 'dash:connect' }],
+      [{ text: subscribed ? 'Alerts On' : 'Alerts Off', callback_data: 'dash:alerts' }, { text: 'Open app', url: env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '') }],
+      [{ text: 'Refresh', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+    ],
+  }
+}
+
+function casesKeyboard(items: Array<{ id: string }>): { inline_keyboard: TelegramInlineKeyboard } {
+  return {
+    inline_keyboard: [
+      ...items.slice(0, 5).map((item, index) => ([{
+        text: `Open case ${index + 1}`,
+        url: `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/cases/${encodeURIComponent(item.id)}`,
+      }])),
+      [{ text: 'Dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+    ],
+  }
+}
+
+function withKeyboard(text: string, replyMarkup: { inline_keyboard: TelegramInlineKeyboard }): TelegramReply {
+  return { text, replyMarkup }
+}
+
+function decorateLegacyReply(text: string, linked: boolean): TelegramReply {
+  return { text, replyMarkup: dashboardKeyboard(linked) }
+}
+
+function formatJobStatus(job: Awaited<ReturnType<typeof listHearingJobs>>[number]) {
+  if (job.status === 'completed') return 'Verdict'
+  if (job.status === 'running') return 'Hearing'
+  return formatTitleCase(job.status)
+}
+
+function truncateTelegramLine(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 3).trim()}...` : value
+}
+
+function formatTitleCase(value: string) {
+  return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 async function consumeTelegramLinkChallenge({
