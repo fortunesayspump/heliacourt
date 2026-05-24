@@ -17,10 +17,29 @@ Helia Court treats agents as paid intelligence workers. Agents need budgets, pai
 - Arc Testnet chain config
 - Circle/Arc integration points for Wallets, CCTP, Nanopayments, USDC settlement, and receipt records
 
-## Run
+## Repository Map
+
+```text
+app/        Product app, wallet flows, case filing, case pages, x402 playground
+marketing/ Public site and product story
+docs/       Static documentation site
+backend/   Fastify API, hearing worker, agents, Telegram, x402, persistence
+contracts/ Foundry contracts for Arc escrow, receipts, and agent registry
+scripts/   Local research/scraping utilities
+```
+
+## Setup
+
+Install JavaScript dependencies and contract submodules:
 
 ```bash
 pnpm install
+git submodule update --init --recursive
+```
+
+Run services:
+
+```bash
 pnpm dev:app
 pnpm dev:backend
 ```
@@ -30,6 +49,48 @@ pnpm dev:backend
 ```bash
 pnpm build
 ```
+
+Package-level builds are also available:
+
+```bash
+pnpm build:app
+pnpm build:marketing
+pnpm build:docs
+pnpm build:backend
+pnpm build:contracts
+```
+
+## Configuration
+
+Local and production configuration is provided through `.env` / `.env.local` files and deployment platform secrets. These files are intentionally ignored by git.
+
+Common frontend variables:
+
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_BACKEND_URL`
+- `NEXT_PUBLIC_REOWN_PROJECT_ID`
+- `NEXT_PUBLIC_ARC_RPC_URL`
+- `NEXT_PUBLIC_CASE_ESCROW_ADDRESS`
+- `NEXT_PUBLIC_COURT_RECEIPTS_ADDRESS`
+- `NEXT_PUBLIC_AGENT_REGISTRY_ADDRESS`
+- `NEXT_PUBLIC_TELEGRAM_BOT_URL`
+
+Common backend variables:
+
+- `DATABASE_URL`
+- `REDIS_URL`
+- `APP_ORIGIN`
+- `HELIA_PUBLIC_APP_URL`
+- `ARC_RPC_URL`
+- `PRIVATE_KEY`
+- `SETTLEMENT_PRIVATE_KEY`
+- `CASE_ESCROW_ADDRESS`
+- `COURT_RECEIPTS_ADDRESS`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_WEBHOOK_SECRET`
+- `HELIA_X402_RECEIVER_ADDRESS`
+- `HELIA_X402_FACILITATOR_URL`
+- `HELIA_X402_SIGNING_SECRET`
 
 ## Product Pieces
 
@@ -62,3 +123,7 @@ Current architecture:
 - [backend/AGENT_TOOLS.md](backend/AGENT_TOOLS.md)
 
 Older planning docs are archived under [docs/archive](docs/archive).
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). The repo is MIT licensed; keep generated files, logs, local screenshots, and secrets out of commits.

@@ -12,6 +12,12 @@ Smart-contract package for Helia Court protocol primitives.
 
 ## Commands
 
+From a fresh clone, initialize the Foundry helper submodule first:
+
+```bash
+git submodule update --init --recursive
+```
+
 ```bash
 forge build
 forge test

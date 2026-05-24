@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { AfterHeroNav } from './components/AfterHeroNav'
 import { AgentStickerStage } from './components/AgentStickerStage'
 import { FadeImageLayer } from './components/FadeImageLayer'
-import { APP_URL, HeaderNav } from './components/Nav'
+import { APP_CASE_URL, HeaderNav } from './components/Nav'
 import { ScrollReveal } from './components/ScrollReveal'
 
 const supportedMarkets = [
@@ -57,15 +57,12 @@ export default function MarketingHome() {
               verdict, and leave an auditable Arc settlement record.
             </p>
             <div className="actions">
-              <Link className="button primary" href={APP_URL}>
+              <Link className="button primary" href={APP_CASE_URL}>
                 File a Case
-              </Link>
-              <Link className="button ghost" href="#arc">
-                View settlement model
               </Link>
               <a className="button telegram-button" href={telegramUrl} target="_blank" rel="noreferrer">
                 <TelegramMark />
-                Telegram bot
+                Open on Telegram
               </a>
             </div>
             <div className="hero-flow-strip" aria-label="Helia Court filing flow">

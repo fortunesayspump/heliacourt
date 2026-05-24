@@ -3,6 +3,7 @@ logs
 *.log
 backend/tmp/
 contracts/broadcast/
+contracts/cache/
 contracts/cache/DeployArcTestnet.s.sol/
 contracts/cache/test-failures
 npm-debug.log*
@@ -16,6 +17,7 @@ node_modules
 out
 dist
 dist-ssr
+*.tsbuildinfo
 *.local
 .env
 **/.env
@@ -23,6 +25,10 @@ dist-ssr
 **/.env.local
 
 # Local screenshots / scratch captures
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
 .tmp-*.png
 *-check.png
 *-hidden-hero.png
