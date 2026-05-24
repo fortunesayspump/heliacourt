@@ -11014,24 +11014,27 @@ a:focus-visible,
   }
 
   .dashboard-grid .case-table .case-row {
-    grid-template-columns: 74px minmax(0, 1fr) !important;
+    grid-template-columns: 44px minmax(0, 1fr) !important;
     grid-template-areas:
       "image copy"
-      "stats stats" !important;
+      "image stats" !important;
     align-items: start !important;
     min-height: 0 !important;
+    gap: 9px 10px !important;
+    padding: 11px !important;
     position: relative !important;
   }
 
   .dashboard-grid .case-table .case-row .market-row-image {
     grid-area: image;
     align-self: start !important;
-    width: 74px !important;
-    height: 74px !important;
+    width: 44px !important;
+    height: 44px !important;
   }
 
   .dashboard-grid .case-table .case-row > div:nth-child(2) {
     grid-area: copy;
+    gap: 4px !important;
   }
 
   .dashboard-grid .case-table .case-row .case-row-stats {
@@ -11040,16 +11043,17 @@ a:focus-visible,
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     width: 100% !important;
     min-width: 0 !important;
-    gap: 7px !important;
+    gap: 6px !important;
   }
 
   .dashboard-grid .case-table .case-row .case-row-stats > * {
     min-width: 0 !important;
-    padding: 7px 8px !important;
+    padding: 5px 6px !important;
     border: 1px solid rgba(241, 211, 170, 0.14) !important;
     border-radius: var(--radius-sm) !important;
     background: rgba(241, 211, 170, 0.045) !important;
-    font-size: 12px !important;
+    font-size: 10.5px !important;
+    line-height: 1.1 !important;
     text-align: center !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -11058,13 +11062,22 @@ a:focus-visible,
 
   .dashboard-grid .case-table .case-row h3 {
     min-height: 0 !important;
-    font-size: 14.5px !important;
-    -webkit-line-clamp: 3 !important;
+    font-size: 13px !important;
+    line-height: 1.28 !important;
+    -webkit-line-clamp: 2 !important;
   }
 
   .case-row-market-meta {
     max-width: 100% !important;
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
+    overflow: hidden !important;
+  }
+
+  .case-row-market-meta > span:not(.market-logo-chip) {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
   .case-row:not(.dashboard-grid .case-table .case-row) .market-row-image {
