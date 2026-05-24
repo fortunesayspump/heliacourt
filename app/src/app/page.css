@@ -4879,7 +4879,8 @@ a.registry-row:hover {
 
   .dashboard-receipts-panel .compact-receipt-card .receipt-card-image {
     width: 52px;
-    min-height: 96px;
+    height: 52px;
+    min-height: 0;
     flex-basis: 52px;
   }
 
@@ -8827,9 +8828,9 @@ select {
 .dashboard-receipts-panel .compact-receipt-card .receipt-card-image {
   grid-area: image;
   width: 64px;
-  height: 100%;
-  min-height: 92px;
+  height: 64px;
   flex-basis: 64px;
+  align-self: center;
   overflow: hidden;
   border-radius: var(--radius-sm);
   box-shadow:
@@ -11143,14 +11144,14 @@ a:focus-visible,
   .dashboard-receipts-panel .compact-receipt-card {
     grid-template-columns: 52px minmax(0, 1fr) !important;
     min-height: 124px !important;
-    align-items: start !important;
+    align-items: center !important;
     padding: 11px !important;
   }
 
   .dashboard-receipts-panel .compact-receipt-card .receipt-card-image {
     width: 52px !important;
-    height: 100% !important;
-    min-height: 96px !important;
+    height: 52px !important;
+    min-height: 0 !important;
   }
 
   .dashboard-receipts-panel .compact-receipt-card .receipt-card-top {
