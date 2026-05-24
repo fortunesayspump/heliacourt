@@ -10999,10 +10999,10 @@ a:focus-visible,
     grid-template-columns: 74px minmax(0, 1fr) !important;
     grid-template-areas:
       "image copy"
-      "image status"
-      "image meta"
+      "stats stats"
       "action action" !important;
-    align-items: center !important;
+    align-items: start !important;
+    min-height: 0 !important;
   }
 
   .dashboard-grid .case-table .case-row .market-row-image {
@@ -11017,23 +11017,37 @@ a:focus-visible,
   }
 
   .dashboard-grid .case-table .case-row > .state-dot {
-    grid-area: status;
+    grid-area: stats;
     width: max-content !important;
     max-width: 100% !important;
     justify-self: start !important;
+    align-self: center !important;
   }
 
   .dashboard-grid .case-table .case-row > strong {
-    justify-self: start !important;
+    align-self: center !important;
+    justify-self: center !important;
+    min-width: 0 !important;
+    font-size: 12.5px !important;
   }
 
   .dashboard-grid .case-table .case-row > strong:nth-of-type(1) {
-    grid-area: meta;
+    grid-area: stats;
   }
 
   .dashboard-grid .case-table .case-row > strong:nth-of-type(2) {
-    grid-area: meta;
+    grid-area: stats;
     justify-self: end !important;
+  }
+
+  .dashboard-grid .case-table .case-row > .state-dot,
+  .dashboard-grid .case-table .case-row > strong {
+    margin-top: 8px !important;
+    padding: 7px 8px !important;
+    border: 1px solid rgba(241, 211, 170, 0.14) !important;
+    border-radius: var(--radius-sm) !important;
+    background: rgba(241, 211, 170, 0.045) !important;
+    white-space: nowrap !important;
   }
 
   .dashboard-grid .case-table .case-row h3 {
@@ -11055,6 +11069,7 @@ a:focus-visible,
   .dashboard-grid .case-table .case-row > a {
     grid-area: action;
     justify-self: stretch !important;
+    margin-top: 2px !important;
   }
 
   .dashboard-grid .case-table .case-row > a {
