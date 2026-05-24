@@ -3034,7 +3034,7 @@ body,
   color: var(--ag-ink);
   font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
   font-size: clamp(19px, 1.65vw, 23px);
-  font-weight: 650;
+  font-weight: 720;
   line-height: 1.36;
 }
 
@@ -3896,8 +3896,10 @@ body,
   .hero-center p {
     max-width: 340px !important;
     margin-top: 18px !important;
-    font-size: 16px !important;
-    line-height: 1.45 !important;
+    color: #171410 !important;
+    font-size: 17px !important;
+    font-weight: 760 !important;
+    line-height: 1.42 !important;
   }
 
   .hero-center .actions,
