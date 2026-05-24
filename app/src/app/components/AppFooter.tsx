@@ -24,12 +24,7 @@ export function AppFooter() {
               </a>
             ))}
           </div>
-          <nav aria-label="App footer">
-            <Link href="/cases">Cases</Link>
-            <Link href="/agents">Agents</Link>
-            <Link href="/ledger">Ledger</Link>
-            <Link href="/docs">Docs</Link>
-          </nav>
+          <span className="footer-copyright">© 2026 Helia Court</span>
           <span className="footer-network-line">Arc Testnet · USDC receipts</span>
         </div>
       </div>

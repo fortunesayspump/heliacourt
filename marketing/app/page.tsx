@@ -199,12 +199,7 @@ export default function MarketingHome() {
               </a>
             ))}
           </div>
-          <nav>
-            <Link href="/#how">Proceedings</Link>
-            <Link href="/#agents">Court roles</Link>
-            <Link href="/#arc">Settlement</Link>
-            <Link href="/docs">Docs</Link>
-          </nav>
+          <span className="footer-copyright">© 2026 Helia Court</span>
           <span className="footer-network-line">Arc Testnet · USDC receipts</span>
         </div>
       </footer>

@@ -7,20 +7,32 @@ export function BrandMark({ href = '/' }: { href?: string }) {
 }
 
 export function HeaderNav({ className = '', showCourtButton = false }: { className?: string; showCourtButton?: boolean }) {
+  const links = (
+    <>
+      <Link href="/#how">How it works</Link>
+      <Link href="/#agents">Agents</Link>
+      <Link href="/#arc">Arc</Link>
+      <Link href="/docs">Docs</Link>
+      {showCourtButton ? (
+        <Link className="nav-court-button" href={APP_URL}>
+          File a Case
+        </Link>
+      ) : null}
+    </>
+  )
+
   return (
     <nav className={`topbar ${className}`}>
       <BrandMark />
-      <div>
-        <Link href="/#how">How it works</Link>
-        <Link href="/#agents">Agents</Link>
-        <Link href="/#arc">Arc</Link>
-        <Link href="/docs">Docs</Link>
-        {showCourtButton ? (
-          <Link className="nav-court-button" href={APP_URL}>
-            File a Case
-          </Link>
-        ) : null}
-      </div>
+      <div className="topbar-links">{links}</div>
+      <details className="topbar-menu">
+        <summary aria-label="Open navigation" title="Menu">
+          <span />
+          <span />
+          <span />
+        </summary>
+        <div className="topbar-menu-panel">{links}</div>
+      </details>
     </nav>
   )
 }

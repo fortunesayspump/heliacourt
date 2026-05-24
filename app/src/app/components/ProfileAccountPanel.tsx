@@ -3,7 +3,7 @@
 import { SealCheck, UserCircle, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState, type CSSProperties } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../lib/backend-data'
 import { GatewayBalance } from './GatewayBalance'
@@ -94,19 +94,6 @@ export function ProfileAccountPanel() {
   const filteredFiledCases = filedCases.filter((item) => visibilityFilter === 'all' || item.visibility === visibilityFilter)
   const privateCaseCount = [...filedCases, ...followedCases].filter((item) => item.visibility === 'private').length
   const publicCaseCount = [...filedCases, ...followedCases].filter((item) => item.visibility === 'public').length
-  const profileChart = useMemo(() => {
-    const max = Math.max(1, filedCases.length, followedCases.length, account?.participation.length ?? 0, account?.payouts.length ?? 0)
-    return [
-      { label: 'Filed', value: filedCases.length },
-      { label: 'Followed', value: followedCases.length },
-      { label: 'Participated', value: account?.participation.length ?? 0 },
-      { label: 'Receipts', value: account?.payouts.length ?? 0 },
-    ].map((item) => ({
-      ...item,
-      percent: Math.max(item.value ? 12 : 3, Math.round((item.value / max) * 100)),
-    }))
-  }, [account?.participation.length, account?.payouts.length, filedCases.length, followedCases.length])
-
   const saveProfile = async () => {
     if (!address || !isOwnProfile || saving) return
 
@@ -284,16 +271,6 @@ export function ProfileAccountPanel() {
         <ProfileStat label="Followed" value={`${account?.follows.length ?? 0}`} />
         <ProfileStat label="Participation" value={`${account?.participation.length ?? 0}`} />
         <ProfileStat label="Receipts" value={payoutTotal ? `${formatAmount(payoutTotal)} USDC` : `${account?.payouts.length ?? 0} rows`} />
-      </section>
-
-      <section className="profile-chart-strip" aria-label="Profile activity chart">
-        {profileChart.map((item) => (
-          <div key={item.label}>
-            <i style={{ '--bar-height': `${item.percent}%` } as CSSProperties} />
-            <span>{item.label}</span>
-            <strong>{item.value}</strong>
-          </div>
-        ))}
       </section>
 
       <section className="profile-main-grid">

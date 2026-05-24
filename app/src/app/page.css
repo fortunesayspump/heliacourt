@@ -651,6 +651,12 @@
   font-size: 12.5px !important;
 }
 
+.footer-copyright {
+  justify-self: end;
+  color: rgba(255, 255, 255, 0.72) !important;
+  font-size: 12.5px !important;
+}
+
 .workspace-header {
   display: grid;
   grid-template-columns: minmax(0, 760px) auto;
@@ -4794,7 +4800,7 @@ a.registry-row:hover {
   }
 
   .agent-profile-stats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .agent-profile-panel,
@@ -6543,9 +6549,12 @@ a.registry-row:hover {
   }
 
   .profile-access-grid,
-  .profile-stat-grid,
   .profile-main-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .profile-connect-panel,
@@ -7422,6 +7431,21 @@ select {
   background: transparent !important;
 }
 
+.sidebar-facts .compact-card.fact-card {
+  grid-template-columns: 30px minmax(0, 1fr) !important;
+}
+
+.sidebar-facts .fact-card-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(241, 211, 170, 0.14);
+  border-radius: 50%;
+  color: var(--member-accent);
+  background: rgba(var(--member-accent-rgb), 0.1);
+}
+
 .sidebar-facts .compact-card:hover,
 .hearing-side-stack .compact-card:hover {
   background: rgba(var(--member-accent-rgb), 0.08) !important;
@@ -7493,12 +7517,11 @@ select {
 .sidebar-facts .compact-card p,
 .hearing-side-stack .compact-card p {
   min-width: 0;
-  overflow: hidden;
   color: var(--ag-muted);
   font-size: 12px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .sidebar-facts .fact-card p {
@@ -8088,12 +8111,11 @@ select {
 }
 
 .verdict-stat-grid strong {
-  overflow: hidden;
   color: var(--ag-ink);
   font-size: 14px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .verdict-section {
@@ -8285,12 +8307,11 @@ select {
 
 .receipt-summary-grid strong,
 .receipt-record-strip strong {
-  overflow: hidden;
   color: var(--ag-ink);
   font-size: 15px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .receipt-record-strip {
@@ -8438,12 +8459,11 @@ select {
 }
 
 .history-summary-grid strong {
-  overflow: hidden;
   color: var(--ag-ink);
   font-size: 15px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .case-history-timeline {
@@ -8507,12 +8527,15 @@ select {
 }
 
 @media (max-width: 900px) {
-  .receipt-summary-grid,
   .receipt-record-strip,
   .case-receipt-row,
-  .history-summary-grid,
   .case-history-event {
     grid-template-columns: 1fr;
+  }
+
+  .receipt-summary-grid,
+  .history-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .receipt-record-strip > .secondary-button,
@@ -8522,10 +8545,13 @@ select {
 }
 
 @media (max-width: 900px) {
-  .verdict-stat-grid,
   .verdict-claim-grid,
   .verdict-two-column {
     grid-template-columns: 1fr;
+  }
+
+  .verdict-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -8675,6 +8701,22 @@ select {
   color: var(--ag-on-dark) !important;
   border-color: rgba(var(--transcript-accent-rgb), 0.42);
   background: var(--transcript-accent);
+}
+
+.transcript-new-turn-button {
+  position: sticky;
+  bottom: 74px;
+  z-index: 8;
+  justify-self: center;
+  margin: 6px auto 0;
+  padding: 8px 12px;
+  border: 1px solid rgba(132, 177, 120, 0.42);
+  border-radius: 999px;
+  color: var(--ag-on-dark);
+  background: rgba(71, 99, 82, 0.94);
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.22);
+  font-size: 12px;
+  font-weight: 760;
 }
 
 /* Cases page needs visible depth: panel, cards, and inner stats should not share one surface. */
@@ -9743,27 +9785,44 @@ select {
 
   .app-footer {
     gap: 18px !important;
-    padding: 28px 0 !important;
+    min-height: 0 !important;
+    padding: 30px 0 calc(30px + env(safe-area-inset-bottom)) !important;
   }
 
   .app-footer-inner {
-    width: min(100% - 28px, 1180px) !important;
+    width: min(100% - 32px, 1180px) !important;
     grid-template-columns: 1fr !important;
-    gap: 18px !important;
+    gap: 22px !important;
+    align-items: start !important;
   }
 
-  .app-footer nav {
-    display: grid !important;
-    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-    gap: 8px 14px !important;
+  .app-footer-inner > div:first-child,
+  .footer-link-stack {
+    justify-items: center !important;
+    text-align: center !important;
+  }
+
+  .app-footer p {
+    max-width: 34rem !important;
+    margin-right: auto !important;
+    margin-left: auto !important;
+    font-size: 13.5px !important;
+    line-height: 1.5 !important;
   }
 
   .footer-link-stack {
-    justify-items: start !important;
+    gap: 10px !important;
   }
 
   .footer-market-row {
-    justify-self: start !important;
+    justify-self: center !important;
+    gap: 14px !important;
+  }
+
+  .footer-copyright,
+  .footer-network-line {
+    justify-self: center !important;
+    text-align: center !important;
   }
 }
 
@@ -10165,12 +10224,11 @@ a:focus-visible,
 }
 
 .case-hero-stats strong {
-  overflow: hidden;
   color: var(--ag-on-dark);
   font-size: 14px;
   line-height: 1.2;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .case-detail-hero .case-onchain-facts {
@@ -10689,7 +10747,7 @@ a:focus-visible,
 
 @media (max-width: 640px) {
   :where(.app-summary-grid, .agent-profile-stats, .profile-stat-grid, .metrics-grid) {
-    grid-template-columns: 1fr !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 }
 
@@ -10988,6 +11046,78 @@ a:focus-visible,
     height: 17px !important;
   }
 
+  .ledger-proof-grid,
+  .ledger-kpi-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .ledger-proof-grid article {
+    min-height: 118px !important;
+    padding: 12px !important;
+  }
+
+  .ledger-kpi-strip span {
+    min-height: 82px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    padding: 12px !important;
+    overflow: hidden !important;
+  }
+
+  .ledger-kpi-strip b {
+    max-width: 100% !important;
+    overflow: hidden !important;
+    font-size: 18px !important;
+    line-height: 1.05 !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .ledger-chart-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .ledger-chart-block.wide {
+    grid-column: auto !important;
+  }
+
+  .ledger-stat-block {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .gateway-balance-grid,
+  .x402-route-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+
+  .gateway-balance-grid article,
+  .x402-route-grid article {
+    min-height: 96px !important;
+    padding: 12px !important;
+  }
+
+  .gateway-action-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .gateway-action-grid label {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  .gateway-action-grid button,
+  .gateway-complete-button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
   .metric span {
     font-size: 11.5px !important;
     line-height: 1.15 !important;
@@ -11219,11 +11349,15 @@ a:focus-visible,
   .case-detail-shell,
   .case-detail-actions,
   .receipt-record-strip,
-  .receipt-summary-grid,
-  .verdict-stat-grid,
   .verdict-claim-grid,
   .verdict-two-column {
     grid-template-columns: 1fr !important;
+  }
+
+  .receipt-summary-grid,
+  .history-summary-grid,
+  .verdict-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
 
   .case-detail-topbar .case-record-tabs,
@@ -11247,7 +11381,10 @@ a:focus-visible,
 
   .transcript-entry {
     grid-template-columns: 34px minmax(0, 1fr) !important;
+    min-width: 0 !important;
     gap: 8px !important;
+    padding: 7px 2px !important;
+    overflow: hidden !important;
   }
 
   .transcript-avatar {
@@ -11256,20 +11393,99 @@ a:focus-visible,
   }
 
   .transcript-message {
+    min-width: 0 !important;
     width: 100% !important;
     max-width: 100% !important;
-    padding: 10px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
   }
 
   .transcript-meta {
-    display: grid !important;
-    gap: 4px !important;
+    display: flex !important;
+    min-width: 0 !important;
+    flex-wrap: wrap !important;
+    gap: 3px 7px !important;
+    align-items: baseline !important;
+  }
+
+  .transcript-meta > div {
+    min-width: 0 !important;
+  }
+
+  .transcript-meta strong {
+    font-size: 13px !important;
+    line-height: 1.15 !important;
+  }
+
+  .transcript-meta span,
+  .transcript-meta time,
+  .transcript-tags span {
+    font-size: 11px !important;
+    line-height: 1.15 !important;
+  }
+
+  .transcript-message > p:not(.transcript-stage):not(.transcript-reply) {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+    font-size: 14px !important;
+    line-height: 1.42 !important;
+  }
+
+  .transcript-message > p :where(span, a, code),
+  .transcript-reply span,
+  .transcript-source-card :where(strong, em, small, span),
+  .transcript-attachment :where(strong, span) {
+    max-width: 100% !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  .transcript-entry.has-reply {
+    grid-template-areas:
+      ". reply"
+      "avatar message" !important;
+  }
+
+  .transcript-reply {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .transcript-contexts::before {
+    left: -24px !important;
+    width: 14px !important;
   }
 
   .transcript-source-grid,
   .receipt-ledger-list,
   .proof-receipt-list {
     grid-template-columns: 1fr !important;
+  }
+
+  .transcript-source-grid {
+    grid-auto-flow: row !important;
+    grid-auto-columns: auto !important;
+    overflow: visible !important;
+    padding-bottom: 0 !important;
+  }
+
+  .transcript-source-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .transcript-attachment {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .attachment-bars span {
+    min-width: 0 !important;
+    max-width: 100% !important;
   }
 
   .case-receipt-row,

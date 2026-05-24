@@ -1,17 +1,15 @@
-import { ArrowLeft } from '@phosphor-icons/react/ssr'
+import { ArrowLeft, Clock, Gauge, Scales, Storefront } from '@phosphor-icons/react/ssr'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
 import { AppFooter } from '../../components/AppFooter'
 import { CaseAddFundingButton } from '../../components/CaseAddFundingButton'
-import { CaseAutoRefresh } from '../../components/CaseAutoRefresh'
 import { CaseDetailTabs } from '../../components/CaseDetailTabs'
 import { CaseFollowButton } from '../../components/CaseFollowButton'
+import { CaseLiveTranscript } from '../../components/CaseLiveTranscript'
 import { getMarketProvider, MarketLogo } from '../../components/MarketLogo'
 import { MarketPreviewImage } from '../../components/MarketPreviewImage'
 import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
-import { SourceEmbedCard } from '../../components/SourceEmbedCard'
-import { TranscriptLiveMotion } from '../../components/TranscriptLiveMotion'
 import { formatConfidence, getBackendCaseDetail, type ApiCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import { getAgentAvatarUrl } from '../../../lib/agent-images'
 import '../../page.css'
@@ -113,7 +111,6 @@ async function CaseRecordData({
   const verdictArtifact = caseDetail.artifacts.findLast((artifact) => artifact.type === 'verdict' && artifact.agentId === 'head-judge')
   const settlementArtifact = caseDetail.artifacts.findLast((artifact) => artifact.agentId === 'settlement-clerk')
   const onchainReceipts = caseDetail.onchainSettlement?.receipts ?? []
-  const artifactById = new Map(caseDetail.artifacts.map((artifact) => [artifact.id, artifact]))
   const relatedLinks = getRelatedLinks(courtCase.links, courtCase.resolution, caseDetail.artifacts)
   const predictionMarketLink = [...courtCase.links ?? [], ...relatedLinks.map((link) => link.url)].find(isSupportedPredictionMarketLink)
   const confidence = formatConfidence(courtCase.confidence)
@@ -133,7 +130,6 @@ async function CaseRecordData({
 
   return (
     <>
-      <CaseAutoRefresh active={Boolean(caseDetail.partial || courtCase.status === 'Hearing' || courtCase.status === 'Queued')} />
         <section className="panel case-detail-hero">
           <div className="case-hero-media">
             <MarketPreviewImage fallbackTitle={courtCase.title} imageUrl={courtCase.imageUrl} preferOgImage url={predictionMarketLink} />
@@ -180,55 +176,7 @@ async function CaseRecordData({
                     <h2>Hearing record</h2>
                   </div>
                 </div>
-                <TranscriptLiveMotion caseId={courtCase.id} />
-                <div className="court-transcript" data-live-transcript>
-                  {caseDetail.transcript.length ? caseDetail.transcript.map((turn) => {
-                    const replyTurn = turn.replyToId ? caseDetail.transcript.find((item) => item.id === turn.replyToId) : undefined
-                    const artifact = turn.artifactId ? artifactById.get(turn.artifactId) : undefined
-                    const sourceCards = getTurnSourceCards(turn, artifact)
-                    const hasContext = Boolean(replyTurn)
-                    const avatarUrl = getAgentAvatarUrl(turn.agentId, turn.agentName)
-
-                    return (
-                      <article className={`transcript-entry role-${formatTurnRole(turn.seat)}${hasContext ? ' has-reply' : ''}`} id={turn.id} key={turn.id}>
-                        {replyTurn ? (
-                          <div className="transcript-contexts">
-                            <a className="transcript-reply" href={`#${replyTurn.id}`} aria-label={`Jump to ${replyTurn.agentName}`}>
-                              <strong>{replyTurn.agentName}</strong>
-                              <span>{summarizeTurn(replyTurn)}</span>
-                            </a>
-                          </div>
-                        ) : null}
-                        <div className="transcript-avatar">
-                          {avatarUrl ? <img alt="" src={avatarUrl} /> : turn.agentName.slice(0, 1)}
-                        </div>
-                        <div className="transcript-message">
-                          <div className="transcript-meta">
-                            <div>
-                              <strong>{turn.agentName}</strong>
-                              <span>{turn.stage}</span>
-                              {typeof turn.confidence === 'number' && <span>{formatConfidence(turn.confidence)}</span>}
-                              {turn.createdAt ? <time dateTime={turn.createdAt}>{formatTurnTime(turn.createdAt)}</time> : null}
-                            </div>
-                          </div>
-                          <p>{renderTextWithLinks(turn.message)}</p>
-                          {sourceCards.length ? (
-                            <div className="transcript-source-grid" aria-label="Referenced sources">
-                              {sourceCards.map((source) => (
-                                <SourceEmbedCard detail={source.detail} kind={source.kind} key={`${turn.id}-${source.url}`} title={source.title} url={source.url} />
-                              ))}
-                            </div>
-                          ) : null}
-                        </div>
-                      </article>
-                    )
-                  }) : (
-                    <div className="empty-state">
-                      <strong>No transcript turns yet</strong>
-                      <p>Run the hearing to add live court turns to this case.</p>
-                    </div>
-                  )}
-                </div>
+                <CaseLiveTranscript caseId={courtCase.id} initialArtifacts={caseDetail.artifacts} initialTranscript={caseDetail.transcript} />
               </section>
                 ),
 
@@ -491,6 +439,7 @@ async function CaseRecordData({
               <div className="sidebar-facts">
                 {caseFacts.map(([label, value]) => (
                   <article className="compact-card fact-card" key={label}>
+                    <span className="fact-card-icon" aria-hidden="true">{getFactIcon(label)}</span>
                     <div>
                       <h3>{label}</h3>
                       <p>{value}</p>
@@ -990,6 +939,13 @@ function formatMarketType(value?: string) {
     .filter(Boolean)
     .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
     .join(' ')
+}
+
+function getFactIcon(label: string) {
+  if (label === 'Status') return <Gauge size={15} />
+  if (label === 'Confidence') return <Scales size={15} />
+  if (label === 'Horizon') return <Clock size={15} />
+  return <Storefront size={15} />
 }
 
 function shortCaseId(id: string) {
