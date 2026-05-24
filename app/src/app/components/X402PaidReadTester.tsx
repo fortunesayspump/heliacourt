@@ -32,6 +32,10 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
   const [policyReadsUsed, setPolicyReadsUsed] = useState(0)
 
   const trimmedCaseId = useMemo(() => caseId.trim(), [caseId])
+  const requestPath = useMemo(
+    () => `/api/x402/${resource}/${trimmedCaseId ? shortCaseId(trimmedCaseId) : ':caseId'}`,
+    [resource, trimmedCaseId],
+  )
   const policyRemainingReads = Math.max(0, Number(policyMaxReads || 0) - policyReadsUsed)
   const policyMaxMicroUsdc = Math.max(0, Math.floor(Number(policyMaxUsdc || 0) * 1_000_000))
   const policyRemainingUsdc = Math.max(0, policyMaxMicroUsdc - policySpentMicroUsdc) / 1_000_000
@@ -229,16 +233,37 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
           <p className="gateway-explainer">Use this when a browser agent or external app needs structured JSON. Public case pages stay free to read.</p>
         </div>
 
-        <div className="x402-live-result">
-          <div>
-            <span>Settlement</span>
-            <pre>{settlement || 'Payment response appears here after settlement.'}</pre>
+        {settlement || responseBody ? (
+          <div className="x402-live-result">
+            <div className="x402-result-pane">
+              <span>Payment settlement</span>
+              <strong>x402 header proof</strong>
+              <pre>{settlement || 'No settlement header returned yet.'}</pre>
+            </div>
+            <div className="x402-result-pane">
+              <span>API response</span>
+              <strong>{resourceOptions.find((option) => option.value === resource)?.label ?? 'Proof'} JSON</strong>
+              <pre>{responseBody || 'No paid API response returned yet.'}</pre>
+            </div>
           </div>
-          <div>
-            <span>Payload</span>
-            <pre>{responseBody || 'Paid API response appears here.'}</pre>
+        ) : (
+          <div className="x402-request-preview">
+            <div className="x402-playground-shell">
+              <div className="x402-playground-topline">
+                <span>Playground output</span>
+                <strong>{resourceOptions.find((option) => option.value === resource)?.label ?? 'Proof'} JSON</strong>
+              </div>
+              <div className="x402-playground-route">
+                <span>Route</span>
+                <code>{trimmedCaseId ? requestPath : '/api/x402/:resource/:caseId'}</code>
+              </div>
+              <div className="x402-playground-empty">
+                <strong>No response yet</strong>
+                <p>Run Pay and read. Settlement proof and the paid API JSON will render here.</p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </section>
   )
@@ -280,4 +305,9 @@ function policyStorageKey(address: string) {
 
 function formatUsdc(value: number) {
   return value.toLocaleString(undefined, { maximumFractionDigits: 4 })
+}
+
+function shortCaseId(value: string) {
+  if (value.length <= 18) return value
+  return `${value.slice(0, 8)}...${value.slice(-6)}`
 }

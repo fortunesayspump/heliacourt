@@ -90,44 +90,33 @@ export default async function X402Page() {
             </article>
           </div>
           <div className="x402-screenshot-grid">
-            <article className="x402-shot gateway-shot">
-              <div className="shot-topline">
-                <span>Gateway balance</span>
-                <strong>0.42 USDC</strong>
-              </div>
-              <div className="shot-stat-row">
-                <span>Wallet</span>
-                <strong>1.20 USDC</strong>
-              </div>
-              <div className="shot-stat-row">
-                <span>Available</span>
-                <strong>0.42 USDC</strong>
-              </div>
-              <div className="shot-action-row">
-                <span>Deposit</span>
-                <code>0.01</code>
-              </div>
+            <div className="x402-trace-summary">
+              <span>Trace</span>
+              <strong>Gateway-paid read</strong>
+              <p>Gateway funds the API call. Case escrow stays separate.</p>
+            </div>
+            <article className="x402-trace-step">
+              <span>01 Request</span>
+              <strong>Transcript route</strong>
+              <code>GET /x402/transcript/:caseId</code>
             </article>
-            <article className="x402-shot code-shot">
-              <div className="shot-code-line"><span>GET</span><code>/x402/transcript/0xcf0b...</code></div>
-              <div className="shot-code-line"><span>402</span><code>X-PAYMENT required</code></div>
-              <div className="shot-code-block">
-                <span>{'{'}</span>
-                <span>  "accepts": "USDC",</span>
-                <span>  "amount": "0.01",</span>
-                <span>  "network": "arc-testnet"</span>
-                <span>{'}'}</span>
-              </div>
+            <article className="x402-trace-step">
+              <span>02 Quote</span>
+              <strong>402 Payment required</strong>
+              <pre>{`{
+  "accepts": "USDC",
+  "amount": "<route quote>",
+  "network": "arc-testnet"
+}`}</pre>
             </article>
-            <article className="x402-shot proof-shot">
-              <div className="shot-code-line"><span>200</span><code>payment settled</code></div>
-              <div className="shot-code-block">
-                <span>{'{'}</span>
-                <span>  "receipt": "anchored",</span>
-                <span>  "paymentTx": "0x42...91",</span>
-                <span>  "payload": "proof"</span>
-                <span>{'}'}</span>
-              </div>
+            <article className="x402-trace-step">
+              <span>03 Result</span>
+              <strong>200 Payment settled</strong>
+              <pre>{`{
+  "receipt": "anchored",
+  "paymentTx": "0x...",
+  "payload": "transcript"
+}`}</pre>
             </article>
           </div>
         </section>
