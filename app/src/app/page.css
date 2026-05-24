@@ -1987,28 +1987,33 @@ button {
 
 .x402-live-panel {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .x402-live-layout {
   display: grid;
   grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.15fr);
-  gap: 10px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(34, 33, 29, 0.14);
+  border-radius: var(--surface-radius-inner);
+  background: #171916;
 }
 
 .x402-live-controls,
 .x402-live-result {
   min-width: 0;
-  border: 1px solid var(--surface-row-border);
-  border-radius: var(--surface-radius-inner);
-  background: var(--surface-inner);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .x402-live-controls {
   display: grid;
   gap: 12px;
   align-content: start;
-  padding: 14px;
+  padding: 16px;
+  border-right: 1px solid rgba(244, 240, 230, 0.1);
 }
 
 .x402-live-controls label {
@@ -2018,7 +2023,7 @@ button {
 
 .x402-live-controls label span,
 .x402-live-result span {
-  color: var(--ag-muted);
+  color: rgba(244, 240, 230, 0.56);
   font-size: 10.5px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -2028,10 +2033,10 @@ button {
 .x402-live-controls input {
   min-width: 0;
   width: 100%;
-  border: 1px solid rgba(34, 33, 29, 0.12);
+  border: 1px solid rgba(244, 240, 230, 0.13);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.78);
-  color: var(--ag-ink);
+  background: rgba(244, 240, 230, 0.06);
+  color: var(--ag-on-dark);
   font: 700 13px/1.2 var(--font-mono);
   padding: 11px 12px;
   outline: none;
@@ -2041,9 +2046,9 @@ button {
   display: grid;
   gap: 9px;
   padding: 10px;
-  border: 1px solid rgba(71, 99, 82, 0.16);
+  border: 1px solid rgba(180, 199, 147, 0.18);
   border-radius: var(--radius-sm);
-  background: rgba(71, 99, 82, 0.07);
+  background: rgba(180, 199, 147, 0.07);
 }
 
 .x402-policy-toggle {
@@ -2060,7 +2065,7 @@ button {
 }
 
 .x402-policy-toggle span {
-  color: var(--ag-ink) !important;
+  color: var(--ag-on-dark) !important;
   font-size: 12px !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
@@ -2086,8 +2091,8 @@ button {
   min-width: 0;
   padding: 7px 8px;
   border-radius: 9px;
-  background: rgba(255, 255, 255, 0.68);
-  color: var(--ag-muted);
+  background: rgba(244, 240, 230, 0.08);
+  color: rgba(244, 240, 230, 0.68);
   font-size: 11px;
   font-weight: 750;
   text-align: center;
@@ -2103,19 +2108,19 @@ button {
   display: grid;
   gap: 5px;
   min-width: 0;
-  min-height: 78px;
+  min-height: 70px;
   padding: 11px;
-  border: 1px solid rgba(34, 33, 29, 0.1);
+  border: 1px solid rgba(244, 240, 230, 0.11);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.62);
-  color: var(--ag-ink);
+  background: rgba(244, 240, 230, 0.05);
+  color: var(--ag-on-dark);
   text-align: left;
   cursor: pointer;
 }
 
 .x402-resource-picker button.active {
-  border-color: rgba(71, 99, 82, 0.42);
-  background: rgba(71, 99, 82, 0.1);
+  border-color: rgba(180, 199, 147, 0.48);
+  background: rgba(180, 199, 147, 0.13);
 }
 
 .x402-resource-picker strong {
@@ -2125,7 +2130,7 @@ button {
 }
 
 .x402-resource-picker span {
-  color: var(--ag-muted);
+  color: rgba(244, 240, 230, 0.58);
   font-size: 12px;
   line-height: 1.25;
 }
@@ -2133,8 +2138,8 @@ button {
 .x402-live-result {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  gap: 8px;
-  padding: 8px;
+  gap: 0;
+  padding: 0;
 }
 
 .x402-live-result div {
@@ -2143,10 +2148,9 @@ button {
   min-width: 0;
   min-height: 260px;
   align-content: start;
-  padding: 12px;
-  border: 1px solid rgba(34, 33, 29, 0.09);
-  border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.68);
+  padding: 16px;
+  border-left: 1px solid rgba(244, 240, 230, 0.1);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .x402-live-result pre {
@@ -2155,19 +2159,23 @@ button {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--ag-green);
+  color: #d6e6c0;
   font: 650 12px/1.45 var(--font-mono);
 }
 
 .x402-guide-panel {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .x402-process-grid,
 .x402-screenshot-grid {
   display: grid;
-  gap: 8px;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid rgba(34, 33, 29, 0.14);
+  border-radius: var(--surface-radius-inner);
+  background: var(--surface-inner);
 }
 
 .x402-process-grid {
@@ -2177,17 +2185,22 @@ button {
 .x402-process-grid article,
 .x402-shot {
   min-width: 0;
-  border: 1px solid var(--surface-row-border);
-  border-radius: var(--surface-radius-inner);
-  background: var(--surface-inner);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .x402-process-grid article {
   display: grid;
   gap: 8px;
   align-content: start;
-  min-height: 150px;
-  padding: 13px;
+  min-height: 138px;
+  padding: 14px;
+  border-right: 1px solid rgba(34, 33, 29, 0.1);
+}
+
+.x402-process-grid article:last-child {
+  border-right: 0;
 }
 
 .x402-process-grid span,
@@ -2228,17 +2241,22 @@ button {
 
 .x402-screenshot-grid {
   grid-template-columns: 0.9fr 1.1fr 1.1fr;
+  margin-top: 2px;
+  background: #171916;
 }
 
 .x402-shot {
   display: grid;
-  gap: 9px;
-  min-height: 190px;
+  gap: 8px;
+  min-height: 178px;
   align-content: start;
   padding: 14px;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(154, 147, 80, 0.08), transparent 34%),
-    var(--surface-inner);
+  border-right: 1px solid rgba(244, 240, 230, 0.1);
+  background: transparent;
+}
+
+.x402-shot:last-child {
+  border-right: 0;
 }
 
 .shot-topline,
@@ -2246,9 +2264,9 @@ button {
 .shot-action-row,
 .shot-code-line,
 .shot-code-block {
-  border: 1px solid rgba(34, 33, 29, 0.1);
+  border: 1px solid rgba(244, 240, 230, 0.11);
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(244, 240, 230, 0.06);
 }
 
 .shot-topline,
@@ -2264,11 +2282,11 @@ button {
 
 .shot-topline {
   grid-template-columns: 1fr auto;
-  background: rgba(71, 99, 82, 0.09);
+  background: rgba(180, 199, 147, 0.11);
 }
 
 .shot-topline strong {
-  color: var(--ag-green);
+  color: #d6e6c0;
   font-size: 22px;
 }
 
@@ -2278,15 +2296,15 @@ button {
   min-height: 24px;
   place-items: center;
   border-radius: 999px;
-  color: var(--ag-on-dark);
-  background: var(--ag-green);
+  color: #171916;
+  background: #d6e6c0;
   font-size: 9.5px;
 }
 
 .shot-code-line code,
 .shot-action-row code {
   overflow: hidden;
-  color: var(--ag-ink);
+  color: var(--ag-on-dark);
   font-size: 12px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -2297,9 +2315,20 @@ button {
   display: grid;
   gap: 5px;
   padding: 12px;
-  color: var(--ag-green);
+  color: #d6e6c0;
   font-size: 12px;
   line-height: 1.35;
+}
+
+.shot-topline span,
+.shot-stat-row span,
+.shot-action-row span,
+.shot-code-line span {
+  color: rgba(244, 240, 230, 0.56);
+}
+
+.shot-stat-row strong {
+  color: var(--ag-on-dark);
 }
 
 .x402-route-grid {
@@ -11467,10 +11496,14 @@ a:focus-visible,
   }
 
   .gateway-balance-grid,
-  .x402-process-grid,
   .x402-route-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 8px !important;
+  }
+
+  .x402-process-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0 !important;
   }
 
   .x402-live-layout,
@@ -11478,16 +11511,24 @@ a:focus-visible,
     grid-template-columns: 1fr !important;
   }
 
+  .x402-live-controls {
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(244, 240, 230, 0.1) !important;
+  }
+
   .x402-policy-meter {
     grid-template-columns: 1fr !important;
   }
 
   .x402-live-result div {
+    border-left: 0 !important;
+    border-top: 1px solid rgba(244, 240, 230, 0.1) !important;
     min-height: 190px !important;
   }
 
   .x402-screenshot-grid {
     grid-template-columns: 1fr !important;
+    gap: 0 !important;
   }
 
   .gateway-balance-grid article,
@@ -11495,6 +11536,25 @@ a:focus-visible,
   .x402-route-grid article {
     min-height: 96px !important;
     padding: 12px !important;
+  }
+
+  .x402-process-grid article {
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(34, 33, 29, 0.1) !important;
+  }
+
+  .x402-process-grid article:last-child {
+    border-bottom: 0 !important;
+  }
+
+  .x402-shot {
+    min-height: 0 !important;
+    border-right: 0 !important;
+    border-bottom: 1px solid rgba(244, 240, 230, 0.1) !important;
+  }
+
+  .x402-shot:last-child {
+    border-bottom: 0 !important;
   }
 
   .gateway-action-grid {
