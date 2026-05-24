@@ -356,11 +356,12 @@ a {
 }
 
 .hero-flow-strip {
-  display: inline-grid;
+  display: grid;
   grid-template-columns: repeat(4, minmax(0, auto));
   gap: 0;
   align-items: center;
   justify-content: center;
+  width: max-content;
   max-width: min(100%, 720px);
   margin: 22px auto 0;
   overflow: hidden;
@@ -387,11 +388,13 @@ a {
 }
 
 .hero-market-logos {
-  display: inline-flex;
+  display: flex;
+  width: max-content;
+  max-width: 100%;
   align-items: center;
   justify-content: center;
   gap: 24px;
-  margin-top: 26px;
+  margin: 18px auto 0;
   animation: hero-enter 760ms var(--ease-snap) 700ms both;
 }
 
