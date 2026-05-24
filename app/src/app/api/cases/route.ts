@@ -1,40 +1,20 @@
-import { NextResponse } from 'next/server'
-
-const backendUrl = (process.env.BACKEND_URL ?? process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:4000').replace(/\/$/, '')
+import { proxyBackendJson, readJsonBody } from '../../../lib/backend-proxy'
 
 export async function GET() {
-  try {
-    const response = await fetch(`${backendUrl}/cases`, { cache: 'no-store' })
-    const payload = await response.json().catch(() => ({ cases: [] }))
-
-    return NextResponse.json(payload, { status: response.status })
-  } catch (error) {
-    return NextResponse.json({
-      cases: [],
-      error: error instanceof Error ? error.message : 'Case data is unavailable.',
-    })
-  }
+  return proxyBackendJson('/cases', {
+    cache: 'no-store',
+    jsonFallback: { cases: [] },
+    unavailableMessage: 'Case data is unavailable.',
+    unavailablePayload: { cases: [] },
+    unavailableStatus: 200,
+  })
 }
 
 export async function POST(request: Request) {
-  const body = await request.json().catch(() => ({}))
-
-  try {
-    const response = await fetch(`${backendUrl}/cases`, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    })
-    const payload = await response.json().catch(() => ({
-      error: 'No case data returned.',
-    }))
-
-    return NextResponse.json(payload, { status: response.status })
-  } catch (error) {
-    return NextResponse.json({
-      error: error instanceof Error ? error.message : 'Case data is unavailable.',
-    }, { status: 502 })
-  }
+  return proxyBackendJson('/cases', {
+    method: 'POST',
+    body: await readJsonBody(request),
+    jsonFallback: { error: 'No case data returned.' },
+    unavailableMessage: 'Case data is unavailable.',
+  })
 }

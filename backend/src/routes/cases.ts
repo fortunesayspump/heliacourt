@@ -1,99 +1,20 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
-import { createPublicClient, formatUnits, http, parseEventLogs, parseUnits, verifyMessage } from 'viem'
-import { z } from 'zod'
+import { verifyMessage } from 'viem'
 import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearing-jobs.js'
-import { arcTestnet } from '../chains/arc-testnet.js'
 import { env } from '../config/env.js'
 import type { CaseType, CourtArtifact, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { authChallenges, caseFollows, caseParticipants, onchainReceipts, users } from '../db/schema.js'
 import { notifyCaseFiled, notifyCaseFunded } from '../integrations/telegram.js'
+import { verifyCaseCancellationReceipt, verifyCaseFundingReceipt, verifyCaseOpenedReceipt } from './cases.onchain.js'
+import { addFundingReceiptSchema, cancelCaseReceiptSchema, caseAccessChallengeSchema, createCaseSchema, followCaseSchema, signedCaseAccessSchema } from './cases.schemas.js'
+import { normalizeWallet } from './cases.utils.js'
 
-const createCaseSchema = z.object({
-  id: z.string().trim().min(1).optional(),
-  question: z.string().trim().min(1),
-  context: z.string().trim().optional(),
-  links: z.array(z.string().trim().url()).min(1),
-  imageUrl: z.string().trim().url().optional(),
-  type: z.enum(['crypto-market', 'prediction-market', 'macro', 'real-world-event']).optional(),
-  parentCaseId: z.string().trim().min(1).optional(),
-  filingKind: z.enum(['original', 'fresh-hearing', 'private-fork']).default('original'),
-  filer: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value)).optional(),
-  visibility: z.enum(['public', 'unlisted', 'private']).default('public'),
-  payerVisibility: z.enum(['public', 'private']).default('private'),
-  onchain: z.object({
-    chainId: z.string().trim().min(1),
-    escrowAddress: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value)),
-    caseId: z.string().trim().min(1),
-    txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
-    budgetUsdc: z.string().trim().min(1),
-    questionHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
-    metadataURI: z.string().trim().optional(),
-  }),
-})
-const walletSchema = z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{40}$/.test(value))
-const signedCaseAccessSchema = z.object({
-  wallet: walletSchema,
-  auth: z.object({
-    message: z.string().min(1),
-    signature: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]+$/.test(value)),
-  }),
-})
-const caseAccessChallengeSchema = z.object({
-  wallet: walletSchema,
-})
-const addFundingReceiptSchema = z.object({
-  wallet: walletSchema,
-  chainId: z.string().trim().min(1),
-  txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
-  amountUsdc: z.string().trim().min(1).optional(),
-})
-const cancelCaseReceiptSchema = z.object({
-  wallet: walletSchema,
-  chainId: z.string().trim().min(1),
-  txHash: z.custom<`0x${string}`>((value) => typeof value === 'string' && /^0x[a-fA-F0-9]{64}$/.test(value)),
-  refundUsdc: z.string().trim().min(1).optional(),
-})
 const CASE_READ_PURPOSE_PREFIX = 'case:read'
 const CASE_FOLLOW_PURPOSE_PREFIX = 'case:follow'
 const CHALLENGE_TTL_MS = 5 * 60 * 1000
-const usdcDecimals = 6
-const publicClient = createPublicClient({
-  chain: arcTestnet,
-  transport: http(env.ARC_RPC_URL),
-})
-const caseEscrowFundingAbi = [
-  {
-    type: 'event',
-    name: 'CaseOpened',
-    inputs: [
-      { name: 'caseId', type: 'uint256', indexed: true },
-      { name: 'petitioner', type: 'address', indexed: true },
-      { name: 'budget', type: 'uint96', indexed: false },
-      { name: 'questionHash', type: 'bytes32', indexed: false },
-      { name: 'metadataURI', type: 'string', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'CaseFunded',
-    inputs: [
-      { name: 'caseId', type: 'uint256', indexed: true },
-      { name: 'funder', type: 'address', indexed: true },
-      { name: 'amount', type: 'uint96', indexed: false },
-    ],
-  },
-  {
-    type: 'event',
-    name: 'CaseCancelled',
-    inputs: [
-      { name: 'caseId', type: 'uint256', indexed: true },
-      { name: 'refund', type: 'uint96', indexed: false },
-    ],
-  },
-] as const
 
 export async function caseRoutes(app: FastifyInstance) {
   app.get('/cases', async () => {
@@ -266,7 +187,7 @@ export async function caseRoutes(app: FastifyInstance) {
     if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
 
     const { caseId } = request.params as { caseId: string }
-    const parsed = signedCaseAccessSchema.extend({ following: z.boolean().default(true) }).safeParse(request.body)
+    const parsed = followCaseSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
         error: 'invalid follow request',
@@ -745,136 +666,6 @@ async function ensureUser(wallet: string) {
     })
 }
 
-async function verifyCaseFundingReceipt({
-  txHash,
-  wallet,
-  onchainCaseId,
-  escrowAddress,
-  expectedAmountUsdc,
-}: {
-  txHash: `0x${string}`
-  wallet: string
-  onchainCaseId: string
-  escrowAddress: `0x${string}`
-  expectedAmountUsdc?: string
-}) {
-  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
-    return { ok: false as const, error: 'funding escrow address does not match backend escrow configuration' }
-  }
-  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
-  if (receipt.status !== 'success') return { ok: false as const, error: 'funding transaction did not succeed' }
-
-  const logs = parseEventLogs({
-    abi: caseEscrowFundingAbi,
-    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
-    eventName: 'CaseFunded',
-  })
-  const event = logs.find((log) => {
-    const args = log.args
-    return args.caseId?.toString() === onchainCaseId && args.funder?.toLowerCase() === wallet
-  })
-  if (!event) return { ok: false as const, error: 'CaseFunded event was not found for this wallet and case' }
-
-  const amount = event.args.amount
-  if (expectedAmountUsdc) {
-    const expected = parseUnits(expectedAmountUsdc, usdcDecimals)
-    if (amount !== expected) return { ok: false as const, error: 'funding amount does not match the transaction event' }
-  }
-
-  return {
-    ok: true as const,
-    amountUsdc: formatUnits(amount, usdcDecimals),
-  }
-}
-
-async function verifyCaseCancellationReceipt({
-  txHash,
-  wallet,
-  onchainCaseId,
-  escrowAddress,
-  expectedRefundUsdc,
-}: {
-  txHash: `0x${string}`
-  wallet: string
-  onchainCaseId: string
-  escrowAddress: `0x${string}`
-  expectedRefundUsdc?: string
-}) {
-  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
-    return { ok: false as const, error: 'cancellation escrow address does not match backend escrow configuration' }
-  }
-  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
-  if (receipt.status !== 'success') return { ok: false as const, error: 'cancellation transaction did not succeed' }
-  if (normalizeWallet(receipt.from) !== wallet) return { ok: false as const, error: 'cancellation transaction sender does not match wallet' }
-
-  const logs = parseEventLogs({
-    abi: caseEscrowFundingAbi,
-    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
-    eventName: 'CaseCancelled',
-  })
-  const event = logs.find((log) => log.args.caseId?.toString() === onchainCaseId)
-  if (!event) return { ok: false as const, error: 'CaseCancelled event was not found for this case' }
-
-  const refund = event.args.refund
-  if (expectedRefundUsdc) {
-    const expected = parseUnits(expectedRefundUsdc, usdcDecimals)
-    if (refund !== expected) return { ok: false as const, error: 'refund amount does not match the transaction event' }
-  }
-
-  return {
-    ok: true as const,
-    refundUsdc: formatUnits(refund, usdcDecimals),
-  }
-}
-
-async function verifyCaseOpenedReceipt({
-  txHash,
-  chainId,
-  escrowAddress,
-  onchainCaseId,
-  budgetUsdc,
-  questionHash,
-  filer,
-}: {
-  txHash: `0x${string}`
-  chainId: string
-  escrowAddress: `0x${string}`
-  onchainCaseId: string
-  budgetUsdc: string
-  questionHash: `0x${string}`
-  filer?: `0x${string}`
-}) {
-  if (String(env.ARC_CHAIN_ID) !== chainId) return { ok: false as const, error: 'case opening chain does not match Arc chain configuration' }
-  if (env.CASE_ESCROW_ADDRESS && normalizeWallet(escrowAddress) !== normalizeWallet(env.CASE_ESCROW_ADDRESS)) {
-    return { ok: false as const, error: 'case opening escrow address does not match backend escrow configuration' }
-  }
-
-  const receipt = await publicClient.getTransactionReceipt({ hash: txHash })
-  if (receipt.status !== 'success') return { ok: false as const, error: 'case opening transaction did not succeed' }
-
-  const logs = parseEventLogs({
-    abi: caseEscrowFundingAbi,
-    logs: receipt.logs.filter((log) => normalizeWallet(log.address) === normalizeWallet(escrowAddress)),
-    eventName: 'CaseOpened',
-  })
-  const expectedBudget = parseUnits(budgetUsdc, usdcDecimals)
-  const event = logs.find((log) => {
-    const args = log.args
-    return args.caseId?.toString() === onchainCaseId
-      && args.budget === expectedBudget
-      && normalizeWallet(args.questionHash ?? '') === normalizeWallet(questionHash)
-      && (!filer || args.petitioner?.toLowerCase() === normalizeWallet(filer))
-  })
-  if (!event) return { ok: false as const, error: 'CaseOpened event was not found with the supplied case id, budget, question hash, and filer' }
-
-  return {
-    ok: true as const,
-    petitioner: normalizeWallet(event.args.petitioner),
-    budgetUsdc: formatUnits(event.args.budget, usdcDecimals),
-    metadataURI: event.args.metadataURI,
-  }
-}
-
 async function consumeCaseReadChallenge({
   wallet,
   caseId,
@@ -1006,10 +797,6 @@ function caseReadPurpose(caseId: string) {
 
 function caseFollowPurpose(caseId: string) {
   return `${CASE_FOLLOW_PURPOSE_PREFIX}:${caseId}`
-}
-
-function normalizeWallet(value: string) {
-  return value.toLowerCase()
 }
 
 function authorizeAdminRequest(headers: Record<string, string | string[] | undefined>) {
