@@ -28,6 +28,7 @@ import {
   casesKeyboard,
   dashboardKeyboard,
   decorateLegacyReply,
+  escapeMarkdown,
   formatTitleCase,
   truncateTelegramLine,
   withKeyboard,
@@ -87,7 +88,8 @@ export async function telegramRoutes(app: FastifyInstance) {
       }).catch((error) => {
         request.log.error({ err: error, chatId: String(chatId), telegramUserId }, 'telegram callback failed')
         return {
-          text: 'Something went wrong while opening that dashboard action. Try /dashboard again.',
+          text: '*⚠️ Dashboard action failed*\n\nTry /dashboard again.',
+          parseMode: 'Markdown' as const,
           replyMarkup: dashboardKeyboard(Boolean(telegramUserId)),
         }
       })
@@ -125,7 +127,8 @@ export async function telegramRoutes(app: FastifyInstance) {
         telegramUserId: from?.id ? String(from.id) : String(chatId),
       }, 'telegram command failed')
       return {
-        text: 'Something went wrong while handling that command. Try again in a moment, or open /dashboard.',
+        text: '*⚠️ Command failed*\n\nTry again in a moment, or open /dashboard.',
+        parseMode: 'Markdown' as const,
         replyMarkup: dashboardKeyboard(false),
       }
     })
@@ -292,67 +295,68 @@ async function buildTelegramReply({
   }
 
   if (name === '/connect' || name === '/link') {
-    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Account linking unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     const token = await createTelegramLinkRequest({ telegramUserId, chatId, username, firstName })
     const url = `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?telegramLink=${encodeURIComponent(token)}`
     return buildConnectReply(url)
   }
 
   if (name === '/subscribe' || name === '/alerts_on') {
-    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Alert subscriptions unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     await subscribeChatToAlerts({ chatId, chatType, chatTitle, telegramUserId })
-    return withKeyboard('Alerts are on for this chat. I will post case updates here.', dashboardKeyboard(Boolean(account), true))
+    return withKeyboard('🔔 *Alerts on*\n\nI will post case updates in this chat.', dashboardKeyboard(Boolean(account), true))
   }
 
   if (name === '/unsubscribe' || name === '/alerts_off') {
-    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Alert subscriptions unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     await unsubscribeChatFromAlerts(chatId)
-    return withKeyboard('Alerts are off for this chat.', dashboardKeyboard(Boolean(account), false))
+    return withKeyboard('🔕 *Alerts off*\n\nThis chat will no longer receive case alerts.', dashboardKeyboard(Boolean(account), false))
   }
 
   if (name === '/alerts') {
     const subscribed = await isChatSubscribedToAlerts(chatId)
     return withKeyboard(
-      subscribed ? 'Alerts are on for this chat.' : 'Alerts are off for this chat.',
+      subscribed ? '🔔 *Alerts are on* for this chat.' : '🔕 *Alerts are off* for this chat.',
       dashboardKeyboard(Boolean(account), subscribed),
     )
   }
 
   if (name === '/account' || name === '/me') {
-    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    if (!account) return withKeyboard('🔐 *No wallet linked yet*\n\nUse Connect Wallet below.', dashboardKeyboard(false))
     return buildAccountReply(await getWalletAccount(account.wallet))
   }
 
   if (name === '/mycases') {
-    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    if (!account) return withKeyboard('🔐 *No wallet linked yet*\n\nUse Connect Wallet below.', dashboardKeyboard(false))
     const summary = await getWalletAccount(account.wallet)
     const items = [...summary.cases, ...summary.follows].slice(0, 8)
-    if (!items.length) return withKeyboard(`Wallet ${shortWallet(account.wallet)} has no filed or followed cases yet.`, dashboardKeyboard(true))
+    if (!items.length) return withKeyboard(`📚 *No cases yet*\n\nWallet \`${account.wallet}\` has no filed or followed cases.`, dashboardKeyboard(true))
     return {
       text: [
-        'Arc case desk',
+        '*📚 Arc Case Desk*',
         '',
-        ...items.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 92)}\n${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}`),
+        ...items.map((item, index) => `${index + 1}. ${escapeMarkdown(truncateTelegramLine(item.title, 92))}\n_${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}_`),
       ].join('\n\n'),
+      parseMode: 'Markdown' as const,
       replyMarkup: casesKeyboard(items),
     }
   }
 
   if (name === '/notifications') {
-    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    if (!account) return withKeyboard('🔐 *No wallet linked yet*\n\nUse Connect Wallet below.', dashboardKeyboard(false))
     const notifications = await getWalletNotifications(account.wallet)
-    if (!notifications.length) return withKeyboard(`No account notifications for ${shortWallet(account.wallet)} yet.`, dashboardKeyboard(true))
+    if (!notifications.length) return withKeyboard(`📭 *No account signals yet*\n\nWallet \`${account.wallet}\` has no notifications.`, dashboardKeyboard(true))
     return withKeyboard([
-      'Recent account signals',
+      '*🔔 Recent Account Signals*',
       '',
-      ...notifications.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 80)}\n${item.detail}`),
+      ...notifications.map((item, index) => `${index + 1}. ${escapeMarkdown(truncateTelegramLine(item.title, 80))}\n_${escapeMarkdown(item.detail)}_`),
     ].join('\n\n'), dashboardKeyboard(true))
   }
 
   if (name === '/disconnect' || name === '/unlink') {
-    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Account linking unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     await db!.delete(telegramAccounts).where(eq(telegramAccounts.telegramUserId, telegramUserId))
-    return withKeyboard('Telegram has been unlinked from your Arc profile.', dashboardKeyboard(false))
+    return withKeyboard('🔓 *Telegram unlinked*\n\nThis chat is no longer attached to your Arc profile.', dashboardKeyboard(false))
   }
 
   return decorateLegacyReply(buildTelegramBotReply(text, jobs), Boolean(account))
@@ -388,26 +392,27 @@ async function buildTelegramCallbackReply({
     })
   }
   if (data === 'dash:connect') {
-    if (!isDatabaseConfigured) return withKeyboard('Account linking is unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Account linking unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     const token = await createTelegramLinkRequest({ telegramUserId, chatId, username, firstName })
     const url = `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/profile?telegramLink=${encodeURIComponent(token)}`
     return buildConnectReply(url)
   }
   if (data === 'dash:me') {
-    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    if (!account) return withKeyboard('🔐 *No wallet linked yet*\n\nUse Connect Wallet below.', dashboardKeyboard(false))
     return buildAccountReply(await getWalletAccount(account.wallet))
   }
   if (data === 'dash:cases') {
-    if (!account) return withKeyboard('No wallet linked yet. Use Connect Wallet below.', dashboardKeyboard(false))
+    if (!account) return withKeyboard('🔐 *No wallet linked yet*\n\nUse Connect Wallet below.', dashboardKeyboard(false))
     const summary = await getWalletAccount(account.wallet)
     const items = [...summary.cases, ...summary.follows].slice(0, 8)
-    if (!items.length) return withKeyboard(`Wallet ${shortWallet(account.wallet)} has no filed or followed cases yet.`, dashboardKeyboard(true))
+    if (!items.length) return withKeyboard(`📚 *No cases yet*\n\nWallet \`${account.wallet}\` has no filed or followed cases.`, dashboardKeyboard(true))
     return {
       text: [
-        'Arc case desk',
+        '*📚 Arc Case Desk*',
         '',
-        ...items.map((item, index) => `${index + 1}. ${truncateTelegramLine(item.title, 92)}\n${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}`),
+        ...items.map((item, index) => `${index + 1}. ${escapeMarkdown(truncateTelegramLine(item.title, 92))}\n_${formatTitleCase(item.role)} - ${formatTitleCase(item.visibility)}_`),
       ].join('\n\n'),
+      parseMode: 'Markdown' as const,
       replyMarkup: casesKeyboard(items),
     }
   }
@@ -415,14 +420,14 @@ async function buildTelegramCallbackReply({
     const subscribed = await isChatSubscribedToAlerts(chatId)
     if (subscribed) {
       await unsubscribeChatFromAlerts(chatId)
-      return withKeyboard('Alerts are off for this chat.', dashboardKeyboard(Boolean(account), false))
+      return withKeyboard('🔕 *Alerts off*\n\nThis chat will no longer receive case alerts.', dashboardKeyboard(Boolean(account), false))
     }
-    if (!isDatabaseConfigured) return withKeyboard('Alert subscriptions are unavailable while the database is not configured.', dashboardKeyboard(Boolean(account)))
+    if (!isDatabaseConfigured) return withKeyboard('⚠️ *Alert subscriptions unavailable*\n\nDatabase is not configured.', dashboardKeyboard(Boolean(account)))
     await subscribeChatToAlerts({ chatId, chatType, chatTitle, telegramUserId })
-    return withKeyboard('Alerts are on for this chat. I will post case updates here.', dashboardKeyboard(Boolean(account), true))
+    return withKeyboard('🔔 *Alerts on*\n\nI will post case updates in this chat.', dashboardKeyboard(Boolean(account), true))
   }
 
-  return withKeyboard('Unknown dashboard action. Open the dashboard below.', dashboardKeyboard(Boolean(account)))
+  return withKeyboard('⚠️ *Unknown dashboard action*\n\nOpen the dashboard below.', dashboardKeyboard(Boolean(account)))
 }
 
 async function consumeTelegramLinkChallenge({

@@ -24,6 +24,7 @@ export type TelegramInlineKeyboard = Array<Array<{
 
 export type TelegramReply = {
   text: string
+  parseMode?: 'Markdown' | 'HTML'
   replyMarkup?: {
     inline_keyboard: TelegramInlineKeyboard
   }

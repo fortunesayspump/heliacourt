@@ -12,6 +12,7 @@ export async function sendTelegramReply(chatId: string, reply: TelegramReply | s
     body: JSON.stringify({
       chat_id: chatId,
       text: normalized.text,
+      parse_mode: normalized.parseMode,
       disable_web_page_preview: true,
       reply_markup: normalized.replyMarkup,
     }),
@@ -33,6 +34,7 @@ export async function editTelegramMessage(chatId: string, messageId: number, rep
       chat_id: chatId,
       message_id: messageId,
       text: reply.text,
+      parse_mode: reply.parseMode,
       disable_web_page_preview: true,
       reply_markup: reply.replyMarkup,
     }),

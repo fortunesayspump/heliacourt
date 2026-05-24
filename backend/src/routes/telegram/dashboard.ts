@@ -31,19 +31,20 @@ export function buildDashboardReply({
 }): TelegramReply {
   const latest = jobs.slice(0, 3)
   const lines = [
-    'Arc Court dashboard',
+    '*⚖️ Arc Court Dashboard*',
     '',
-    `${firstName ? `Welcome, ${firstName}.` : 'Welcome.'}`,
-    account ? `Wallet: ${shortWallet(account.wallet)}` : 'Wallet: not linked',
-    `Public cases: ${jobs.length}`,
-    `Alerts: ${subscribed ? 'on' : 'off'}`,
+    `${firstName ? `Welcome, ${escapeMarkdown(firstName)}.` : 'Welcome.'}`,
+    account ? `💼 Wallet:\n\`${account.wallet}\`` : '💼 Wallet: _not linked_',
+    `📚 Public cases: *${jobs.length}*`,
+    `🔔 Alerts: *${subscribed ? 'on' : 'off'}*`,
     '',
-    latest.length ? 'Latest hearings:' : 'No public hearings yet.',
-    ...latest.map((job, index) => `${index + 1}. ${truncateTelegramLine(job.marketCase.question, 82)}\n${formatJobStatus(job)}`),
+    latest.length ? '*Latest hearings*' : '_No public hearings yet._',
+    ...latest.map((job, index) => `${index + 1}. ${escapeMarkdown(truncateTelegramLine(job.marketCase.question, 82))}\n_${formatJobStatus(job)}_`),
   ]
 
   return {
     text: lines.filter(Boolean).join('\n'),
+    parseMode: 'Markdown',
     replyMarkup: dashboardKeyboard(Boolean(account), subscribed),
   }
 }
@@ -51,15 +52,16 @@ export function buildDashboardReply({
 export function buildConnectReply(url: string): TelegramReply {
   return {
     text: [
-      'Connect wallet',
+      '*🔐 Connect wallet*',
       '',
       'Open the secure link, connect your wallet, and sign once.',
       'No transaction, gas, or private key is required.',
     ].join('\n'),
+    parseMode: 'Markdown',
     replyMarkup: {
       inline_keyboard: [
-        [{ text: 'Open secure link', url }],
-        [{ text: 'Back to dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+        [{ text: '🔐 Open secure link', url }],
+        [{ text: '⚖️ Dashboard', callback_data: 'dash:home' }, { text: '🗑 Dismiss', callback_data: 'dash:dismiss' }],
       ],
     },
   }
@@ -69,20 +71,22 @@ export function buildAccountReply(summary: TelegramWalletAccount): TelegramReply
   const name = summary.profile.displayName || summary.profile.username || shortWallet(summary.wallet)
   return {
     text: [
-      'Arc account',
+      '*💼 Arc Account*',
       '',
-      `Name: ${name}`,
-      `Wallet: ${shortWallet(summary.wallet)}`,
-      `Filed cases: ${summary.cases.length}`,
-      `Followed cases: ${summary.follows.length}`,
-      `Participation: ${summary.participation.length}`,
-      `Payout receipts: ${summary.payouts.length}`,
+      `Name: *${escapeMarkdown(name)}*`,
+      `Wallet:\n\`${summary.wallet}\``,
+      '',
+      `⚖️ Filed cases: *${summary.cases.length}*`,
+      `👁 Followed cases: *${summary.follows.length}*`,
+      `🧾 Participation: *${summary.participation.length}*`,
+      `💸 Payout receipts: *${summary.payouts.length}*`,
     ].join('\n'),
+    parseMode: 'Markdown',
     replyMarkup: {
       inline_keyboard: [
-        [{ text: 'Open profile', url: `${appUrl()}/profile?wallet=${encodeURIComponent(summary.wallet)}` }],
-        [{ text: 'My cases', callback_data: 'dash:cases' }, { text: 'Refresh', callback_data: 'dash:me' }],
-        [{ text: 'Dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+        [{ text: '👤 Open profile', url: `${appUrl()}/profile?wallet=${encodeURIComponent(summary.wallet)}` }],
+        [{ text: '📚 My cases', callback_data: 'dash:cases' }, { text: '🔄 Refresh', callback_data: 'dash:me' }],
+        [{ text: '⚖️ Dashboard', callback_data: 'dash:home' }, { text: '🗑 Dismiss', callback_data: 'dash:dismiss' }],
       ],
     },
   }
@@ -92,10 +96,10 @@ export function dashboardKeyboard(linked: boolean, subscribed = false): { inline
   return {
     inline_keyboard: [
       linked
-        ? [{ text: 'My wallet', callback_data: 'dash:me' }, { text: 'My cases', callback_data: 'dash:cases' }]
-        : [{ text: 'Connect Wallet', callback_data: 'dash:connect' }],
-      [{ text: subscribed ? 'Alerts On' : 'Alerts Off', callback_data: 'dash:alerts' }, { text: 'Open app', url: appUrl() }],
-      [{ text: 'Refresh', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+        ? [{ text: '💼 My Wallet', callback_data: 'dash:me' }, { text: '📚 My Cases', callback_data: 'dash:cases' }]
+        : [{ text: '🔐 Connect Wallet', callback_data: 'dash:connect' }],
+      [{ text: subscribed ? '🔔 Alerts On' : '🔕 Alerts Off', callback_data: 'dash:alerts' }, { text: '↗️ Open App', url: appUrl() }],
+      [{ text: '🔄 Refresh', callback_data: 'dash:home' }, { text: '🗑 Dismiss', callback_data: 'dash:dismiss' }],
     ],
   }
 }
@@ -104,16 +108,16 @@ export function casesKeyboard(items: Array<{ id: string }>): { inline_keyboard: 
   return {
     inline_keyboard: [
       ...items.slice(0, 5).map((item, index) => ([{
-        text: `Open case ${index + 1}`,
+        text: `⚖️ Open case ${index + 1}`,
         url: `${appUrl()}/cases/${encodeURIComponent(item.id)}`,
       }])),
-      [{ text: 'Dashboard', callback_data: 'dash:home' }, { text: 'Dismiss', callback_data: 'dash:dismiss' }],
+      [{ text: '⚖️ Dashboard', callback_data: 'dash:home' }, { text: '🗑 Dismiss', callback_data: 'dash:dismiss' }],
     ],
   }
 }
 
 export function withKeyboard(text: string, replyMarkup: { inline_keyboard: TelegramInlineKeyboard }): TelegramReply {
-  return { text, replyMarkup }
+  return { text, parseMode: 'Markdown', replyMarkup }
 }
 
 export function decorateLegacyReply(text: string, linked: boolean): TelegramReply {
@@ -126,6 +130,10 @@ export function truncateTelegramLine(value: string, maxLength: number) {
 
 export function formatTitleCase(value: string) {
   return value.replace(/[-_]/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+export function escapeMarkdown(value: string) {
+  return value.replace(/([*_`\[])/g, '\\$1')
 }
 
 function formatJobStatus(job: HearingJob) {
