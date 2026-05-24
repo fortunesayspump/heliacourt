@@ -1,5 +1,5 @@
 import { and, eq } from 'drizzle-orm'
-import { listHearingJobs } from '../agents/hearing-jobs.js'
+import { listHearingJobs } from '../agents/hearings/index.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { caseFollows, caseParticipants, users } from '../db/schema.js'
 

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
-import { listHearingJobs } from '../agents/hearing-jobs.js'
+import { listHearingJobs } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 
 type SettlementReceipt = {

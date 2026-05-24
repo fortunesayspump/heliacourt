@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify'
-import { getHearingQueueStats } from '../agents/hearing-jobs.js'
+import { getHearingQueueStats } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 import { isDatabaseConfigured } from '../db/client.js'
 

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
-import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearing-jobs.js'
+import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'

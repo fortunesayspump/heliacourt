@@ -1,5 +1,5 @@
 import '../config/env.js'
-import { getHearingQueueStats, startHearingJobWorker } from '../agents/hearing-jobs.js'
+import { getHearingQueueStats, startHearingJobWorker } from '../agents/hearings/index.js'
 
 startHearingJobWorker()
 

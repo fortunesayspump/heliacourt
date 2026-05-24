@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearing-jobs.js'
+import { enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearings/index.js'
 import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 

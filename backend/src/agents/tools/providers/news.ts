@@ -1,7 +1,7 @@
-import type { MarketCase, ToolEvidence } from '../../court/types'
-import { generateRawJson, isCourtModelConfigured } from '../model'
-import { fetchJson } from './http'
-import { getCaseSearchQuery, getEntityCandidates, getMarketGenres, getSearchTerms } from './text'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
+import { generateRawJson, isCourtModelConfigured } from '../../model'
+import { fetchJson } from '../http'
+import { getCaseSearchQuery, getEntityCandidates, getMarketGenres, getSearchTerms } from '../text'
 import * as cheerio from 'cheerio'
 
 type SearchItem = {

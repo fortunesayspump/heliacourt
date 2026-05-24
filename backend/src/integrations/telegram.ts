@@ -1,5 +1,5 @@
 import { env } from '../config/env.js'
-import type { HearingJob } from '../agents/hearing-jobs.js'
+import type { HearingJob } from '../agents/hearings/index.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
 import { telegramAlertSubscriptions } from '../db/schema.js'

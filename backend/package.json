@@ -14,6 +14,7 @@
     "agents:erc8004:info": "tsx src/ops/register-erc8004-agent.ts --info",
     "agents:erc8004:update-uri": "tsx src/ops/register-erc8004-agent.ts --update-uri",
     "onchain:approve-settlement-signer": "tsx src/ops/approve-settlement-signer.ts",
+    "x402": "tsx src/ops/x402-demo.ts",
     "hearing": "tsx src/ops/run-hearing.ts",
     "start": "tsx src/server.ts",
     "start:web": "HELIA_ENABLE_HEARING_WORKER=false tsx src/server.ts",

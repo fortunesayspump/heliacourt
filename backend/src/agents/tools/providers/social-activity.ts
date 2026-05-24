@@ -1,6 +1,6 @@
-import type { MarketCase, ToolEvidence } from '../../court/types'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { getNewsEvidence } from './news'
-import { getCaseSearchQuery } from './text'
+import { getCaseSearchQuery } from '../text'
 
 const xPublicBearerToken = process.env.HELIA_X_PUBLIC_BEARER_TOKEN
 

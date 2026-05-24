@@ -7,7 +7,7 @@ import {
 } from '@circle-fin/x402-batching'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { desc, eq, sql } from 'drizzle-orm'
-import { listHearingJobs } from '../agents/hearing-jobs.js'
+import { listHearingJobs } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
 import { db } from '../db/client.js'

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import type { MarketCase, ToolEvidence } from '../../court/types'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { getNewsEvidence } from './news'
 
 const maxVisualTargets = readPositiveIntegerEnv('HELIA_VISUAL_MAX_TARGETS', 4)

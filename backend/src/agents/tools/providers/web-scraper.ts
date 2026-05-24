@@ -3,9 +3,9 @@ import { existsSync } from 'node:fs'
 import { Readability } from '@mozilla/readability'
 import * as cheerio from 'cheerio'
 import { JSDOM } from 'jsdom'
-import type { MarketCase, ToolEvidence } from '../../court/types'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { getNewsEvidence } from './news'
-import { getSearchTerms, normalizeSearchText } from './text'
+import { getSearchTerms, normalizeSearchText } from '../text'
 
 const maxPages = readPositiveIntegerEnv('HELIA_SCRAPER_MAX_PAGES', 12)
 const maxCrawlDepth = readPositiveIntegerEnv('HELIA_SCRAPER_MAX_CRAWL_DEPTH', 2)

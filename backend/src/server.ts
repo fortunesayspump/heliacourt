@@ -1,6 +1,6 @@
 import cors from '@fastify/cors'
 import Fastify from 'fastify'
-import { startHearingJobWorker } from './agents/hearing-jobs.js'
+import { startHearingJobWorker } from './agents/hearings/index.js'
 import { env } from './config/env.js'
 import { agentRoutes } from './routes/agents.js'
 import { caseRoutes } from './routes/cases.js'

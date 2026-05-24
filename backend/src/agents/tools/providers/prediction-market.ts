@@ -1,6 +1,6 @@
-import type { MarketCase, ToolEvidence } from '../../court/types'
-import { fetchJson } from './http'
-import { getCaseSearchQuery, getCryptoAssetIds, getSearchTerms, getStockSymbols, getUsdTarget, normalizeSearchText } from './text'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
+import { fetchJson } from '../http'
+import { getCaseSearchQuery, getCryptoAssetIds, getSearchTerms, getStockSymbols, getUsdTarget, normalizeSearchText } from '../text'
 
 type PolymarketMarket = {
   question?: string

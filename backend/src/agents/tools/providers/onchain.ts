@@ -1,6 +1,6 @@
-import type { MarketCase, ToolEvidence } from '../../court/types'
-import { fetchJson, postJson } from './http'
-import { getAddresses, getCaseSearchQuery, getSolanaAddresses } from './text'
+import type { MarketCase, ToolEvidence } from '../../../court/types'
+import { fetchJson, postJson } from '../http'
+import { getAddresses, getCaseSearchQuery, getSolanaAddresses } from '../text'
 
 type JsonRpcResponse<T> = {
   result?: T

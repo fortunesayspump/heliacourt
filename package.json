@@ -9,6 +9,7 @@
     "dev:marketing": "pnpm --dir marketing dev",
     "dev:docs": "pnpm --dir docs dev",
     "dev:backend": "pnpm --dir backend dev",
+    "x402": "pnpm --dir backend x402",
     "build:app": "pnpm --dir app build",
     "build:marketing": "pnpm --dir marketing build",
     "build:docs": "pnpm --dir docs build",
