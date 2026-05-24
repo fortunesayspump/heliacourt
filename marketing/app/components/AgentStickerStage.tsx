@@ -34,7 +34,7 @@ export function AgentStickerStage({ agents }: { agents: readonly AgentSticker[] 
     <div ref={stageRef} className="agent-sticker-stage" aria-label="Featured Helia Court agents">
       {agents.map((agent) => (
         <article className="agent-sticker" key={agent.name}>
-          <img alt="" src={agent.image} />
+          <img alt="" decoding="async" loading="lazy" src={agent.image} />
           <span>
             <strong>{agent.name}</strong>
             <small>{agent.role}</small>

@@ -52,7 +52,7 @@ export function FadeImageLayer({ src, position = 'center', className = '' }: Fad
       aria-hidden="true"
       className={classes}
       style={{
-        backgroundImage: `url("${src}")`,
+        backgroundImage: loaded ? `url("${src}")` : undefined,
         backgroundPosition: position,
       }}
     />

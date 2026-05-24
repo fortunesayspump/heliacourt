@@ -96,6 +96,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preload" as="image" href="/assets/ancient-athenian-juries.jpg" fetchPriority="high" />
+      </head>
       <body className={`${cinzelDecorative.variable} ${cormorant.variable} ${inter.variable}`}>
         <div className="site-scroll-root">{children}</div>
       </body>
