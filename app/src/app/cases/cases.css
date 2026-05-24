@@ -406,7 +406,22 @@
   }
 
   .case-market-lines {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin: 2px 10px 0;
+  }
+
+  .case-market-lines > div {
+    padding: 9px 7px;
+  }
+
+  .case-market-lines span {
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+
+  .case-market-lines strong {
+    margin-top: 5px;
+    font-size: 12px;
   }
 
   .docket-case-card-actions {
