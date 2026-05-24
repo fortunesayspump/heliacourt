@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { AppFooter } from '../../components/AppFooter'
-import { AppHeader } from '../../components/AppHeader'
-import { getPredictionMarketLink, MarketLogo } from '../../components/MarketLogo'
+import { AppFooter } from '../../components/layout/AppFooter'
+import { AppHeader } from '../../components/layout/AppHeader'
+import { getPredictionMarketLink, MarketLogo } from '../../components/markets/MarketLogo'
 import { getBackendAgents, getBackendCaseDetail, getBackendCases, getBackendLedgerRows } from '../../../lib/backend-data'
 import '../../page.css'
 

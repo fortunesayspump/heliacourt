@@ -5,7 +5,7 @@ import { DotsThreeVertical, Plus, ShieldCheck, UserCircle, Wallet } from '@phosp
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
-import { appKitProjectId, arcTestnet } from '../../lib/arc'
+import { appKitProjectId, arcTestnet } from '../../../lib/arc'
 
 type WalletButtonProps = {
   label?: string

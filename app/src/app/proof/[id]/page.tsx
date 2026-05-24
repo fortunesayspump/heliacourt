@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowSquareOut } from '@phosphor-icons/react/ssr'
-import { AppFooter } from '../../components/AppFooter'
-import { AppHeader } from '../../components/AppHeader'
+import { AppFooter } from '../../components/layout/AppFooter'
+import { AppHeader } from '../../components/layout/AppHeader'
 import { getBackendCaseDetail, type ApiCourtArtifact } from '../../../lib/backend-data'
 import '../../page.css'
 

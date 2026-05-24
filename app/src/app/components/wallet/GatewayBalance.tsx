@@ -2,7 +2,7 @@
 
 import { formatUnits } from 'viem'
 import { useAccount, useReadContracts } from 'wagmi'
-import { contractAddresses, gatewayWalletAbi } from '../../lib/contracts'
+import { contractAddresses, gatewayWalletAbi } from '../../../lib/contracts'
 
 type GatewayBalanceProps = {
   className?: string

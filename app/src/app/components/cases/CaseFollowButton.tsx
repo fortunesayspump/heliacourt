@@ -3,7 +3,7 @@
 import { Bell, BellSlash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
-import { WalletButton } from './WalletButton'
+import { WalletButton } from '../wallet/WalletButton'
 
 export function CaseFollowButton({ caseId }: { caseId: string }) {
   const { address, isConnected } = useAccount()
@@ -56,9 +56,8 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
       const currentFollowing = typeof following === 'boolean' ? following : Boolean(challenge.following)
       const nextFollowing = !currentFollowing
 
-      let signature: `0x${string}`
       setStatus(nextFollowing ? 'Sign to follow this case...' : 'Sign to unfollow this case...')
-      signature = await signMessageAsync({ message: challenge.message })
+      const signature = await signMessageAsync({ message: challenge.message })
 
       setFollowing(nextFollowing)
       setStatus(nextFollowing ? 'Following case...' : 'Removing from watchlist...')

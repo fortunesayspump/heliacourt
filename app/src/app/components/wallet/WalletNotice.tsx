@@ -1,5 +1,5 @@
 import { Wallet } from '@phosphor-icons/react/ssr'
-import { WalletButton } from './WalletButton'
+import { WalletButton } from '../wallet/WalletButton'
 
 type WalletNoticeProps = {
   title: string

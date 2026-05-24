@@ -2,7 +2,7 @@
 
 import { Scales } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import { MarketLogo } from './MarketLogo'
+import { MarketLogo } from '../markets/MarketLogo'
 
 type Preview = {
   title?: string

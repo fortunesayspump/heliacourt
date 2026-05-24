@@ -2,7 +2,7 @@
 
 import { formatUnits } from 'viem'
 import { useAccount, useReadContract } from 'wagmi'
-import { contractAddresses, erc20Abi } from '../../lib/contracts'
+import { contractAddresses, erc20Abi } from '../../../lib/contracts'
 
 type WalletBalanceProps = {
   className?: string

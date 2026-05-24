@@ -4,9 +4,9 @@ import { CurrencyDollar } from '@phosphor-icons/react'
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits, parseEventLogs, parseUnits } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
-import { arcTestnet } from '../../lib/arc'
-import { caseEscrowAbi, contractAddresses, erc20Abi } from '../../lib/contracts'
-import { WalletButton } from './WalletButton'
+import { arcTestnet } from '../../../lib/arc'
+import { caseEscrowAbi, contractAddresses, erc20Abi } from '../../../lib/contracts'
+import { WalletButton } from '../wallet/WalletButton'
 
 type CaseOnchain = {
   chainId: string

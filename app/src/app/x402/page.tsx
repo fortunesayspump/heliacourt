@@ -1,8 +1,8 @@
 import { Bank, Code, Lightning, Receipt, ShieldCheck } from '@phosphor-icons/react/ssr'
-import { AppFooter } from '../components/AppFooter'
-import { AppHeader } from '../components/AppHeader'
-import { GatewayPanel } from '../components/GatewayPanel'
-import { X402PaidReadTester } from '../components/X402PaidReadTester'
+import { AppFooter } from '../components/layout/AppFooter'
+import { AppHeader } from '../components/layout/AppHeader'
+import { GatewayPanel } from '../components/wallet/GatewayPanel'
+import { X402PaidReadTester } from '../components/x402/X402PaidReadTester'
 import '../page.css'
 
 export const dynamic = 'force-dynamic'

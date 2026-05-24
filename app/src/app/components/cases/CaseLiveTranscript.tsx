@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { SourceEmbedCard } from './SourceEmbedCard'
-import { getAgentAvatarUrl } from '../../lib/agent-images'
-import type { ApiCourtArtifact, ApiTranscriptTurn } from '../../lib/backend-data'
+import { getAgentAvatarUrl } from '../../../lib/agent-images'
+import type { ApiCourtArtifact, ApiTranscriptTurn } from '../../../lib/backend-data'
 
 type TranscriptSourceCard = {
   url: string

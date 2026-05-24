@@ -5,10 +5,10 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
-import type { ApiUserAccount } from '../../lib/backend-data'
-import { GatewayBalance } from './GatewayBalance'
-import { WalletBalance } from './WalletBalance'
-import { WalletButton } from './WalletButton'
+import type { ApiUserAccount } from '../../../lib/backend-data'
+import { GatewayBalance } from '../wallet/GatewayBalance'
+import { WalletBalance } from '../wallet/WalletBalance'
+import { WalletButton } from '../wallet/WalletButton'
 
 type ProfileForm = {
   username: string
@@ -445,10 +445,6 @@ function ProfileStat({ label, value }: {
       <strong>{value}</strong>
     </article>
   )
-}
-
-function shortAddress(address: string) {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`
 }
 
 function normalizeWalletParam(value: string | null) {

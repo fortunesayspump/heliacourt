@@ -4,7 +4,7 @@ import { ArrowClockwise, DownloadSimple, UploadSimple } from '@phosphor-icons/re
 import { formatUnits, parseUnits, zeroAddress } from 'viem'
 import { useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
-import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../lib/contracts'
+import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../../lib/contracts'
 
 const usdcDecimals = 6
 const zero = BigInt(0)

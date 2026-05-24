@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { TelegramLogo } from '@phosphor-icons/react/ssr'
-import { MarketLogo } from './MarketLogo'
+import { MarketLogo } from '../markets/MarketLogo'
 
 const supportedMarkets = [
   { market: 'polymarket', url: 'https://polymarket.com' },

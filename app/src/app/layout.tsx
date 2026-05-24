@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { Cinzel_Decorative, Cormorant_Garamond, Inter } from 'next/font/google'
 import './globals.css'
-import { AppScrollMotion } from './components/AppScrollMotion'
-import { RouteLoadingBar } from './components/RouteLoadingBar'
+import { AppScrollMotion } from './components/layout/AppScrollMotion'
+import { RouteLoadingBar } from './components/layout/RouteLoadingBar'
 import { Providers } from './providers'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://app.heliacourt.xyz'

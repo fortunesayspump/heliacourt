@@ -1,9 +1,9 @@
 import Link from 'next/link'
 import { Briefcase, CurrencyCircleDollar, House, Question, Receipt, UsersThree } from '@phosphor-icons/react/ssr'
 import { NotificationsMenu } from './NotificationsMenu'
-import { GatewayBalance } from './GatewayBalance'
-import { WalletBalance } from './WalletBalance'
-import { WalletButton } from './WalletButton'
+import { GatewayBalance } from '../wallet/GatewayBalance'
+import { WalletBalance } from '../wallet/WalletBalance'
+import { WalletButton } from '../wallet/WalletButton'
 
 type AppHeaderProps = {
   active: 'dashboard' | 'cases' | 'new-case' | 'agents' | 'ledger' | 'x402' | 'docs' | 'profile'

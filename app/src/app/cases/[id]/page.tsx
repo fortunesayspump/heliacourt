@@ -1,15 +1,15 @@
 import { ArrowLeft, Clock, Gauge, Scales, Storefront } from '@phosphor-icons/react/ssr'
 import { Suspense } from 'react'
 import Link from 'next/link'
-import { AppHeader } from '../../components/AppHeader'
-import { AppFooter } from '../../components/AppFooter'
-import { CaseAddFundingButton } from '../../components/CaseAddFundingButton'
-import { CaseDetailTabs } from '../../components/CaseDetailTabs'
-import { CaseFollowButton } from '../../components/CaseFollowButton'
-import { CaseLiveTranscript } from '../../components/CaseLiveTranscript'
-import { getMarketProvider, MarketLogo } from '../../components/MarketLogo'
-import { MarketPreviewImage } from '../../components/MarketPreviewImage'
-import { PrivateCaseUnlockPanel } from '../../components/PrivateCaseUnlockPanel'
+import { AppHeader } from '../../components/layout/AppHeader'
+import { AppFooter } from '../../components/layout/AppFooter'
+import { CaseAddFundingButton } from '../../components/cases/CaseAddFundingButton'
+import { CaseDetailTabs } from '../../components/cases/CaseDetailTabs'
+import { CaseFollowButton } from '../../components/cases/CaseFollowButton'
+import { CaseLiveTranscript } from '../../components/cases/CaseLiveTranscript'
+import { getMarketProvider, MarketLogo } from '../../components/markets/MarketLogo'
+import { MarketPreviewImage } from '../../components/markets/MarketPreviewImage'
+import { PrivateCaseUnlockPanel } from '../../components/cases/PrivateCaseUnlockPanel'
 import { formatConfidence, getBackendCaseDetail, type ApiCaseDetail, type ApiCourtArtifact, type ApiTranscriptTurn } from '../../../lib/backend-data'
 import { getAgentAvatarUrl } from '../../../lib/agent-images'
 import '../../page.css'
@@ -592,84 +592,8 @@ function CaseRecordSkeleton() {
   )
 }
 
-function formatTurnRole(seat: string) {
-  if (seat.includes('counsel') && seat.includes('bull')) return 'counsel-bull'
-  if (seat.includes('counsel') && seat.includes('bear')) return 'counsel-bear'
-  if (seat.includes('witness')) return 'witness'
-  if (seat.includes('judge') || seat.includes('magistrate')) return 'bench'
-  if (seat.includes('clerk')) return 'clerk'
-  if (seat.includes('juror')) return 'jury'
-  if (seat.includes('risk')) return 'risk'
-  return 'witness'
-}
-
 function summarizeTurn(turn: ApiTranscriptTurn) {
   return turn.message.length > 120 ? `${turn.message.slice(0, 117)}...` : turn.message
-}
-
-function renderTextWithLinks(text: string) {
-  const markdownParts = text.split(/(\[[^\]]+\]\(https?:\/\/[^)\s]+\))/g)
-
-  return markdownParts.flatMap((part, index) => {
-    const markdown = /^\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)$/i.exec(part)
-    if (markdown) {
-      return (
-        <a href={markdown[2]} key={`${markdown[2]}-${index}`} target="_blank" rel="noreferrer">
-          {markdown[1]}
-        </a>
-      )
-    }
-
-    const parts = part.split(/(https?:\/\/[^\s)]+)/g)
-    return parts.map((piece, pieceIndex) => renderUrlPiece(piece, `${index}-${pieceIndex}`))
-  })
-}
-
-function renderUrlPiece(part: string, key: string) {
-  if (!/^https?:\/\//i.test(part)) return part
-
-  const cleanUrl = part.replace(/[.,;:!?]+$/, '')
-  const trailing = part.slice(cleanUrl.length)
-
-  return (
-    <span key={`${cleanUrl}-${key}`}>
-      <a href={cleanUrl} target="_blank" rel="noreferrer">{formatUrlLabel(cleanUrl)}</a>
-      {trailing}
-    </span>
-  )
-}
-
-function getTurnSourceCards(turn: ApiTranscriptTurn, artifact?: ApiCourtArtifact) {
-  const turnText = `${turn.message} ${turn.request ?? ''}`
-  const directUrls: TranscriptSourceCard[] = extractUrls(turnText).map((url) => ({
-    url,
-    title: formatUrlLabel(url),
-    kind: 'Referenced link',
-    detail: domainFromUrl(url),
-  }))
-
-  const evidenceSources: TranscriptSourceCard[] = artifact?.toolEvidence
-    ?.flatMap((evidence) => evidence.sources?.flatMap((source) => {
-      if (!source.url) return []
-      if (!shouldShowEvidenceSourceForTurn(source.url, source.title, evidence.capability, turnText)) return []
-
-      return [{
-        url: source.url,
-        title: source.title ?? formatUrlLabel(source.url),
-        kind: evidence.capability ? formatAgentLabel(evidence.capability.replace(/_/g, '-')) : 'Source',
-        detail: source.value ?? evidence.provider,
-      }]
-    }) ?? [])
-    ?? []
-
-  const seen = new Set<string>()
-  return [...directUrls, ...evidenceSources]
-    .filter((source) => {
-      const key = source.url.toLowerCase()
-      if (seen.has(key)) return false
-      seen.add(key)
-      return true
-    })
 }
 
 function getRelatedLinks(caseLinks: string[] | undefined, context: string | undefined, artifacts: ApiCourtArtifact[]) {
@@ -718,27 +642,6 @@ function isSupportedPredictionMarketLink(link: string) {
   }
 }
 
-function shouldShowEvidenceSourceForTurn(url: string, title: string | undefined, capability: string | undefined, turnText: string) {
-  const directUrls = extractUrls(turnText).map((value) => normalizeUrlForCompare(value))
-  if (directUrls.includes(normalizeUrlForCompare(url))) return true
-
-  if (capability && /^(web_page_scrape|visual_page_analysis|screenshot|image_read|social_activity_data)$/i.test(capability)) {
-    return true
-  }
-
-  const normalizedText = turnText.toLowerCase()
-  const host = domainFromUrl(url)?.toLowerCase()
-  if (host && normalizedText.includes(host.replace(/^www\./, ''))) return true
-
-  const titleWords = (title ?? '')
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter((word) => word.length >= 5)
-
-  return titleWords.length >= 2 && titleWords.slice(0, 5).filter((word) => normalizedText.includes(word)).length >= 2
-}
-
 function extractUrls(text: string) {
   return Array.from(text.matchAll(/https?:\/\/[^\s)]+/gi))
     .map((match) => match[0].replace(/[.,;:!?]+$/, ''))
@@ -779,18 +682,6 @@ function formatAgentLabel(agentId?: string) {
     .split('-')
     .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
     .join(' ')
-}
-
-function formatTurnTime(value: string) {
-  const timestamp = Date.parse(value)
-  if (!Number.isFinite(timestamp)) return value
-
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  }).format(new Date(timestamp))
 }
 
 function formatReceiptType(type: string) {

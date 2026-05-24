@@ -1,9 +1,9 @@
 import '../page.css'
 import { ArrowRight, MagnifyingGlass } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
-import { AppHeader } from '../components/AppHeader'
-import { AppFooter } from '../components/AppFooter'
-import { MarketLogo } from '../components/MarketLogo'
+import { AppHeader } from '../components/layout/AppHeader'
+import { AppFooter } from '../components/layout/AppFooter'
+import { MarketLogo } from '../components/markets/MarketLogo'
 
 const supportedMarkets = [
   { label: 'Polymarket', market: 'polymarket', url: 'https://polymarket.com' },

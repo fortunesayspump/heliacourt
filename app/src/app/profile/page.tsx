@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
-import { AppHeader } from '../components/AppHeader'
-import { AppFooter } from '../components/AppFooter'
-import { ProfileAccountPanel } from '../components/ProfileAccountPanel'
+import { AppHeader } from '../components/layout/AppHeader'
+import { AppFooter } from '../components/layout/AppFooter'
+import { ProfileAccountPanel } from '../components/profile/ProfileAccountPanel'
 import '../page.css'
 
 export default function ProfilePage() {

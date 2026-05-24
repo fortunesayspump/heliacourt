@@ -8,12 +8,12 @@ Run it locally with:
 pnpm dev:docs
 ```
 
-Deployment notes live in `DEPLOYMENT.md`.
+Deployment notes live in `operations/deployment.md`.
 
 Current implementation docs:
 
-- `court-engine-architecture.md`: target architecture for the AI court engine.
-- `production-intelligence-stack.md`: Railway/Vercel/backend deployment split and evidence tooling.
+- `reference/court-engine-architecture.md`: target architecture for the AI court engine.
+- `reference/production-intelligence-stack.md`: Railway/Vercel/backend deployment split and evidence tooling.
 
 Backend-specific agent/tool notes live in `backend/AGENT_TOOLS.md`.
 

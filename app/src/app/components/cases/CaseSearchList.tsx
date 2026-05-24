@@ -3,8 +3,8 @@
 import { Briefcase, Clock, MagnifyingGlass, Stamp, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import type { ApiCase } from '../../lib/backend-data'
-import { getPredictionMarketLink, MarketLogo } from './MarketLogo'
+import type { ApiCase } from '../../../lib/backend-data'
+import { getPredictionMarketLink, MarketLogo } from '../markets/MarketLogo'
 
 export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initialNow: number }) {
   const [query, setQuery] = useState('')

@@ -7,10 +7,10 @@ import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { formatUnits, keccak256, parseEventLogs, parseUnits, stringToBytes } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
-import { arcTestnet } from '../../lib/arc'
-import type { ApiCase } from '../../lib/backend-data'
-import { caseEscrowAbi, contractAddresses, erc20Abi, hasCaseEscrowAddress } from '../../lib/contracts'
-import { WalletButton } from './WalletButton'
+import { arcTestnet } from '../../../lib/arc'
+import type { ApiCase } from '../../../lib/backend-data'
+import { caseEscrowAbi, contractAddresses, erc20Abi, hasCaseEscrowAddress } from '../../../lib/contracts'
+import { WalletButton } from '../wallet/WalletButton'
 
 type ExistingCase = {
   id: string

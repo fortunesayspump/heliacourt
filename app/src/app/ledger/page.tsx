@@ -1,8 +1,8 @@
 import { Bank, CurrencyCircleDollar, GitBranch, Wallet } from '@phosphor-icons/react/ssr'
 import { Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
-import { AppHeader } from '../components/AppHeader'
-import { AppFooter } from '../components/AppFooter'
+import { AppHeader } from '../components/layout/AppHeader'
+import { AppFooter } from '../components/layout/AppFooter'
 import { getBackendLedgerRows, type ApiLedgerRow } from '../../lib/backend-data'
 import '../page.css'
 

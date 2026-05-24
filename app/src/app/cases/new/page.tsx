@@ -1,7 +1,7 @@
 import { Suspense } from 'react'
-import { AppHeader } from '../../components/AppHeader'
-import { AppFooter } from '../../components/AppFooter'
-import { CaseFilingFlow } from '../../components/CaseFilingFlow'
+import { AppHeader } from '../../components/layout/AppHeader'
+import { AppFooter } from '../../components/layout/AppFooter'
+import { CaseFilingFlow } from '../../components/cases/CaseFilingFlow'
 import { getBackendCaseDetail, getBackendCases } from '../../../lib/backend-data'
 import '../../page.css'
 

@@ -3,7 +3,7 @@
 import { ArrowRight, LinkSimple, Stamp } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
-import { MarketLogo } from './MarketLogo'
+import { MarketLogo } from '../markets/MarketLogo'
 
 export function MarketUrlPetitionForm() {
   const router = useRouter()

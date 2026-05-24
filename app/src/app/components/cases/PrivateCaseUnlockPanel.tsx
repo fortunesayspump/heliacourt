@@ -3,8 +3,8 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
-import type { ApiCaseDetail } from '../../lib/backend-data'
-import { WalletButton } from './WalletButton'
+import type { ApiCaseDetail } from '../../../lib/backend-data'
+import { WalletButton } from '../wallet/WalletButton'
 
 export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
   const { address, isConnected } = useAccount()

@@ -18,7 +18,7 @@ const loadedImages = new Set<string>()
 
 export function FadeImageLayer({ src, sources, position = 'center', className = '' }: FadeImageLayerProps) {
   const imageSources = useMemo(() => normalizeSources(sources, src, position), [position, sources, src])
-  const [nextIndex, setNextIndex] = useState(0)
+  const [, setNextIndex] = useState(0)
   const [frontLayer, setFrontLayer] = useState<'current' | 'staged'>('current')
   const [currentImage, setCurrentImage] = useState(imageSources[0])
   const [stagedImage, setStagedImage] = useState(imageSources[0])

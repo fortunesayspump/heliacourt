@@ -118,8 +118,8 @@ Start with [docs/README.md](docs/README.md).
 
 Current architecture:
 
-- [docs/court-engine-architecture.md](docs/court-engine-architecture.md)
-- [docs/production-intelligence-stack.md](docs/production-intelligence-stack.md)
+- [docs/reference/court-engine-architecture.md](docs/reference/court-engine-architecture.md)
+- [docs/reference/production-intelligence-stack.md](docs/reference/production-intelligence-stack.md)
 - [backend/AGENT_TOOLS.md](backend/AGENT_TOOLS.md)
 
 Older planning docs are archived under [docs/archive](docs/archive).
