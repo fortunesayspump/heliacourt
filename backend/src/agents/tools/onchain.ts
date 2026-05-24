@@ -28,14 +28,18 @@ type SolanaSignature = {
   err?: unknown
 }
 
-const evmRpcUrl = process.env.EVM_PUBLIC_RPC_URL ?? 'https://ethereum.publicnode.com'
+const evmRpcUrls = (process.env.EVM_PUBLIC_RPC_URLS ?? process.env.EVM_PUBLIC_RPC_URL ?? 'https://ethereum.publicnode.com,https://eth.llamarpc.com,https://cloudflare-eth.com')
+  .split(',')
+  .map((url) => url.trim())
+  .filter(Boolean)
 const solanaRpcUrl = process.env.SOLANA_PUBLIC_RPC_URL ?? 'https://api.mainnet-beta.solana.com'
 
-export async function getOnchainEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
-  const query = getCaseSearchQuery(marketCase.question)
+export async function getOnchainEvidence(marketCase: MarketCase, instruction = ''): Promise<ToolEvidence> {
+  const onchainText = [marketCase.question, marketCase.context, marketCase.links?.join(' '), instruction].filter(Boolean).join(' ')
+  const query = getCaseSearchQuery(onchainText)
   const fetchedAt = new Date().toISOString()
-  const evmAddresses = getAddresses(marketCase.question)
-  const solanaAddresses = getSolanaAddresses(marketCase.question)
+  const evmAddresses = getAddresses(onchainText)
+  const solanaAddresses = getSolanaAddresses(onchainText)
 
   if (!evmAddresses.length && !solanaAddresses.length) {
     return {
@@ -44,7 +48,7 @@ export async function getOnchainEvidence(marketCase: MarketCase): Promise<ToolEv
       query,
       fetchedAt,
       status: 'skipped',
-      observations: ['No EVM or Solana address was found in the case question, so address-level onchain reads were skipped.'],
+      observations: ['No EVM or Solana address was found in the case question, context, links, or witness instruction, so address-level onchain reads were skipped.'],
       sources: [],
     }
   }
@@ -85,15 +89,31 @@ export async function getOnchainEvidence(marketCase: MarketCase): Promise<ToolEv
 }
 
 async function getEvmPublicRpcEvidence(address: string): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
+  const errors: string[] = []
+
+  for (const rpcUrl of evmRpcUrls) {
+    const result = await tryGetEvmPublicRpcEvidence(rpcUrl, address)
+    if (result.observations.length) return result
+    if (result.error) errors.push(`${new URL(rpcUrl).hostname}: ${result.error}`)
+  }
+
+  return {
+    observations: [],
+    sources: [{ title: `${address} on Etherscan`, url: `https://etherscan.io/address/${address}` }],
+    error: errors.join('; ') || 'All EVM public RPC endpoints failed',
+  }
+}
+
+async function tryGetEvmPublicRpcEvidence(rpcUrl: string, address: string): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
   try {
     const [balance, transactionCount] = await Promise.all([
-      postJson<JsonRpcResponse<string>>(evmRpcUrl, {
+      postJson<JsonRpcResponse<string>>(rpcUrl, {
         jsonrpc: '2.0',
         method: 'eth_getBalance',
         params: [address, 'latest'],
         id: 1,
       }),
-      postJson<JsonRpcResponse<string>>(evmRpcUrl, {
+      postJson<JsonRpcResponse<string>>(rpcUrl, {
         jsonrpc: '2.0',
         method: 'eth_getTransactionCount',
         params: [address, 'latest'],
@@ -110,14 +130,14 @@ async function getEvmPublicRpcEvidence(address: string): Promise<Pick<ToolEviden
 
     return {
       observations: [
-        `${address} has about ${eth.toFixed(4)} ETH on Ethereum public RPC. Public RPC also reports account nonce ${nonce.toLocaleString('en-US')}; for contracts this is not token-transfer volume or full contract activity.`,
+        `${address} has about ${eth.toFixed(4)} ETH on Ethereum public RPC (${new URL(rpcUrl).hostname}). Public RPC also reports account nonce ${nonce.toLocaleString('en-US')}; for contracts this is not token-transfer volume or full contract activity.`,
       ],
       sources: [{ title: `${address} on Etherscan`, url: `https://etherscan.io/address/${address}`, value: `${eth}` }],
     }
   } catch (error) {
     return {
       observations: [],
-      sources: [{ title: `${address} on Etherscan`, url: `https://etherscan.io/address/${address}` }],
+      sources: [],
       error: error instanceof Error ? error.message : 'EVM public RPC failed',
     }
   }

@@ -10,10 +10,11 @@ type NagerHoliday = {
   global?: boolean
 }
 
-export async function getCalendarEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
-  const query = getCaseSearchQuery(marketCase.question)
+export async function getCalendarEvidence(marketCase: MarketCase, instruction = ''): Promise<ToolEvidence> {
+  const calendarText = [marketCase.question, marketCase.context, marketCase.links?.join(' '), instruction].filter(Boolean).join(' ')
+  const query = getCaseSearchQuery(calendarText)
   const fetchedAt = new Date().toISOString()
-  const countryCode = getPossibleCountryCode(marketCase.question)
+  const countryCode = getPossibleCountryCode(calendarText)
 
   if (!countryCode) {
     return {

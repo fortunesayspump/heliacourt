@@ -23,10 +23,11 @@ type SportsDbEventResponse = {
   }>
 }
 
-export async function getSportsEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
-  const query = getSportsSearchQuery(marketCase.question)
+export async function getSportsEvidence(marketCase: MarketCase, instruction = ''): Promise<ToolEvidence> {
+  const sportsText = [marketCase.question, marketCase.context, instruction].filter(Boolean).join(' ')
+  const query = getSportsSearchQuery(sportsText)
   const fetchedAt = new Date().toISOString()
-  const caseText = `${marketCase.question} ${marketCase.context ?? ''}`
+  const caseText = sportsText
 
   if (!looksLikeSportsQuestion(caseText)) {
     return {

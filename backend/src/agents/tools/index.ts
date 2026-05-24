@@ -609,17 +609,17 @@ function runToolIntent(capability: ToolEvidence['capability'], marketCase: Marke
     case 'prediction_market_data':
       return getPredictionMarketEvidence(marketCase)
     case 'market_data':
-      return getMarketDataEvidence(marketCase)
+      return getMarketDataEvidence(marketCase, instruction)
     case 'web_news_search':
       return getNewsEvidence(marketCase, instruction)
     case 'onchain_data':
-      return getOnchainEvidence(marketCase)
+      return getOnchainEvidence(marketCase, instruction)
     case 'weather_data':
       return getWeatherEvidence(marketCase, instruction)
     case 'sports_data':
-      return getSportsEvidence(marketCase)
+      return getSportsEvidence(marketCase, instruction)
     case 'calendar_data':
-      return getCalendarEvidence(marketCase)
+      return getCalendarEvidence(marketCase, instruction)
     case 'web_page_scrape':
       return getWebPageScrapeEvidence(marketCase, instruction)
     case 'visual_page_analysis':
