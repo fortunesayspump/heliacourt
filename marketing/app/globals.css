@@ -3294,3 +3294,25 @@ body,
     grid-template-columns: 1fr;
   }
 }
+
+/* Visual polish: keep the brand, calm the reading surface. */
+:where(.section-label, .kicker, .agent-grid span, .ledger span, .agent-sticker small, .footer-network-line) {
+  font-weight: 620 !important;
+  letter-spacing: 0.065em !important;
+  line-height: 1.18 !important;
+}
+
+:where(.section h2, .section-heading h2, .arc-panel h2, .registry-copy h2, .closing h2, .docs-body h1, .docs-body h2) {
+  font-weight: 560 !important;
+  line-height: 1.04 !important;
+}
+
+:where(.hero-center p, .section-heading p, .steps p, .arc-panel p, .registry p, .closing p, .site-footer p, .docs-body p, .docs-body li) {
+  line-height: 1.55 !important;
+  text-wrap: pretty;
+}
+
+:where(.button, .topbar a, .site-footer a) {
+  font-weight: 600 !important;
+  letter-spacing: 0 !important;
+}

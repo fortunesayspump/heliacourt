@@ -419,3 +419,23 @@
     flex: none;
   }
 }
+
+/* Cases polish: reduce shouty labels and loosen dense card text. */
+:where(.cases-market-heading h2, .docket-case-card-title, .case-market-lines strong) {
+  font-weight: 620 !important;
+  line-height: 1.18 !important;
+}
+
+:where(.case-market-lines span, .docket-case-card-status, .docket-case-card-meta span) {
+  font-weight: 680 !important;
+  letter-spacing: 0.065em !important;
+  line-height: 1.18 !important;
+}
+
+:where(.docket-case-card-copy, .docket-case-card p, .case-market-lines strong) {
+  line-height: 1.4 !important;
+}
+
+:where(.market-source-link, .docket-case-card-link) {
+  font-weight: 680 !important;
+}

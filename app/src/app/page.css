@@ -10606,3 +10606,33 @@ a:focus-visible,
   filter: none !important;
   text-shadow: none !important;
 }
+
+/* Visual polish: calmer weight, spacing, and readable rhythm. */
+:where(.eyebrow, .section-label, .transcript-stage, .receipt-card-copy > span, .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy > span, .market-preview-source, .preview-meta-row span, .case-market-lines span, .receipt-section-heading .eyebrow, .transcript-tags span) {
+  font-weight: 680 !important;
+  letter-spacing: 0.065em !important;
+  line-height: 1.18 !important;
+}
+
+:where(.panel-heading h2, .panel-heading h3, .app-section-heading h2, .app-section-heading h3, .profile-panel-heading h3, .receipt-section-heading h2) {
+  font-weight: 580 !important;
+  line-height: 1.12 !important;
+}
+
+:where(.panel-heading p, .panel-heading span, .app-section-heading p, .profile-panel-heading p, .compact-card p, .receipt-card-copy p, .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy p, .case-box p, .preview-summary p, .market-preview-image strong, .case-hero-media .market-preview-image strong, .transcript-message > p:not(.transcript-stage):not(.transcript-reply), .transcript-reply span, .transcript-source-card strong, .transcript-attachment span, .agent-profile-copy p:not(.eyebrow), .profile-hero p:not(.eyebrow), .profile-connect-panel p:not(.eyebrow)) {
+  line-height: 1.45 !important;
+}
+
+:where(.receipt-card-copy strong, .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy strong, .case-market-lines strong, .transcript-meta strong, .transcript-source-card > span, .transcript-attachment strong, .bench-agent-copy h3, .app-record-row strong, .profile-record-row strong, .agent-profile-list strong, .agent-testimony-list strong) {
+  font-weight: 680 !important;
+  line-height: 1.24 !important;
+}
+
+:where(.primary-button, .secondary-button, .wallet-primary, .market-source-link, .docket-case-card-link, button) {
+  font-weight: 680 !important;
+  letter-spacing: 0 !important;
+}
+
+:where(.transcript-message, .receipt-card, .compact-receipt-card, .case-box, .compact-card, .market-preview-image, .similar-case-row) {
+  text-wrap: pretty;
+}

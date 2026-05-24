@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Helia Court">
   <rect width="64" height="64" rx="14" fill="#f1d3aa"/>
-  <g fill="#22211d">
+  <g fill="#22211d" transform="translate(0 1) scale(0.88) translate(4.36 4.36)">
     <path d="M32 7 8 23v4h48v-4L32 7z"/>
     <path d="M13 29h38v5H13z"/>
     <path d="M17 38h7v13h-7zM29 38h7v13h-7zM41 38h7v13h-7z"/>
