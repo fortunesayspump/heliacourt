@@ -78,7 +78,7 @@ async function DashboardData() {
     getBackendAgents(),
   ])
   const activeCases = backendCases.filter((item) => item.status !== 'Verdict' && item.status !== 'Refunded')
-  const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 3)
+  const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 10)
   const liveFeed = buildLiveFeed(backendCases, ledgerRows).slice(0, 8)
   const graphStats = buildDashboardGraphs(backendCases, ledgerRows)
   const benchAgents = registryAgents
@@ -152,7 +152,7 @@ async function DashboardData() {
 
               <div className="case-table">
                 {backendCases.length ? (
-                  backendCases.slice(0, 3).map((item) => {
+                  backendCases.slice(0, 10).map((item) => {
                     const marketLink = getPredictionMarketLink(item.links)
 
                     return (
