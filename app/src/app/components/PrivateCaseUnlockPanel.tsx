@@ -1,6 +1,5 @@
 'use client'
 
-import { LockKeyOpen, ShieldCheck } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
@@ -71,7 +70,6 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
             <p className="eyebrow">Private record</p>
             <h2>{detail.case.title}</h2>
           </div>
-          <ShieldCheck size={19} />
         </div>
         <div className="settlement-table">
           <div>
@@ -111,7 +109,6 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
 
   return (
     <section className="panel empty-state private-unlock-panel">
-      <LockKeyOpen size={22} />
       <strong>Private case</strong>
       <p>This record is hidden from public case routes. Connect the filer wallet and sign a one-use message to unlock it.</p>
       {isConnected ? (

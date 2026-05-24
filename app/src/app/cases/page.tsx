@@ -145,7 +145,6 @@ function CasesSkeleton() {
               <p className="eyebrow">Prediction docket</p>
               <h2>Markets</h2>
             </div>
-            <Briefcase size={20} />
           </div>
         <div className="docket-case-grid">
           {Array.from({ length: 6 }).map((_, index) => (

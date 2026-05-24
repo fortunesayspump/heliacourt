@@ -1,6 +1,6 @@
 'use client'
 
-import { BookOpenText, CheckCircle, MagnifyingGlass, Scales, ShieldCheck, Stamp } from '@phosphor-icons/react'
+import { CheckCircle, Scales, Stamp } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import type { CSSProperties } from 'react'
@@ -329,7 +329,6 @@ export function CaseFilingFlow({
           </div>
           {parentCase ? (
             <div className="direction-strip inline-strip lineage-strip">
-              <Scales size={19} />
               <p>{formatFilingKind(filingKind)} linked to {shortCaseId(parentCase.id)}. This opens a new funded escrow and keeps the parent relationship in the case record.</p>
             </div>
           ) : null}
@@ -376,7 +375,6 @@ export function CaseFilingFlow({
                 <p className="eyebrow">Readiness</p>
                 <h2>Filing checklist</h2>
               </div>
-              <CheckCircle size={19} />
             </div>
             <div className="filing-checklist">
               {checklistItems.map((item) => (
@@ -387,7 +385,6 @@ export function CaseFilingFlow({
               ))}
             </div>
             <div className="direction-strip inline-strip">
-              <ShieldCheck size={19} />
               <p>Wallet connection is only needed when you file and fund the case.</p>
             </div>
           </section>
@@ -398,7 +395,6 @@ export function CaseFilingFlow({
                 <p className="eyebrow">Similarity check</p>
                 <h2>Existing hearings</h2>
               </div>
-              <MagnifyingGlass size={19} />
             </div>
             <div className="similar-case-list">
               {relatedCases.length ? relatedCases.map((item) => (
@@ -429,7 +425,6 @@ export function CaseFilingFlow({
             <p className="eyebrow">Case preview</p>
             <h2>Review before filing</h2>
           </div>
-          <BookOpenText size={19} />
         </div>
 
         <div className="case-preview-grid">
@@ -474,7 +469,6 @@ export function CaseFilingFlow({
               <strong>{budgetUnits > zero ? `${formatUnits(budgetUnits, usdcDecimals)} USDC` : 'Pending'}</strong>
             </div>
             <div className="preview-route">
-              <Scales size={18} />
               <span>Escrow opens on Arc when you file.</span>
             </div>
             <div className="preview-actions">

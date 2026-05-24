@@ -1,13 +1,10 @@
 import {
-  CurrencyDollar,
   Briefcase,
-  CurrencyCircleDollar,
-  Gavel,
-  Play,
+  CurrencyDollar,
   Eye,
-  Timer,
-  UserCircleCheck,
+  Play,
   Stamp,
+  Timer,
 } from '@phosphor-icons/react/ssr'
 import { Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
@@ -123,7 +120,6 @@ async function DashboardData() {
         </section>
 
         <section className="live-court-feed-panel" aria-label="Live court activity">
-          <span className="live-court-feed-label">Live court feed</span>
           <div className="live-court-feed">
             {liveFeed.length ? (
               <div className="live-court-feed-track">
@@ -149,7 +145,6 @@ async function DashboardData() {
                   <p className="eyebrow">Market docket</p>
                   <h2>Live probability hearings</h2>
                 </div>
-                <Gavel size={19} />
               </div>
 
               <div className="case-table">
@@ -192,7 +187,6 @@ async function DashboardData() {
                   <p className="eyebrow">Petition desk</p>
                   <h2>File from a market URL</h2>
                 </div>
-                <Gavel size={19} />
               </div>
               <MarketUrlPetitionForm />
             </aside>
@@ -203,7 +197,6 @@ async function DashboardData() {
                   <p className="eyebrow">Verdict archive</p>
                   <h2>Recent decision receipts</h2>
                 </div>
-                <CurrencyCircleDollar size={19} />
               </div>
               <div className="settlement-table">
                 {verdictRows.length ? (
@@ -243,7 +236,6 @@ async function DashboardData() {
                   <p className="eyebrow">Agent registry</p>
                   <h2>Active witness bench</h2>
                 </div>
-                <UserCircleCheck size={19} />
               </div>
               <div className="agent-market-list dashboard-bench-list">
                 {benchAgents.length ? (
@@ -292,7 +284,6 @@ function DashboardDataSkeleton() {
         ))}
       </section>
       <section className="live-court-feed-panel">
-        <span className="live-court-feed-label">Live court feed</span>
         <div className="live-court-feed">
           <div className="live-court-feed-track">
           {Array.from({ length: 4 }).map((_, index) => (
@@ -313,7 +304,6 @@ function DashboardDataSkeleton() {
               <p className="eyebrow">Market docket</p>
               <h2>Live probability hearings</h2>
             </div>
-            <Gavel size={19} />
           </div>
           {Array.from({ length: 3 }).map((_, index) => (
             <article className="case-row skeleton-case-row" key={index}>
@@ -335,7 +325,6 @@ function DashboardDataSkeleton() {
               <p className="eyebrow">Petition desk</p>
               <h2>File from a market URL</h2>
             </div>
-            <Gavel size={19} />
           </div>
           <MarketUrlPetitionForm />
         </aside>
@@ -345,7 +334,6 @@ function DashboardDataSkeleton() {
               <p className="eyebrow">Verdict archive</p>
               <h2>Recent decision receipts</h2>
             </div>
-            <CurrencyCircleDollar size={19} />
           </div>
           <div className="settlement-table">
             {Array.from({ length: 3 }).map((_, index) => (
@@ -368,7 +356,6 @@ function DashboardDataSkeleton() {
               <p className="eyebrow">Agent registry</p>
               <h2>Active witness bench</h2>
             </div>
-            <UserCircleCheck size={19} />
           </div>
           <div className="agent-market-list dashboard-bench-list">
             {Array.from({ length: 6 }).map((_, index) => (

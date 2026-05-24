@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { Suspense } from 'react'
-import { Briefcase, Database, Gavel, Stamp, UserGear } from '@phosphor-icons/react/ssr'
 import { AppFooter } from '../../components/AppFooter'
 import { AppHeader } from '../../components/AppHeader'
 import { getPredictionMarketLink, MarketLogo } from '../../components/MarketLogo'
@@ -96,7 +95,6 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
 
               <article className="panel app-section-panel profile-record-section agent-profile-panel">
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
-                  <UserGear size={18} />
                   <div>
                     <h3>Operating profile</h3>
                     <p>Mode and payment routing for this agent.</p>
@@ -130,7 +128,6 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
 
               <article className="panel app-section-panel profile-record-section agent-profile-panel">
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
-                  <Briefcase size={18} />
                   <div>
                     <h3>Recent cases</h3>
                     <p>Hearings where this agent has been seated or paid.</p>
@@ -161,7 +158,6 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
 
               <article className="panel app-section-panel profile-record-section agent-profile-panel">
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
-                  <Gavel size={18} />
                   <div>
                     <h3>Recent testimony</h3>
                     <p>Latest transcript turns attributed to this agent.</p>
@@ -186,7 +182,6 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
 
               <article className="panel app-section-panel profile-record-section agent-profile-panel">
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
-                  <Stamp size={18} />
                   <div>
                     <h3>Receipt history</h3>
                     <p>Payment rows and generated artifacts connected to this agent.</p>
@@ -217,7 +212,6 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
 
               <article className="panel app-section-panel profile-record-section agent-profile-panel">
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
-                  <Database size={18} />
                   <div>
                     <h3>Registry data</h3>
                     <p>Versioning and ownership fields used by the court registry.</p>

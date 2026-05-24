@@ -1,4 +1,4 @@
-import { CurrencyCircleDollar, GitBranch, Bank, Wallet, ShieldCheck, ChartLineUp } from '@phosphor-icons/react/ssr'
+import { Bank, CurrencyCircleDollar, GitBranch, Wallet } from '@phosphor-icons/react/ssr'
 import { Suspense, type CSSProperties } from 'react'
 import Link from 'next/link'
 import { AppHeader } from '../components/AppHeader'
@@ -79,30 +79,25 @@ async function LedgerData() {
               <p className="eyebrow">Stats</p>
               <h2>Proof and settlement overview</h2>
             </div>
-            <ShieldCheck size={19} />
           </div>
 
           <div className="ledger-proof-grid">
             <article>
-              <Wallet size={18} />
               <span>Total USDC moved</span>
               <strong>{stats.totalAmount ? `${formatAmount(stats.totalAmount)} USDC` : '0 USDC'}</strong>
               <MiniLedgerBars values={stats.amountBars} />
             </article>
             <article>
-              <GitBranch size={18} />
               <span>Total receipts</span>
               <strong>{ledgerRows.length}</strong>
               <MiniLedgerSparkline values={stats.caseBars} />
             </article>
             <article>
-              <ShieldCheck size={18} />
               <span>x402 paid reads</span>
               <strong>{x402Activity.totalPaidReads}</strong>
               <LedgerRing value={stats.anchoredCoverage} label="Anchored" />
             </article>
             <article>
-              <ChartLineUp size={18} />
               <span>Avg receipt cost</span>
               <strong>{x402Activity.averageUsdc} USDC</strong>
               <LedgerRing value={stats.hashCoverage} label="Hashed" />

@@ -22,7 +22,6 @@ export default async function X402Page() {
             <h1>x402 Gateway</h1>
             <p>Gateway balance is for tiny paid proof, transcript, receipt, and price reads. Case filing and join funding stay on normal wallet USDC through Arc escrow.</p>
           </div>
-          <Lightning size={22} />
         </section>
 
         <section className="metrics-grid x402-metrics-grid">
@@ -64,7 +63,6 @@ export default async function X402Page() {
               <p className="eyebrow">Paid API</p>
               <h2>Available proof routes</h2>
             </div>
-            <Receipt size={19} />
           </div>
           <div className="x402-route-grid">
             {status.resources.map((resource) => (

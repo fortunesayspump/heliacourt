@@ -54,7 +54,7 @@ export default async function ReferencePage({ params }: { params: Promise<{ slug
     <main>
       <header className="topbar">
         <Link className="brand" href="/">
-          <img src="/assets/helia-court-logo.svg" alt="" />
+          <img src="/assets/helia-temple-mark.svg" alt="" />
           <span>Helia Court Docs</span>
         </Link>
         <nav aria-label="Primary navigation">

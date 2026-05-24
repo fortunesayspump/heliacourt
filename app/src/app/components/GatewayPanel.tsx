@@ -1,6 +1,6 @@
 'use client'
 
-import { ArrowClockwise, Bank, DownloadSimple, UploadSimple } from '@phosphor-icons/react'
+import { ArrowClockwise, DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { formatUnits, parseUnits, zeroAddress } from 'viem'
 import { useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
@@ -161,7 +161,6 @@ export function GatewayPanel() {
           <p className="eyebrow">Gateway</p>
           <h2>Circle Gateway balance</h2>
         </div>
-        <Bank size={19} />
       </div>
 
       <div className="gateway-balance-grid">

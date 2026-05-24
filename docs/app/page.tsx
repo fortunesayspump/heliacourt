@@ -28,7 +28,7 @@ export default function DocsHome() {
     <main>
       <header className="topbar">
         <a className="brand" href="https://heliacourt.xyz">
-          <img src="/assets/helia-court-logo.svg" alt="" />
+          <img src="/assets/helia-temple-mark.svg" alt="" />
           <span>Helia Court Docs</span>
         </a>
         <nav aria-label="Primary navigation">

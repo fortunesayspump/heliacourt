@@ -1,4 +1,4 @@
-import { Briefcase, Gavel, Gauge, Scroll, ShieldCheck, Stamp, Timer, UserCircleCheck } from '@phosphor-icons/react/ssr'
+import { ArrowLeft } from '@phosphor-icons/react/ssr'
 import { Suspense } from 'react'
 import Link from 'next/link'
 import { AppHeader } from '../../components/AppHeader'
@@ -48,7 +48,7 @@ export default async function CaseRecordPage({
       <section className="workspace case-record-workspace">
         <section className="case-detail-topbar" aria-label="Case navigation">
           <Link className="secondary-button compact-back" href="/cases">
-            <Gavel size={16} />
+            <ArrowLeft size={16} />
             Docket
           </Link>
           <div className="case-detail-actions">
@@ -125,10 +125,10 @@ async function CaseRecordData({
     transcriptMessage: verdictArtifact?.transcriptMessage,
   })
   const caseFacts = [
-    ['Status', courtCase.status, ShieldCheck],
-    ['Confidence', confidence, Gauge],
-    ['Horizon', courtCase.horizon ?? 'Open', Timer],
-    ['Market', marketLabel, Briefcase],
+    ['Status', courtCase.status],
+    ['Confidence', confidence],
+    ['Horizon', courtCase.horizon ?? 'Open'],
+    ['Market', marketLabel],
   ] as const
 
   return (
@@ -148,9 +148,8 @@ async function CaseRecordData({
             </div>
             <h1>{courtCase.title}</h1>
             <div className="case-hero-stats" aria-label="Case stats">
-              {caseFacts.map(([label, value, Icon]) => (
+              {caseFacts.map(([label, value]) => (
                 <article key={label}>
-                  <Icon size={16} />
                   <span>{label}</span>
                   <strong>{value}</strong>
                 </article>
@@ -180,7 +179,6 @@ async function CaseRecordData({
                     <p className="eyebrow">Court transcript</p>
                     <h2>Hearing record</h2>
                   </div>
-                  <Scroll size={19} />
                 </div>
                 <TranscriptLiveMotion caseId={courtCase.id} />
                 <div className="court-transcript" data-live-transcript>
@@ -241,13 +239,9 @@ async function CaseRecordData({
                     <p className="eyebrow">Archon decree</p>
                     <h2>Verdict</h2>
                   </div>
-                  <ShieldCheck size={19} />
                 </div>
                 <div className="verdict-sheet">
                   <section className="verdict-sheet-hero">
-                    <div className="verdict-mark">
-                      <ShieldCheck size={28} />
-                    </div>
                     <div>
                       <p className="eyebrow">Court outcome</p>
                       <h2>{verdictDisplay.title}</h2>
@@ -257,22 +251,18 @@ async function CaseRecordData({
 
                   <section className="verdict-stat-grid" aria-label="Verdict stats">
                     <article>
-                      <Gauge size={17} />
                       <span>Probability</span>
                       <strong>{courtCase.probability ?? confidence}</strong>
                     </article>
                     <article>
-                      <ShieldCheck size={17} />
                       <span>Confidence</span>
                       <strong>{verdictArtifact?.confidence ? formatConfidence(verdictArtifact.confidence) : confidence}</strong>
                     </article>
                     <article>
-                      <Stamp size={17} />
                       <span>Record hash</span>
                       <strong>{shortReceiptHash(caseDetail.recordHash ?? courtCase.receipt)}</strong>
                     </article>
                     <article>
-                      <Briefcase size={17} />
                       <span>Settlement</span>
                       <strong>{caseDetail.onchainSettlement?.status ?? courtCase.onchainSettlement?.status ?? 'Pending'}</strong>
                     </article>
@@ -367,7 +357,6 @@ async function CaseRecordData({
                     <p className="eyebrow">Arc receipt</p>
                     <h2>Payments and record hash</h2>
                   </div>
-                  <Stamp size={19} />
                 </div>
                 <div className="receipt-sheet">
                   <section className="receipt-summary-grid" aria-label="Receipt summary">
@@ -450,7 +439,6 @@ async function CaseRecordData({
                     <p className="eyebrow">Case history</p>
                     <h2>Activity timeline</h2>
                   </div>
-                  <Timer size={19} />
                 </div>
                 <div className="case-history-sheet">
                   <section className="history-summary-grid" aria-label="Case history summary">
@@ -499,12 +487,10 @@ async function CaseRecordData({
                   <p className="eyebrow">Case facts</p>
                   <h2>Record status</h2>
                 </div>
-                <Briefcase size={19} />
               </div>
               <div className="sidebar-facts">
-                {caseFacts.map(([label, value, Icon]) => (
+                {caseFacts.map(([label, value]) => (
                   <article className="compact-card fact-card" key={label}>
-                    <span className="agent-presence" aria-hidden="true"><Icon size={15} /></span>
                     <div>
                       <h3>{label}</h3>
                       <p>{value}</p>
@@ -520,7 +506,6 @@ async function CaseRecordData({
                   <p className="eyebrow">Court bench</p>
                   <h2>Agents seated</h2>
                 </div>
-                <UserCircleCheck size={19} />
               </div>
               <div className="bench-agent-list">
                 {seatedAgents.length ? seatedAgents.map((agent) => (
@@ -593,7 +578,6 @@ function CaseRecordSkeleton() {
                       <p className="eyebrow">Court transcript</p>
                       <h2>Hearing record</h2>
                     </div>
-                    <Scroll size={19} />
                   </div>
                   <div className="court-transcript">
                     {Array.from({ length: 6 }).map((_, index) => (
@@ -640,7 +624,6 @@ function CaseRecordSkeleton() {
                 <p className="eyebrow">Court bench</p>
                 <h2>Agents seated</h2>
               </div>
-              <UserCircleCheck size={19} />
             </div>
             <div className="bench-agent-list">
               {Array.from({ length: 5 }).map((_, index) => (
