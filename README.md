@@ -25,7 +25,6 @@ marketing/ Public site and product story
 docs/       Static documentation site
 backend/   Fastify API, hearing worker, agents, Telegram, x402, persistence
 contracts/ Foundry contracts for Arc escrow, receipts, and agent registry
-scripts/   Local research/scraping utilities
 ```
 
 ## Setup
@@ -36,6 +35,8 @@ Install JavaScript dependencies and contract submodules:
 pnpm install
 git submodule update --init --recursive
 ```
+
+OpenZeppelin Solidity dependencies are installed through pnpm in the contracts package. Only `forge-std` is kept as a Foundry submodule.
 
 Run services:
 

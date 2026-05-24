@@ -13,8 +13,9 @@ src/
   court/         Hearing strategy, evidence, transcript, scoring, and record guards
   db/            Drizzle schema and database client
   integrations/  External integrations such as Telegram
+  ops/           One-off operational commands for ERC-8004, settlement, and smoke checks
   routes/        HTTP route modules for cases, users, x402, stats, health, and webhooks
-  scripts/       Operational scripts and workers
+  workers/       Long-running background workers
 ```
 
 ## Commands
@@ -30,7 +31,8 @@ pnpm --dir backend db:migrate
 ## Notes
 
 - `src/server.ts` owns HTTP bootstrapping and route registration.
-- `src/scripts/hearing-worker.ts` runs background hearing work.
+- `src/workers/hearing-worker.ts` runs background hearing work.
+- `src/ops/` contains explicit operator commands invoked through `backend/package.json`.
 - `src/routes/x402.ts` exposes paid proof, transcript, receipt, and price resources.
 - `src/routes/telegram.ts` handles opt-in chat linking and webhook traffic.
 - Runtime secrets belong in local or deployment environment variables, not in source control.

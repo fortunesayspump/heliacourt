@@ -1,7 +1,7 @@
 'use client'
 
 import { usePathname } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 export function RouteLoadingBar() {
   const pathname = usePathname()
@@ -12,7 +12,7 @@ export function RouteLoadingBar() {
   const startedAt = useRef(0)
   const didStart = useRef(false)
 
-  const finish = () => {
+  const finish = useCallback(() => {
     if (!didStart.current) return
     const remaining = Math.max(0, 650 - (Date.now() - startedAt.current))
 
@@ -25,9 +25,9 @@ export function RouteLoadingBar() {
         setPhase('idle')
       }, 240)
     }, remaining)
-  }
+  }, [])
 
-  const start = () => {
+  const start = useCallback(() => {
     window.clearTimeout(fallbackTimer.current)
     window.clearTimeout(doneTimer.current)
     window.clearTimeout(hideTimer.current)
@@ -35,7 +35,7 @@ export function RouteLoadingBar() {
     startedAt.current = Date.now()
     setPhase('loading')
     fallbackTimer.current = window.setTimeout(finish, 4500)
-  }
+  }, [finish])
 
   useEffect(() => {
     const handleNavigateIntent = (event: MouseEvent | PointerEvent) => {
@@ -61,11 +61,11 @@ export function RouteLoadingBar() {
       window.clearTimeout(doneTimer.current)
       window.clearTimeout(hideTimer.current)
     }
-  }, [])
+  }, [start])
 
   useEffect(() => {
     finish()
-  }, [pathname])
+  }, [finish, pathname])
 
   return <div className={`route-loading-bar ${phase}`} aria-hidden="true"><span /></div>
 }

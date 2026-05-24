@@ -33,7 +33,7 @@ export function CaseMarketIcon({
     return () => {
       cancelled = true
     }
-  }, [url])
+  }, [title, url])
 
   return (
     <div className={`case-market-icon${image ? ' has-image' : ''}`} aria-hidden="true">

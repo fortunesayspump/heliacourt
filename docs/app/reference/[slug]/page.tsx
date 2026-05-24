@@ -26,7 +26,7 @@ const pages = {
     sections: [
       ['Current docs', 'The active references are the court engine architecture, production intelligence stack, and backend agent tools.'],
       ['Archive', 'Older MVP, protocol, user-flow, and agent-architecture notes remain in docs/archive as historical context.'],
-      ['Assets', 'Reference images and papers live under docs/reference-assets and are not required for the public docs app build.'],
+      ['Assets', 'Public docs assets live under docs/public so the docs app has a single deployable asset root.'],
     ],
   },
 } as const

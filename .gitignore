@@ -39,6 +39,8 @@ dist-ssr
 # Local OSS reference clones and research scratch space
 research/
 .codex-backup/
+.tmp-*/
+tmp/
 
 # Editor directories and files
 .vscode/*

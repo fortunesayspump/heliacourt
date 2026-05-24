@@ -12,11 +12,14 @@ Smart-contract package for Helia Court protocol primitives.
 
 ## Commands
 
-From a fresh clone, initialize the Foundry helper submodule first:
+From a fresh clone, install workspace dependencies and initialize the Foundry helper submodule first:
 
 ```bash
+pnpm install
 git submodule update --init --recursive
 ```
+
+OpenZeppelin contracts are resolved from the package dependencies in `contracts/package.json`; they are not vendored under `contracts/lib/`.
 
 ```bash
 forge build

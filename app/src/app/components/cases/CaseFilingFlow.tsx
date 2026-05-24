@@ -85,6 +85,8 @@ export function CaseFilingFlow({
   const [autofilledFields, setAutofilledFields] = useState<AutofilledFields>({})
   const [autofillStatus, setAutofillStatus] = useState<FilingStatus | undefined>()
   const [filingMainHeight, setFilingMainHeight] = useState<number | undefined>()
+  const autofilledFieldsRef = useRef(autofilledFields)
+  const questionRef = useRef(question)
 
   const budgetUnits = useMemo(() => safeBudget(budget), [budget])
   const escrowAddress = contractAddresses.caseEscrow
@@ -127,6 +129,11 @@ export function CaseFilingFlow({
   ].filter(Boolean).join('\n\n')
 
   useEffect(() => {
+    autofilledFieldsRef.current = autofilledFields
+    questionRef.current = question
+  }, [autofilledFields, question])
+
+  useEffect(() => {
     const element = filingMainRef.current
     if (!element) return
 
@@ -153,7 +160,8 @@ export function CaseFilingFlow({
     setAutofillStatus({ tone: 'muted', text: 'Reading market details...' })
     const params = new URLSearchParams({ url: predictionMarketLink })
     params.set('image', 'og')
-    if (question.trim()) params.set('title', question.trim())
+    const currentQuestion = questionRef.current.trim()
+    if (currentQuestion) params.set('title', currentQuestion)
     fetch(`/api/market-image?${params.toString()}`, { cache: 'no-store' })
       .then((response) => response.json())
       .then((payload: LinkPreview) => {
@@ -163,10 +171,11 @@ export function CaseFilingFlow({
         const nextQuestion = payload.title?.trim()
         const nextContext = buildAutofillContext(payload, predictionMarketLink)
         const nextHorizon = formatMarketHorizon(payload.endDate)
+        const priorAutofill = autofilledFieldsRef.current
 
-        setQuestion((current) => canAutofill(current, autofilledFields.question) && nextQuestion ? nextQuestion : current)
-        setContext((current) => canAutofill(current, autofilledFields.context) && nextContext ? nextContext : current)
-        setHorizon((current) => canAutofill(current, autofilledFields.horizon) && nextHorizon ? nextHorizon : current)
+        setQuestion((current) => canAutofill(current, priorAutofill.question) && nextQuestion ? nextQuestion : current)
+        setContext((current) => canAutofill(current, priorAutofill.context) && nextContext ? nextContext : current)
+        setHorizon((current) => canAutofill(current, priorAutofill.horizon) && nextHorizon ? nextHorizon : current)
         setAutofilledFields({
           question: nextQuestion,
           context: nextContext,

@@ -5,7 +5,7 @@ import { Script } from "forge-std/Script.sol";
 import { AgentRegistry } from "../src/AgentRegistry.sol";
 import { CaseEscrow } from "../src/CaseEscrow.sol";
 import { CourtReceipts } from "../src/CourtReceipts.sol";
-import { ERC1967Proxy } from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
+import { ERC1967Proxy } from "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract DeployArcTestnet is Script {
     address private constant ARC_TESTNET_USDC = 0x3600000000000000000000000000000000000000;
