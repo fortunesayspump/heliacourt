@@ -1525,7 +1525,7 @@ button {
 }
 
 .dashboard-grid .case-table .case-row {
-  grid-template-columns: 76px minmax(220px, 1fr) minmax(88px, auto) minmax(64px, auto) minmax(92px, auto) 38px;
+  grid-template-columns: 76px minmax(220px, 1fr) minmax(220px, auto) 38px;
   gap: 12px;
   height: 82px;
   overflow: hidden;
@@ -1551,6 +1551,19 @@ button {
 
 .dashboard-grid .case-table .case-row p {
   margin: 0;
+}
+
+.case-row-stats {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.case-row-stats > * {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .market-row-image {
@@ -10984,6 +10997,11 @@ a:focus-visible,
     padding-right: 2px !important;
   }
 
+  .dashboard-case-list {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
   .dashboard-grid .case-table .case-row,
   .case-row,
   .ledger-table .case-row {
@@ -11016,37 +11034,25 @@ a:focus-visible,
     grid-area: copy;
   }
 
-  .dashboard-grid .case-table .case-row > .state-dot {
+  .dashboard-grid .case-table .case-row .case-row-stats {
     grid-area: stats;
-    width: max-content !important;
-    max-width: 100% !important;
-    justify-self: start !important;
-    align-self: center !important;
-  }
-
-  .dashboard-grid .case-table .case-row > strong {
-    align-self: center !important;
-    justify-self: center !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    width: 100% !important;
     min-width: 0 !important;
-    font-size: 12.5px !important;
+    gap: 7px !important;
   }
 
-  .dashboard-grid .case-table .case-row > strong:nth-of-type(1) {
-    grid-area: stats;
-  }
-
-  .dashboard-grid .case-table .case-row > strong:nth-of-type(2) {
-    grid-area: stats;
-    justify-self: end !important;
-  }
-
-  .dashboard-grid .case-table .case-row > .state-dot,
-  .dashboard-grid .case-table .case-row > strong {
-    margin-top: 8px !important;
+  .dashboard-grid .case-table .case-row .case-row-stats > * {
+    min-width: 0 !important;
     padding: 7px 8px !important;
     border: 1px solid rgba(241, 211, 170, 0.14) !important;
     border-radius: var(--radius-sm) !important;
     background: rgba(241, 211, 170, 0.045) !important;
+    font-size: 12px !important;
+    text-align: center !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     white-space: nowrap !important;
   }
 

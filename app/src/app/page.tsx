@@ -167,9 +167,11 @@ async function DashboardData() {
                           <span>{item.horizon ?? 'Open'}</span>
                         </p>
                       </div>
-                      <span className="state-dot active">{item.status}</span>
-                      <strong>{item.probability ?? formatConfidence(item.confidence)}</strong>
-                      <strong>{item.witnesses?.length ?? 0} seats</strong>
+                      <div className="case-row-stats" aria-label="Case status">
+                        <span className="state-dot active">{item.status}</span>
+                        <strong>{item.probability ?? formatConfidence(item.confidence)}</strong>
+                        <strong>{item.witnesses?.length ?? 0} seats</strong>
+                      </div>
                       <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
                         <Stamp size={17} />
                       </Link>
