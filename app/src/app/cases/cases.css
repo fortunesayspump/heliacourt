@@ -412,6 +412,7 @@
 
   .case-market-lines > div {
     padding: 9px 7px;
+    text-align: center;
   }
 
   .case-market-lines span {
