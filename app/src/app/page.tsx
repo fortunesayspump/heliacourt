@@ -150,7 +150,7 @@ async function DashboardData() {
                 </div>
               </div>
 
-              <div className="case-table">
+              <div className="case-table dashboard-case-list">
                 {backendCases.length ? (
                   backendCases.slice(0, 10).map((item) => {
                     const marketLink = getPredictionMarketLink(item.links)
@@ -203,7 +203,7 @@ async function DashboardData() {
                   <p className="panel-hint">Funding, verdict, and settlement records from recent cases.</p>
                 </div>
               </div>
-              <div className="settlement-table">
+              <div className="settlement-table dashboard-receipt-list">
                 {verdictRows.length ? (
                   verdictRows.map((row) => (
                     <Link className="receipt-card compact-receipt-card" href={`/cases/${row.caseId}?tab=receipts`} key={`${row.caseId}-${row.item}`}>
@@ -211,13 +211,13 @@ async function DashboardData() {
                         {row.imageUrl ? <img alt="" src={row.imageUrl} /> : formatReceiptType(row.receiptType).slice(0, 1)}
                       </span>
                       <div className="receipt-card-copy">
-                        <span>{formatReceiptType(row.receiptType)}</span>
-                        <strong>{row.item}</strong>
-                        <p>{row.title}</p>
-                        <div>
-                          <code>{formatReceiptHash(row.hash)}</code>
+                        <div className="receipt-card-top">
+                          <span className="receipt-card-kind">{formatReceiptType(row.receiptType)}</span>
                           <em>{row.amount}</em>
                         </div>
+                        <strong className="receipt-card-item">{row.item}</strong>
+                        <p>{row.title}</p>
+                        <code>{formatReceiptHash(row.hash)}</code>
                       </div>
                     </Link>
                   ))
@@ -344,7 +344,7 @@ function DashboardDataSkeleton() {
               <p className="panel-hint">Funding, verdict, and settlement records from recent cases.</p>
             </div>
           </div>
-          <div className="settlement-table">
+          <div className="settlement-table dashboard-receipt-list">
             {Array.from({ length: 3 }).map((_, index) => (
               <article className="receipt-card compact-receipt-card skeleton-receipt-card" key={index}>
                 <span className="skeleton receipt-card-image" />

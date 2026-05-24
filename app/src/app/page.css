@@ -1348,6 +1348,12 @@ button {
   scrollbar-gutter: stable;
 }
 
+.dashboard-case-list,
+.dashboard-receipt-list,
+.dashboard-bench-list {
+  max-height: 332px;
+}
+
 .primary-work-panel {
   grid-row: auto;
 }
@@ -1515,7 +1521,8 @@ button {
 .dashboard-grid .case-table .case-row {
   grid-template-columns: 76px minmax(220px, 1fr) minmax(88px, auto) minmax(64px, auto) minmax(92px, auto) 38px;
   gap: 12px;
-  min-height: 82px;
+  height: 82px;
+  overflow: hidden;
   padding: 10px 12px !important;
 }
 
@@ -4845,6 +4852,8 @@ a.registry-row:hover {
 
   .dashboard-receipts-panel .compact-receipt-card {
     grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-areas: "image copy";
+    min-height: 118px;
     gap: 10px;
     padding: 10px;
   }
@@ -4856,7 +4865,6 @@ a.registry-row:hover {
   }
 
   .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy {
-    grid-template-columns: minmax(0, 1fr);
     gap: 4px;
   }
 
@@ -4872,10 +4880,7 @@ a.registry-row:hover {
   }
 
   .dashboard-receipts-panel .compact-receipt-card em {
-    grid-column: 1;
-    grid-row: auto;
-    justify-self: start;
-    margin-top: 2px;
+    padding: 4px 7px;
   }
 }
 
@@ -8778,11 +8783,12 @@ select {
 
 .dashboard-receipts-panel .compact-receipt-card {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr);
-  min-height: 78px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  grid-template-areas: "image copy";
+  min-height: 112px;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
+  padding: 12px;
   border-color: rgba(241, 211, 170, 0.18);
   border-radius: var(--radius-sm);
   background:
@@ -8799,59 +8805,72 @@ select {
 }
 
 .dashboard-receipts-panel .compact-receipt-card .receipt-card-image {
-  width: 50px;
-  height: 50px;
-  flex-basis: 50px;
+  grid-area: image;
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  overflow: hidden;
   border-radius: var(--radius-sm);
   box-shadow: inset 0 0 0 1px rgba(255, 250, 242, 0.04);
 }
 
 .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 4px 10px;
-  align-items: center;
+  grid-area: copy;
+  min-width: 0;
+  overflow: visible;
+  gap: 4px;
+  align-items: start;
 }
 
-.dashboard-receipts-panel .compact-receipt-card .receipt-card-copy > span {
-  grid-column: 1;
+.dashboard-receipts-panel .compact-receipt-card .receipt-card-top {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dashboard-receipts-panel .compact-receipt-card .receipt-card-kind {
+  min-width: 0;
+  overflow: hidden;
   color: var(--ag-muted);
   font-size: 10.5px;
   font-weight: 760;
   letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.dashboard-receipts-panel .compact-receipt-card .receipt-card-copy strong {
+.dashboard-receipts-panel .compact-receipt-card .receipt-card-item {
   display: none;
 }
 
 .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy p {
   display: -webkit-box;
   overflow: hidden;
-  grid-column: 1 / -1;
   color: var(--ag-ink);
   font-size: 13px;
   line-height: 1.3;
-  min-height: 34px;
+  min-height: 0;
   text-overflow: ellipsis;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
-.dashboard-receipts-panel .compact-receipt-card .receipt-card-copy > div {
-  display: contents;
-}
-
 .dashboard-receipts-panel .compact-receipt-card code {
-  grid-column: 1;
+  display: block;
+  min-width: 0;
+  overflow: hidden;
   color: var(--ag-muted);
   font-size: 11.5px;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboard-receipts-panel .compact-receipt-card em {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
+  flex: 0 0 auto;
   padding: 4px 8px;
   border: 1px solid rgba(92, 165, 128, 0.24);
   border-radius: var(--radius-sm);
@@ -8859,6 +8878,8 @@ select {
   background: rgba(92, 165, 128, 0.1);
   font-size: 11.5px;
   font-weight: 760;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
 .dashboard-agents-panel,
