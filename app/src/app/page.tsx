@@ -19,7 +19,7 @@ import './page.css'
 
 const dashboardTitleImages = [
   { src: '/assets/ancient-athenian-juries.jpg', position: 'center 29%' },
-  { src: '/assets/Tashko-Athenian-Democracy-169-e1746471436925.png', position: 'center 36%' },
+  { src: '/assets/tashko-athenian-democracy-hero.webp', position: 'center 36%' },
   { src: '/assets/athenian-women-attack-a-messenger-12726.jpg', position: 'center 34%' },
   { src: '/assets/socrates-address-louis-joseph-lebrun-1867-credit-public-domain-wikimedia-commons.jpeg', position: 'center 30%' },
   { src: '/assets/socrates.1400x0.jpg', position: 'center 33%' },
