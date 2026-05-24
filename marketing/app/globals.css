@@ -3946,6 +3946,47 @@ body,
     gap: 26px !important;
   }
 
+  .intro,
+  .proceedings-copy,
+  .section-heading,
+  .section-heading > div,
+  .arc-panel,
+  .access-copy,
+  .product-scenes,
+  .registry-copy,
+  .closing,
+  .steps article,
+  .access-card,
+  .scene-card,
+  .ledger article {
+    text-align: center !important;
+  }
+
+  .proceedings-copy,
+  .section-heading,
+  .section-heading > div,
+  .arc-panel,
+  .access-copy,
+  .registry-copy,
+  .closing > div,
+  .access-card,
+  .scene-card,
+  .ledger article {
+    justify-items: center !important;
+  }
+
+  .proceedings-copy p,
+  .section-heading p,
+  .arc-panel p,
+  .access-copy p,
+  .registry-copy p,
+  .closing p,
+  .access-card p,
+  .scene-card p {
+    margin-right: auto !important;
+    margin-left: auto !important;
+  }
+
   .access-copy p {
     max-width: 34rem !important;
     font-size: 16px !important;
