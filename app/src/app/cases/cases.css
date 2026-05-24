@@ -425,13 +425,18 @@
   }
 
   .docket-case-card-actions {
-    grid-template-columns: 1fr;
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
   }
 
   .market-source-link,
   .docket-case-card-link {
     flex: none;
+    min-width: 0;
+    min-height: 38px;
+    padding: 0 10px;
+    font-size: 12px;
   }
 }
 
