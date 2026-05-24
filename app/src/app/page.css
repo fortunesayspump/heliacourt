@@ -10801,3 +10801,254 @@ a:focus-visible,
 :where(.transcript-message, .receipt-card, .compact-receipt-card, .case-box, .compact-card, .market-preview-image, .similar-case-row) {
   text-wrap: pretty;
 }
+
+/* Mobile product pass: readable cards, no clipped rows, thumb-first filing flow. */
+@media (max-width: 640px) {
+  .app-shell {
+    padding-bottom: calc(114px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  .app-topnav-inner {
+    width: min(100% - 20px, 1180px) !important;
+  }
+
+  .app-header-wallet {
+    gap: 6px !important;
+  }
+
+  .app-header-wallet .wallet-balance {
+    display: none !important;
+  }
+
+  .app-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    grid-auto-rows: 38px !important;
+  }
+
+  .app-nav a,
+  .app-topnav .app-nav a {
+    min-height: 38px !important;
+    font-size: 12px !important;
+    line-height: 1 !important;
+  }
+
+  .workspace > :not(.page-title) {
+    width: min(100% - 16px, 1180px) !important;
+  }
+
+  .workspace > .page-title + *,
+  .workspace > :first-child:not(.page-title),
+  .workspace > :not(.page-title) + :not(.page-title) {
+    margin-top: 18px !important;
+  }
+
+  .panel,
+  .metrics-grid,
+  .wallet-notice,
+  .case-box,
+  .cases-docket-panel {
+    padding: 14px !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  .wallet-notice {
+    grid-template-columns: 1fr !important;
+  }
+
+  .wallet-notice button {
+    width: 100% !important;
+  }
+
+  .panel-heading {
+    margin-bottom: 14px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .panel-hint {
+    font-size: 12.5px !important;
+  }
+
+  .primary-work-panel,
+  .dashboard-receipts-panel,
+  .dashboard-agents-panel {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .dashboard-case-list,
+  .dashboard-receipt-list,
+  .dashboard-bench-list {
+    max-height: min(68vh, 560px) !important;
+    overflow-y: auto !important;
+    padding-right: 2px !important;
+  }
+
+  .dashboard-grid .case-table .case-row,
+  .case-row,
+  .ledger-table .case-row {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+    padding: 12px !important;
+  }
+
+  .dashboard-grid .case-table .case-row h3 {
+    min-height: 0 !important;
+    font-size: 14.5px !important;
+    -webkit-line-clamp: 3 !important;
+  }
+
+  .case-row-market-meta {
+    max-width: 100% !important;
+    flex-wrap: wrap !important;
+  }
+
+  .market-row-image {
+    width: 100% !important;
+    height: 128px !important;
+  }
+
+  .dashboard-grid .case-table .case-row > .state-dot,
+  .dashboard-grid .case-table .case-row > strong,
+  .dashboard-grid .case-table .case-row > a {
+    justify-self: stretch !important;
+  }
+
+  .dashboard-grid .case-table .case-row > a {
+    width: 100% !important;
+    height: 38px !important;
+    border-radius: var(--radius-sm) !important;
+  }
+
+  .dashboard-receipts-panel .compact-receipt-card {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+    min-height: 120px !important;
+    align-items: start !important;
+    padding: 11px !important;
+  }
+
+  .dashboard-receipts-panel .compact-receipt-card .receipt-card-image {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .dashboard-receipts-panel .compact-receipt-card .receipt-card-top {
+    align-items: flex-start !important;
+  }
+
+  .dashboard-receipts-panel .compact-receipt-card .receipt-card-copy p {
+    font-size: 12.5px !important;
+    -webkit-line-clamp: 3 !important;
+  }
+
+  .dashboard-receipts-panel .compact-receipt-card em {
+    max-width: 96px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .case-filing-shell,
+  .case-preview-grid,
+  .help-desk-grid,
+  .help-answers-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+
+  .case-filing-side {
+    height: auto !important;
+    max-height: none !important;
+  }
+
+  .similar-case-panel .similar-case-list,
+  .preview-contract-list {
+    max-height: 280px !important;
+  }
+
+  .preview-market-image {
+    height: 170px !important;
+  }
+
+  .preview-summary h3 {
+    font-size: 23px !important;
+  }
+
+  .preview-summary p {
+    -webkit-line-clamp: 5 !important;
+  }
+
+  .preview-actions .primary-button,
+  .preview-actions .secondary-button {
+    width: 100% !important;
+  }
+
+  .case-detail-topbar,
+  .case-detail-shell,
+  .case-detail-actions,
+  .receipt-record-strip,
+  .receipt-summary-grid,
+  .verdict-stat-grid,
+  .verdict-claim-grid,
+  .verdict-two-column {
+    grid-template-columns: 1fr !important;
+  }
+
+  .case-detail-topbar .case-record-tabs,
+  .case-detail-topbar .top-record-tabs {
+    display: flex !important;
+    overflow-x: auto !important;
+    padding-bottom: 4px !important;
+    scrollbar-width: none !important;
+  }
+
+  .case-detail-topbar .case-record-tabs::-webkit-scrollbar,
+  .case-detail-topbar .top-record-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .case-detail-topbar .case-record-tabs a,
+  .case-detail-topbar .top-record-tabs a {
+    flex: 0 0 auto !important;
+    min-height: 38px !important;
+  }
+
+  .transcript-entry {
+    grid-template-columns: 34px minmax(0, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .transcript-avatar {
+    width: 34px !important;
+    height: 34px !important;
+  }
+
+  .transcript-message {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 10px !important;
+  }
+
+  .transcript-meta {
+    display: grid !important;
+    gap: 4px !important;
+  }
+
+  .transcript-source-grid,
+  .receipt-ledger-list,
+  .proof-receipt-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .case-receipt-row,
+  .receipt-ledger-row {
+    grid-template-columns: 42px minmax(0, 1fr) !important;
+  }
+
+  .case-receipt-row > strong,
+  .case-receipt-row > .state-dot {
+    grid-column: 1 / -1 !important;
+    justify-self: stretch !important;
+  }
+}
