@@ -6,7 +6,7 @@ import {
   GATEWAY_AUTH_VALIDITY_WINDOW_SECONDS,
 } from '@circle-fin/x402-batching'
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
-import { desc, eq } from 'drizzle-orm'
+import { desc, eq, sql } from 'drizzle-orm'
 import { listHearingJobs } from '../agents/hearing-jobs.js'
 import { env } from '../config/env.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
@@ -402,14 +402,33 @@ async function getX402Activity(caseId?: string) {
     const rows = caseId
       ? await db.select().from(x402Receipts).where(eq(x402Receipts.caseId, caseId)).orderBy(desc(x402Receipts.createdAt)).limit(50)
       : await db.select().from(x402Receipts).orderBy(desc(x402Receipts.createdAt)).limit(250)
-    const totalMicroUsdc = rows.reduce((total, row) => total + Number(row.amountMicroUsdc || 0), 0)
-    const distinctPayers = new Set(rows.map((row) => row.payer).filter(Boolean)).size
-    const distinctCases = new Set(rows.map((row) => row.caseId)).size
-    const averageMicroUsdc = rows.length ? totalMicroUsdc / rows.length : 0
+    const [summary] = caseId
+      ? await db
+        .select({
+          totalPaidReads: sql<number>`count(*)::int`,
+          totalMicroUsdc: sql<string>`coalesce(sum((${x402Receipts.amountMicroUsdc})::numeric), 0)::text`,
+          distinctPayers: sql<number>`count(distinct ${x402Receipts.payer})::int`,
+          distinctCases: sql<number>`count(distinct ${x402Receipts.caseId})::int`,
+        })
+        .from(x402Receipts)
+        .where(eq(x402Receipts.caseId, caseId))
+      : await db
+        .select({
+          totalPaidReads: sql<number>`count(*)::int`,
+          totalMicroUsdc: sql<string>`coalesce(sum((${x402Receipts.amountMicroUsdc})::numeric), 0)::text`,
+          distinctPayers: sql<number>`count(distinct ${x402Receipts.payer})::int`,
+          distinctCases: sql<number>`count(distinct ${x402Receipts.caseId})::int`,
+        })
+        .from(x402Receipts)
+    const totalPaidReads = Number(summary?.totalPaidReads ?? 0)
+    const totalMicroUsdc = Number(summary?.totalMicroUsdc ?? 0)
+    const distinctPayers = Number(summary?.distinctPayers ?? 0)
+    const distinctCases = Number(summary?.distinctCases ?? 0)
+    const averageMicroUsdc = totalPaidReads ? totalMicroUsdc / totalPaidReads : 0
 
     return {
       caseId: caseId ?? null,
-      totalPaidReads: rows.length,
+      totalPaidReads,
       totalMicroUsdc,
       totalUsdc: formatMicroUsdc(totalMicroUsdc),
       averageMicroUsdc,
