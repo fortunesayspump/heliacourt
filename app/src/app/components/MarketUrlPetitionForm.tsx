@@ -1,6 +1,6 @@
 'use client'
 
-import { Stamp } from '@phosphor-icons/react'
+import { ArrowRight, LinkSimple, Stamp } from '@phosphor-icons/react'
 import { useRouter } from 'next/navigation'
 import { FormEvent, useEffect, useState } from 'react'
 import { MarketLogo } from './MarketLogo'
@@ -45,8 +45,12 @@ export function MarketUrlPetitionForm() {
     <form className="case-box petition-card" onSubmit={submit}>
       <div className="petition-card-visual" aria-hidden="true">
         {marketImage ? <img alt="" src={marketImage} /> : null}
-        <span />
-        <strong>URL</strong>
+        <span className="petition-visual-bars" />
+        <div className="petition-visual-copy">
+          <LinkSimple size={18} />
+          <strong>Market URL</strong>
+          <small>Question, image, outcomes, horizon</small>
+        </div>
       </div>
       <label className="petition-url-field" htmlFor="dashboard-market-url">
         <span>Polymarket, Kalshi, or Manifold URL</span>
@@ -57,6 +61,13 @@ export function MarketUrlPetitionForm() {
           onChange={(event) => setMarketUrl(event.target.value)}
         />
       </label>
+      <div className="petition-flow-strip" aria-hidden="true">
+        <span>Auto-fill</span>
+        <ArrowRight size={13} />
+        <span>Fund</span>
+        <ArrowRight size={13} />
+        <span>Verdict</span>
+      </div>
       <div className="petition-card-footer">
         <span className="petition-market-logos">
           <MarketLogo market="polymarket" />

@@ -37,6 +37,8 @@ export default function DashboardPage() {
         <PageTitle
           eyebrow="Market case filing"
           title="Paste a market link. Get an agent verdict."
+          description="Helia pulls the market details, seats specialist witnesses, argues both sides, and records the verdict with Arc receipts."
+          className="dashboard-hero-title"
           imageSrcs={dashboardTitleImages}
           imagePosition="center 29%"
           tone="dark"
@@ -144,6 +146,7 @@ async function DashboardData() {
                 <div>
                   <p className="eyebrow">Market docket</p>
                   <h2>Live cases</h2>
+                  <p className="panel-hint">Open hearings, verdicts, and market records moving through the court.</p>
                 </div>
               </div>
 
@@ -186,6 +189,7 @@ async function DashboardData() {
                 <div>
                   <p className="eyebrow">Start here</p>
                   <h2>Paste a market URL</h2>
+                  <p className="panel-hint">Supported links auto-fill the case before wallet funding.</p>
                 </div>
               </div>
               <MarketUrlPetitionForm />
@@ -196,6 +200,7 @@ async function DashboardData() {
                 <div>
                   <p className="eyebrow">Verdict archive</p>
                   <h2>Recent decision receipts</h2>
+                  <p className="panel-hint">Funding, verdict, and settlement records from recent cases.</p>
                 </div>
               </div>
               <div className="settlement-table">
@@ -235,6 +240,7 @@ async function DashboardData() {
                 <div>
                   <p className="eyebrow">Agent registry</p>
                   <h2>Active witness bench</h2>
+                  <p className="panel-hint">Tool-backed agents currently available for hearings.</p>
                 </div>
               </div>
               <div className="agent-market-list dashboard-bench-list">
@@ -303,6 +309,7 @@ function DashboardDataSkeleton() {
             <div>
               <p className="eyebrow">Market docket</p>
               <h2>Live cases</h2>
+              <p className="panel-hint">Open hearings, verdicts, and market records moving through the court.</p>
             </div>
           </div>
           {Array.from({ length: 3 }).map((_, index) => (
@@ -324,6 +331,7 @@ function DashboardDataSkeleton() {
             <div>
               <p className="eyebrow">Start here</p>
               <h2>Paste a market URL</h2>
+              <p className="panel-hint">Supported links auto-fill the case before wallet funding.</p>
             </div>
           </div>
           <MarketUrlPetitionForm />
@@ -333,6 +341,7 @@ function DashboardDataSkeleton() {
             <div>
               <p className="eyebrow">Verdict archive</p>
               <h2>Recent decision receipts</h2>
+              <p className="panel-hint">Funding, verdict, and settlement records from recent cases.</p>
             </div>
           </div>
           <div className="settlement-table">
@@ -355,6 +364,7 @@ function DashboardDataSkeleton() {
             <div>
               <p className="eyebrow">Agent registry</p>
               <h2>Active witness bench</h2>
+              <p className="panel-hint">Tool-backed agents currently available for hearings.</p>
             </div>
           </div>
           <div className="agent-market-list dashboard-bench-list">

@@ -62,6 +62,12 @@ export default function MarketingHome() {
                 View settlement model
               </Link>
             </div>
+            <div className="hero-flow-strip" aria-label="Helia Court filing flow">
+              <span>Paste link</span>
+              <span>Auto-fill case</span>
+              <span>Agent hearing</span>
+              <span>Arc receipt</span>
+            </div>
             <div className="hero-market-logos" aria-label="Supported prediction markets">
               {supportedMarkets.map((market) => (
                 <a href={`https://${market.domain}`} key={market.domain} target="_blank" rel="noreferrer" title={market.name}>

@@ -763,6 +763,13 @@
   font-weight: 500;
 }
 
+.workspace-header.page-title.dashboard-hero-title .header-copy {
+  max-width: 680px !important;
+  color: rgba(20, 19, 15, 0.88) !important;
+  font-size: 17px !important;
+  font-weight: 560 !important;
+}
+
 .page-title-actions {
   min-height: 42px;
   justify-content: flex-end;
@@ -3197,6 +3204,22 @@ button {
   margin-bottom: 22px;
 }
 
+.panel-heading > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.panel-hint {
+  max-width: 440px;
+  margin-top: 3px !important;
+  color: var(--ag-muted) !important;
+  font-size: 13px !important;
+  line-height: 1.35 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
 .section-title span {
   color: var(--ash);
   font-size: 14px;
@@ -3236,21 +3259,22 @@ button {
 }
 
 .petition-card {
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
-  padding: 10px;
+  padding: 12px;
   background:
-    linear-gradient(180deg, rgba(241, 211, 170, 0.04), transparent 42%),
+    radial-gradient(circle at 18% 0%, rgba(241, 211, 170, 0.13), transparent 30%),
+    linear-gradient(180deg, rgba(241, 211, 170, 0.055), transparent 42%),
     var(--ag-inner-surface);
 }
 
 .petition-card-visual {
   position: relative;
   display: grid;
-  min-height: 108px;
+  min-height: 150px;
   align-items: end;
   overflow: hidden;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid rgba(241, 211, 170, 0.16);
   border-radius: var(--radius-md);
   background:
@@ -3259,7 +3283,17 @@ button {
     linear-gradient(135deg, rgba(71, 99, 82, 0.52), rgba(20, 19, 15, 0.94));
 }
 
-.petition-card-visual > span {
+.petition-card-visual::after {
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 1;
+  height: 68%;
+  content: "";
+  background: linear-gradient(180deg, transparent, rgba(13, 12, 9, 0.78));
+  pointer-events: none;
+}
+
+.petition-visual-bars {
   position: absolute;
   z-index: 2;
   top: 13px;
@@ -3273,17 +3307,42 @@ button {
     116px 0 0 rgba(241, 211, 170, 0.12);
 }
 
-.petition-card-visual strong {
+.petition-visual-copy {
   position: relative;
   z-index: 2;
-  width: max-content;
-  padding: 6px 9px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 4px 8px;
+  align-items: center;
+  width: min(100%, 310px);
+  padding: 10px 11px;
   border: 1px solid rgba(255, 250, 242, 0.16);
   border-radius: var(--radius-sm);
   color: var(--ag-cream);
-  background: rgba(13, 12, 9, 0.34);
+  background: rgba(13, 12, 9, 0.42);
+  backdrop-filter: blur(10px);
+}
+
+.petition-visual-copy svg {
+  grid-row: 1 / span 2;
+  color: #9fe0b9;
+}
+
+.petition-visual-copy strong {
   font-size: 11px;
   letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.petition-visual-copy small {
+  min-width: 0;
+  overflow: hidden;
+  color: rgba(255, 250, 242, 0.7);
+  font-size: 12px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .petition-url-field {
@@ -3294,6 +3353,7 @@ button {
   border: 1px solid rgba(241, 211, 170, 0.16);
   border-radius: var(--radius-sm);
   background: rgba(241, 211, 170, 0.045);
+  transition: border-color 160ms ease, background-color 160ms ease;
 }
 
 .petition-url-field span {
@@ -3319,6 +3379,37 @@ button {
 .petition-url-field input::placeholder {
   color: var(--ag-muted);
   opacity: 0.82;
+}
+
+.petition-url-field:focus-within {
+  border-color: rgba(159, 224, 185, 0.42);
+  background: rgba(92, 165, 128, 0.08);
+}
+
+.petition-flow-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  padding: 9px 10px;
+  border: 1px solid rgba(241, 211, 170, 0.14);
+  border-radius: var(--radius-sm);
+  color: var(--ag-muted);
+  background: rgba(241, 211, 170, 0.04);
+}
+
+.petition-flow-strip span {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 11.5px;
+  font-weight: 760;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.petition-flow-strip svg {
+  color: rgba(159, 224, 185, 0.8);
 }
 
 .petition-card-footer {
