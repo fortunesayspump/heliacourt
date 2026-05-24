@@ -10998,7 +10998,7 @@ a:focus-visible,
   }
 
   .dashboard-case-list {
-    max-height: min(58vh, 440px) !important;
+    max-height: min(62vh, 430px) !important;
     overflow-y: auto !important;
   }
 
@@ -11014,27 +11014,27 @@ a:focus-visible,
   }
 
   .dashboard-grid .case-table .case-row {
-    grid-template-columns: 44px minmax(0, 1fr) !important;
+    grid-template-columns: 52px minmax(0, 1fr) !important;
     grid-template-areas:
       "image copy"
       "image stats" !important;
     align-items: start !important;
-    min-height: 0 !important;
-    gap: 9px 10px !important;
-    padding: 11px !important;
+    min-height: 120px !important;
+    gap: 10px 12px !important;
+    padding: 12px !important;
     position: relative !important;
   }
 
   .dashboard-grid .case-table .case-row .market-row-image {
     grid-area: image;
     align-self: start !important;
-    width: 44px !important;
-    height: 44px !important;
+    width: 52px !important;
+    height: 52px !important;
   }
 
   .dashboard-grid .case-table .case-row > div:nth-child(2) {
     grid-area: copy;
-    gap: 4px !important;
+    gap: 6px !important;
   }
 
   .dashboard-grid .case-table .case-row .case-row-stats {
@@ -11043,17 +11043,17 @@ a:focus-visible,
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
     width: 100% !important;
     min-width: 0 !important;
-    gap: 6px !important;
+    gap: 7px !important;
   }
 
   .dashboard-grid .case-table .case-row .case-row-stats > * {
     min-width: 0 !important;
-    padding: 5px 6px !important;
+    padding: 6px 7px !important;
     border: 1px solid rgba(241, 211, 170, 0.14) !important;
     border-radius: var(--radius-sm) !important;
     background: rgba(241, 211, 170, 0.045) !important;
-    font-size: 10.5px !important;
-    line-height: 1.1 !important;
+    font-size: 11.5px !important;
+    line-height: 1.15 !important;
     text-align: center !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -11062,9 +11062,9 @@ a:focus-visible,
 
   .dashboard-grid .case-table .case-row h3 {
     min-height: 0 !important;
-    font-size: 13px !important;
-    line-height: 1.28 !important;
-    -webkit-line-clamp: 2 !important;
+    font-size: 14px !important;
+    line-height: 1.32 !important;
+    -webkit-line-clamp: 3 !important;
   }
 
   .case-row-market-meta {
