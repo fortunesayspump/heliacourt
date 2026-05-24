@@ -10880,6 +10880,16 @@ a:focus-visible,
     width: min(100% - 24px, 1180px) !important;
   }
 
+  .live-court-feed {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    padding-inline: 0 !important;
+  }
+
+  .live-court-feed-panel {
+    overflow: hidden !important;
+  }
+
   .workspace > .page-title + *,
   .workspace > :first-child:not(.page-title),
   .workspace > :not(.page-title) + :not(.page-title) {
