@@ -219,18 +219,27 @@ async function DashboardData() {
                         </div>
                         <strong className="receipt-card-item">{row.item}</strong>
                         <p>{row.title}</p>
-                        <code>{formatReceiptHash(row.hash)}</code>
+                        <div className="receipt-card-footer">
+                          <code>{formatReceiptHash(row.hash)}</code>
+                          <span>Receipt</span>
+                        </div>
                       </div>
                     </Link>
                   ))
                 ) : (
                   <div className="receipt-card compact-receipt-card">
-                    <span>No receipts yet</span>
-                    <strong>No receipt records yet</strong>
-                    <p>File or settle a case to create the first receipt.</p>
-                    <div>
-                      <code>Pending</code>
-                      <em>0 USDC</em>
+                    <span className="receipt-card-image" aria-hidden="true">R</span>
+                    <div className="receipt-card-copy">
+                      <div className="receipt-card-top">
+                        <span className="receipt-card-kind">No receipts yet</span>
+                        <em>0 USDC</em>
+                      </div>
+                      <strong className="receipt-card-item">No receipt records yet</strong>
+                      <p>File or settle a case to create the first receipt.</p>
+                      <div className="receipt-card-footer">
+                        <code>Pending</code>
+                        <span>Receipt</span>
+                      </div>
                     </div>
                   </div>
                 )}
