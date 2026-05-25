@@ -199,9 +199,19 @@ h3 {
   align-items: center;
   border-radius: 6px;
   color: var(--ag-muted);
-  font-family: var(--font-body);
   font-size: 14px;
   font-weight: 650;
+}
+
+.sidebar a {
+  font-family: var(--font-title);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.toc a {
+  font-family: var(--font-body);
 }
 
 .sidebar a {
@@ -292,8 +302,10 @@ h3 {
 
 .quick-grid strong {
   color: var(--ag-ink);
-  font-family: var(--font-body);
-  font-size: 15px;
+  font-family: var(--font-title);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.05;
 }
 
 .quick-grid span {
