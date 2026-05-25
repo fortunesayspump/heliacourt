@@ -227,12 +227,12 @@ async function processQueue() {
         onArtifact: async (artifact) => {
           liveResult.artifacts.push(artifact)
           job.updatedAt = new Date().toISOString()
-          await saveJob(job)
+          await saveLiveJobUpdate(job, 'artifact')
         },
         onTurn: async (turn) => {
           liveResult.transcript.push(turn)
           job.updatedAt = new Date().toISOString()
-          await saveJob(job)
+          await saveLiveJobUpdate(job, 'turn')
         },
       }),
       env.HELIA_HEARING_TIMEOUT_MS,
@@ -287,6 +287,20 @@ async function processQueue() {
         void processQueue()
       })
   }
+}
+
+async function saveLiveJobUpdate(job: HearingJob, stage: 'artifact' | 'turn') {
+  await saveJob(job).catch((error) => {
+    const message = error instanceof Error ? error.message : 'live hearing save failed'
+    console.warn(JSON.stringify({
+      service: 'helia-hearing-worker',
+      jobId: job.id,
+      caseId: job.caseId,
+      stage,
+      error: message,
+      at: new Date().toISOString(),
+    }))
+  })
 }
 
 function popMemoryJob() {
