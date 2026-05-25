@@ -9,12 +9,18 @@ const courtAgents = [
 
 const navItems = [
   ['Overview', '#overview'],
-  ['Case Flow', '#case-flow'],
+  ['Case flow', '#case-flow'],
   ['Agents', '#agents'],
   ['Arc', '#arc'],
   ['x402', '#x402'],
   ['Builders', '#builders'],
   ['Deploy', '#deploy'],
+] as const
+
+const quickLinks = [
+  ['File a case', 'Open the production app filing flow.', 'https://app.heliacourt.xyz/cases/new'],
+  ['Engine architecture', 'Read the maintained court-engine reference.', '/reference/court-engine-architecture'],
+  ['Production stack', 'Review deployment and evidence tooling.', '/reference/production-intelligence-stack'],
 ] as const
 
 const references = [
@@ -25,44 +31,76 @@ const references = [
 
 export default function DocsHome() {
   return (
-    <main>
+    <main className="docs-app">
       <header className="topbar">
         <a className="brand" href="https://heliacourt.xyz">
           <img src="/assets/helia-temple-mark.svg" alt="" />
-          <span>Helia Court Docs</span>
+          <span><strong>Helia Court</strong> Docs</span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="https://app.heliacourt.xyz">App</a>
           <a href="https://heliacourt.xyz">Site</a>
-          <a href="#builders">Builders</a>
+          <a href="/reference/court-engine-architecture">Reference</a>
         </nav>
       </header>
 
-      <div className="layout">
+      <div className="docs-layout">
         <aside className="sidebar" aria-label="Docs sections">
-          <span className="sidebar-label">Docs</span>
-          {navItems.map(([label, href]) => (
-            <a href={href} key={href}>{label}</a>
-          ))}
+          <div className="sidebar-section">
+            <span className="sidebar-label">Start here</span>
+            {navItems.slice(0, 2).map(([label, href]) => (
+              <a href={href} key={href}>{label}</a>
+            ))}
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Platform</span>
+            {navItems.slice(2, 5).map(([label, href]) => (
+              <a href={href} key={href}>{label}</a>
+            ))}
+          </div>
+          <div className="sidebar-section">
+            <span className="sidebar-label">Operate</span>
+            {navItems.slice(5).map(([label, href]) => (
+              <a href={href} key={href}>{label}</a>
+            ))}
+          </div>
+          <div className="sidebar-section reference-links">
+            <span className="sidebar-label">Reference</span>
+            {references.map(([label, href]) => (
+              <a href={href} key={href}>{label}</a>
+            ))}
+          </div>
         </aside>
 
         <article className="content">
-          <section className="hero" id="overview">
-            <p className="eyebrow">docs.heliacourt.xyz</p>
-            <h1>Build and audit the forecasting court.</h1>
-            <p>
+          <section className="doc-hero" id="overview">
+            <p className="breadcrumb">Documentation / Overview</p>
+            <h1>Helia Court documentation</h1>
+            <p className="lead">
               Helia Court turns prediction-market questions into funded proceedings. Agents gather evidence, argue both sides,
               issue verdicts, and leave Arc receipts for settlement and review.
             </p>
-            <div className="hero-actions">
-              <a href="https://app.heliacourt.xyz/cases/new">File a case</a>
-              <a href="#arc">View Arc identity</a>
+            <div className="quick-grid">
+              {quickLinks.map(([title, detail, href]) => (
+                <a href={href} key={href}>
+                  <strong>{title}</strong>
+                  <span>{detail}</span>
+                </a>
+              ))}
+            </div>
+            <div className="note">
+              <strong>Scope</strong>
+              <span>These docs cover case flow, agent roles, Arc receipts, ERC-8004 identity, and x402 paid reads.</span>
             </div>
           </section>
 
-          <section className="section" id="case-flow">
+          <section className="doc-section" id="case-flow">
             <p className="eyebrow">Case Flow</p>
             <h2>From market URL to court record</h2>
+            <p>
+              A case starts with a supported market URL, then moves through evidence gathering, argument, verdict generation,
+              and receipt persistence. The backend owns the courtroom record and stores auditable rows for later settlement review.
+            </p>
             <div className="step-grid">
               <article><strong>01</strong><h3>Petition</h3><p>Submit a Polymarket, Kalshi, or Manifold URL with budget, horizon, and visibility.</p></article>
               <article><strong>02</strong><h3>Evidence</h3><p>Witnesses collect market data, fresh news, page text, screenshots, timelines, and source quality notes.</p></article>
@@ -75,7 +113,7 @@ export default function DocsHome() {
             </p>
           </section>
 
-          <section className="section" id="agents">
+          <section className="doc-section" id="agents">
             <p className="eyebrow">Agents</p>
             <h2>One public identity, many courtroom roles</h2>
             <p>
@@ -93,7 +131,7 @@ export default function DocsHome() {
             </div>
           </section>
 
-          <section className="section identity" id="arc">
+          <section className="doc-section identity" id="arc">
             <p className="eyebrow">Arc + ERC-8004</p>
             <h2>Registered court identity</h2>
             <dl>
@@ -111,7 +149,7 @@ export default function DocsHome() {
             </a>
           </section>
 
-          <section className="section" id="x402">
+          <section className="doc-section" id="x402">
             <p className="eyebrow">x402</p>
             <h2>Paid reads for agents and bots</h2>
             <p>
@@ -142,7 +180,7 @@ Flow:
             </p>
           </section>
 
-          <section className="section" id="builders">
+          <section className="doc-section" id="builders">
             <p className="eyebrow">Builders</p>
             <h2>Integrate specialist agents</h2>
             <p>
@@ -158,7 +196,7 @@ Flow:
             </div>
           </section>
 
-          <section className="section" id="deploy">
+          <section className="doc-section" id="deploy">
             <p className="eyebrow">Deploy</p>
             <h2>Subdomain setup</h2>
             <p>
@@ -172,6 +210,13 @@ Flow:
             </div>
           </section>
         </article>
+
+        <aside className="toc" aria-label="On this page">
+          <span>On this page</span>
+          {navItems.map(([label, href]) => (
+            <a href={href} key={href}>{label}</a>
+          ))}
+        </aside>
       </div>
     </main>
   )
