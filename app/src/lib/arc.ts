@@ -29,6 +29,13 @@ export const arcTestnet = defineChain({
 
 export const appKitProjectId = process.env.NEXT_PUBLIC_REOWN_PROJECT_ID?.trim()
 
+export function getArcExplorerTxUrl(txHash?: string | null) {
+  if (!txHash) return null
+  const normalized = txHash.startsWith('0x') ? txHash : `0x${txHash}`
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) return null
+  return `${arcTestnet.blockExplorers.default.url}/tx/${normalized}`
+}
+
 const rpcUrl = process.env.NEXT_PUBLIC_ARC_RPC_URL || arcTestnet.rpcUrls.default.http[0]
 
 const connectors = [

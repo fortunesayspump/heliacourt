@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { ArrowSquareOut } from '@phosphor-icons/react/ssr'
 import { AppFooter } from '../../components/layout/AppFooter'
 import { AppHeader } from '../../components/layout/AppHeader'
+import { getArcExplorerTxUrl } from '../../../lib/arc'
 import { getBackendCaseDetail, type ApiCourtArtifact } from '../../../lib/backend-data'
 import { backendUrl } from '../../../lib/backend-url'
 import '../../page.css'
@@ -86,7 +87,7 @@ export default async function ProofPage({ params }: { params: Promise<{ id: stri
             </div>
             <div className="proof-receipt-list">
               {receipts.length ? receipts.map((receipt, index) => (
-                <a className="proof-row" href={`https://explorer.testnet.arc.network/tx/${receipt.txHash}`} key={`${receipt.type}-${receipt.txHash}-${index}`} target="_blank" rel="noreferrer">
+                <a className="proof-row" href={getArcExplorerTxUrl(receipt.txHash) ?? undefined} key={`${receipt.type}-${receipt.txHash}-${index}`} target="_blank" rel="noreferrer">
                   <span>{String(index + 1).padStart(2, '0')}</span>
                   <div>
                     <strong>{formatReceiptType(receipt.type)}</strong>

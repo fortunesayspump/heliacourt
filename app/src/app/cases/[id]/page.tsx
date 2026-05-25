@@ -10,6 +10,7 @@ import { CaseLiveTranscript } from '../../components/cases/CaseLiveTranscript'
 import { getMarketProvider, MarketLogo } from '../../components/markets/MarketLogo'
 import { MarketPreviewImage } from '../../components/markets/MarketPreviewImage'
 import { PrivateCaseUnlockPanel } from '../../components/cases/PrivateCaseUnlockPanel'
+import { getArcExplorerTxUrl } from '../../../lib/arc'
 import { formatConfidence, getBackendCaseDetail } from '../../../lib/backend-data'
 import {
   buildCaseHistoryEvents,
@@ -347,8 +348,8 @@ async function CaseRecordData({
                       <span>Settlement artifact</span>
                       <strong>{settlementArtifact ? `${settlementArtifact.costUsd?.toFixed(2) ?? '0.00'} USDC` : 'Pending'}</strong>
                     </div>
-                    {courtCase.onchain?.txHash ? (
-                      <a className="secondary-button compact-back" href={`https://explorer.testnet.arc.network/tx/${courtCase.onchain.txHash}`} target="_blank" rel="noreferrer">
+                    {getArcExplorerTxUrl(courtCase.onchain?.txHash) ? (
+                      <a className="secondary-button compact-back" href={getArcExplorerTxUrl(courtCase.onchain?.txHash) ?? undefined} target="_blank" rel="noreferrer">
                         View funding tx
                       </a>
                     ) : null}
@@ -365,7 +366,7 @@ async function CaseRecordData({
                       </div>
                       <div className="receipt-ledger-list">
                         {onchainReceipts.map((receipt, index) => (
-                          <a className="case-receipt-row" href={`https://explorer.testnet.arc.network/tx/${receipt.txHash}`} key={`${receipt.type}-${receipt.txHash}-${receipt.agentId ?? 'case'}-${receipt.amountUsdc ?? 'record'}-${index}`} target="_blank" rel="noreferrer">
+                          <a className="case-receipt-row" href={getArcExplorerTxUrl(receipt.txHash) ?? undefined} key={`${receipt.type}-${receipt.txHash}-${receipt.agentId ?? 'case'}-${receipt.amountUsdc ?? 'record'}-${index}`} target="_blank" rel="noreferrer">
                             <div className="receipt-index">{String(index + 1).padStart(2, '0')}</div>
                             <div>
                               <span>{formatReceiptType(receipt.type)}</span>

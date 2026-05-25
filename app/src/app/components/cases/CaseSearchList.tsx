@@ -8,11 +8,17 @@ import { getPredictionMarketLink, MarketLogo } from '../markets/MarketLogo'
 
 export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initialNow: number }) {
   const [query, setQuery] = useState('')
+  const [showArchived, setShowArchived] = useState(false)
   const normalizedQuery = normalizeSearchText(query)
+  const archivedCount = cases.filter(isArchivedCaseStatus).length
+  const visibleCases = useMemo(
+    () => showArchived ? cases : cases.filter((item) => !isArchivedCaseStatus(item)),
+    [cases, showArchived],
+  )
   const filteredCases = useMemo(() => {
-    if (!normalizedQuery) return cases
+    if (!normalizedQuery) return visibleCases
 
-    return cases.filter((item) => {
+    return visibleCases.filter((item) => {
       const marketLink = getPredictionMarketLink(item.links)
       const haystack = normalizeSearchText([
         item.title,
@@ -28,7 +34,7 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
 
       return haystack.includes(normalizedQuery)
     })
-  }, [cases, normalizedQuery])
+  }, [normalizedQuery, visibleCases])
 
   return (
     <>
@@ -54,7 +60,19 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
             <p className="eyebrow">Prediction docket</p>
             <h2>Markets</h2>
           </div>
-          <Briefcase size={20} />
+          <div className="case-list-heading-actions">
+            {archivedCount ? (
+              <button
+                className={`case-archive-toggle${showArchived ? ' active' : ''}`}
+                type="button"
+                aria-pressed={showArchived}
+                onClick={() => setShowArchived((current) => !current)}
+              >
+                {showArchived ? 'Hide failed/refunded' : `Show failed/refunded (${archivedCount})`}
+              </button>
+            ) : null}
+            <Briefcase size={20} />
+          </div>
         </div>
 
         {!cases.length ? (
@@ -64,6 +82,21 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
               File case
               <Stamp size={16} />
             </Link>
+          </div>
+        ) : !visibleCases.length && !showArchived ? (
+          <div className="empty-state">
+            <h3>No active cases</h3>
+            <p>{archivedCount ? `${archivedCount} failed/refunded records are hidden.` : 'File a case to populate the docket.'}</p>
+            {archivedCount ? (
+              <button className="secondary-button" type="button" onClick={() => setShowArchived(true)}>
+                Show hidden records
+              </button>
+            ) : (
+              <Link className="primary-button" href="/cases/new">
+                File case
+                <Stamp size={16} />
+              </Link>
+            )}
           </div>
         ) : filteredCases.length ? (
           <div className="docket-case-grid">
@@ -185,4 +218,8 @@ function formatFilingKind(kind?: string) {
   if (kind === 'fresh-hearing') return 'Fresh hearing'
   if (kind === 'private-fork') return 'Private fork'
   return 'Original case'
+}
+
+function isArchivedCaseStatus(caseItem: ApiCase) {
+  return caseItem.status === 'Failed' || caseItem.status === 'Refunded'
 }

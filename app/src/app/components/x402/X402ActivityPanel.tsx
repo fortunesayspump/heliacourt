@@ -3,6 +3,7 @@
 import { ArrowClockwise, Briefcase, Receipt, ShieldCheck, UsersThree } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import { getArcExplorerTxUrl } from '../../../lib/arc'
 import { normalizeActivity, type X402ActivitySnapshot } from '../../../lib/x402-activity'
 
 export function X402ActivityPanel({ initialActivity }: { initialActivity: X402ActivitySnapshot }) {
@@ -117,10 +118,7 @@ function shortValue(value?: string | null, start = 8, end = 6) {
 }
 
 function getExplorerTxHref(value?: string | null) {
-  if (!value) return null
-  const normalized = value.startsWith('0x') ? value : `0x${value}`
-  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) return null
-  return `https://explorer.testnet.arc.network/tx/${normalized}`
+  return getArcExplorerTxUrl(value)
 }
 
 function formatDate(value?: string | null) {

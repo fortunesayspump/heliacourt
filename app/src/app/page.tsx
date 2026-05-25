@@ -3,7 +3,6 @@ import {
   CurrencyDollar,
   Eye,
   Play,
-  Stamp,
   Timer,
 } from '@phosphor-icons/react/ssr'
 import { Suspense, type CSSProperties } from 'react'
@@ -11,10 +10,10 @@ import Link from 'next/link'
 import { AppHeader } from './components/layout/AppHeader'
 import { AppFooter } from './components/layout/AppFooter'
 import { PageTitle } from './components/layout/PageTitle'
+import { DashboardCaseList } from './components/cases/DashboardCaseList'
 import { MarketUrlPetitionForm } from './components/markets/MarketUrlPetitionForm'
-import { getPredictionMarketLink, MarketLogo } from './components/markets/MarketLogo'
 import { WalletNotice } from './components/wallet/WalletNotice'
-import { formatConfidence, getBackendAgents, getBackendCases, getBackendLedgerRows, type ApiCase, type ApiLedgerRow } from '../lib/backend-data'
+import { getBackendAgents, getBackendCases, getBackendLedgerRows, type ApiCase, type ApiLedgerRow } from '../lib/backend-data'
 import './page.css'
 
 const dashboardTitleImages = [
@@ -77,9 +76,9 @@ async function DashboardData() {
     getBackendLedgerRows(),
     getBackendAgents(),
   ])
-  const activeCases = backendCases.filter((item) => item.status !== 'Verdict' && item.status !== 'Refunded')
+  const activeCases = backendCases.filter((item) => item.status !== 'Verdict' && !isArchivedCaseStatus(item))
   const verdictRows = ledgerRows.filter((item) => item.hash).slice(0, 10)
-  const liveFeed = buildLiveFeed(backendCases, ledgerRows).slice(0, 8)
+  const liveFeed = buildLiveFeed(backendCases.filter((item) => !isArchivedCaseStatus(item)), ledgerRows).slice(0, 8)
   const graphStats = buildDashboardGraphs(backendCases, ledgerRows)
   const benchAgents = registryAgents
     .filter((agent) => agent.enabled && (agent.seat === 'expert-witness' || agent.seat === 'risk-bailiff'))
@@ -115,7 +114,7 @@ async function DashboardData() {
               <Eye size={19} />
               <div>
                 <span>Public verdicts</span>
-                <strong>{backendCases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length} sealed</strong>
+                <strong>{backendCases.filter((item) => item.status === 'Verdict').length} sealed</strong>
               </div>
               <MiniSparkline values={graphStats.verdictCadence} />
             </div>
@@ -150,40 +149,7 @@ async function DashboardData() {
                 </div>
               </div>
 
-              <div className="case-table dashboard-case-list">
-                {backendCases.length ? (
-                  backendCases.slice(0, 10).map((item) => {
-                    const marketLink = getPredictionMarketLink(item.links)
-
-                    return (
-                    <article className="case-row" key={item.id}>
-                      <div className="market-row-image" aria-hidden="true">
-                        {item.imageUrl ? <img alt="" src={item.imageUrl} /> : <MarketLogo url={marketLink} market={item.market} />}
-                      </div>
-                      <div>
-                        <h3>{item.title}</h3>
-                        <p className="case-row-market-meta">
-                          <MarketLogo url={marketLink} market={item.market} showLabel />
-                          <span>{item.horizon ?? 'Open'}</span>
-                        </p>
-                      </div>
-                      <div className="case-row-stats" aria-label="Case status">
-                        <span className="state-dot active">{item.status}</span>
-                        <strong>{item.probability ?? formatConfidence(item.confidence)}</strong>
-                        <strong>{item.witnesses?.length ?? 0} seats</strong>
-                      </div>
-                      <Link href={`/cases/${item.id}`} aria-label={`Open ${item.title}`}>
-                        <Stamp size={17} />
-                      </Link>
-                    </article>
-                  )})
-                ) : (
-                  <div className="empty-state">
-                    <strong>No live cases yet</strong>
-                    <p>File a case to populate the docket.</p>
-                  </div>
-                )}
-              </div>
+              <DashboardCaseList cases={backendCases} />
             </section>
 
             <aside className="panel action-panel">
@@ -453,7 +419,7 @@ function buildDashboardGraphs(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
   const statusBars = [
     cases.filter((item) => item.status === 'Queued').length,
     cases.filter((item) => item.status === 'Hearing').length,
-    cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').length,
+    cases.filter((item) => item.status === 'Verdict').length,
   ]
   const receiptBars = [
     ledgerRows.filter((item) => item.receiptType?.includes('funding')).length,
@@ -466,7 +432,7 @@ function buildDashboardGraphs(cases: ApiCase[], ledgerRows: ApiLedgerRow[]) {
     statusBars,
     receiptBars,
     caseCadence: countByRecentDay(cases.map((item) => item.createdAt ?? item.updated)),
-    verdictCadence: countByRecentDay(cases.filter((item) => item.status === 'Verdict' || item.status === 'Refunded').map((item) => item.updated ?? item.createdAt)),
+    verdictCadence: countByRecentDay(cases.filter((item) => item.status === 'Verdict').map((item) => item.updated ?? item.createdAt)),
   }
 }
 
@@ -524,4 +490,8 @@ function formatRelativeTime(value?: string) {
   if (hours < 24) return `${hours}h`
   const days = Math.floor(hours / 24)
   return `${days}d`
+}
+
+function isArchivedCaseStatus(caseItem: ApiCase) {
+  return caseItem.status === 'Failed' || caseItem.status === 'Refunded'
 }
