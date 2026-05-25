@@ -168,13 +168,14 @@
   "services": [
     {
       "name": "MCP",
-      "endpoint": "https://heliacourt.xyz/.well-known/mcp.json",
+      "endpoint": "https://app.heliacourt.xyz/api/mcp",
       "version": "2025-06-18",
       "mcpTools": [
         "helia_queue_hearing",
         "helia_get_hearing_job"
       ],
-      "capabilities": []
+      "capabilities": [],
+      "discovery": "https://heliacourt.xyz/.well-known/mcp.json"
     },
     {
       "name": "A2A",

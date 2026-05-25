@@ -6,7 +6,7 @@
     "organization": "Helia Court",
     "url": "https://heliacourt.xyz"
   },
-  "version": "0.1.0",
+  "version": "0.2.0",
   "documentationUrl": "https://docs.heliacourt.xyz",
   "protocolVersion": "0.3.0",
   "preferredTransport": "JSONRPC",
@@ -40,6 +40,69 @@
       ],
       "inputModes": [
         "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "prediction-market-analysis",
+      "name": "Prediction Market Analysis",
+      "description": "Reads supported Polymarket, Kalshi, and Manifold questions and prepares market context for courtroom review.",
+      "tags": [
+        "prediction-markets",
+        "market-data",
+        "probability"
+      ],
+      "examples": [
+        "Analyze this Polymarket URL before the hearing.",
+        "Summarize the Kalshi market context and resolution criteria."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "evidence-research",
+      "name": "Evidence Research",
+      "description": "Collects source trails, freshness notes, web evidence, and uncertainty signals for a case record.",
+      "tags": [
+        "research",
+        "evidence",
+        "source-quality"
+      ],
+      "examples": [
+        "Gather evidence for both sides of this market.",
+        "Find source-quality notes for this claim."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    },
+    {
+      "id": "verdict-record",
+      "name": "Verdict Record",
+      "description": "Returns hearing status, transcript pointers, verdict payloads, confidence, rationale, and receipt references for queued jobs.",
+      "tags": [
+        "verdict",
+        "transcript",
+        "receipts",
+        "audit"
+      ],
+      "examples": [
+        "Get the result for hearing job abc123.",
+        "Return the verdict and receipt trail for this queued case."
+      ],
+      "inputModes": [
         "application/json"
       ],
       "outputModes": [
