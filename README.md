@@ -117,7 +117,7 @@ Common backend variables:
 - Case filing is contract-backed: the backend verifies the Arc `CaseOpened` event before queueing a hearing.
 - Settlement retry is a privileged backend action; set `HELIA_ADMIN_KEY` before using the retry route.
 - Generated hearing logs live under ignored local runtime folders and are never committed.
-- Local OSS research clones live under `research/open-source/` and are ignored by git.
+- Local reference research lives under `research/` and is ignored by git.
 
 ## Docs
 
@@ -129,6 +129,6 @@ Current architecture:
 - [docs/reference/production-intelligence-stack.md](docs/reference/production-intelligence-stack.md)
 - [backend/AGENT_TOOLS.md](backend/AGENT_TOOLS.md)
 
-## Contributing
+## Code Availability
 
-See [CONTRIBUTING.md](CONTRIBUTING.md). The repo is MIT licensed; keep generated files, logs, local screenshots, and secrets out of commits.
+This repository may be visible for review and deployment transparency, but no public reuse rights are granted. Keep generated files, logs, local screenshots, and secrets out of commits.

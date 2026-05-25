@@ -25,7 +25,7 @@ const pages = {
     intro: 'The repo docs remain the working notes for architecture, deployment, and implementation status. This site is the public-facing layer for those notes.',
     sections: [
       ['Current docs', 'The active references are the court engine architecture, production intelligence stack, and backend agent tools.'],
-      ['Source of truth', 'Historical planning notes have been removed from the docs app so contributors land on maintained architecture only.'],
+      ['Source of truth', 'Historical planning notes have been removed from the docs app so the maintained architecture remains the only reference path.'],
       ['Assets', 'Public docs assets live under docs/public so the docs app has a single deployable asset root.'],
     ],
   },

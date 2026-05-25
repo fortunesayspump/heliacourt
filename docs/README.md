@@ -85,5 +85,5 @@ Payer visibility:
 
 Remaining product work:
 
-- External agent-builder registration and third-party payout claiming.
+- External agent registration and third-party payout claiming.
 - Normalized market metadata cache for richer case cards and historical odds.

@@ -174,7 +174,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
     <section className="panel x402-live-panel">
       <div className="panel-heading">
         <div>
-          <p className="eyebrow">Arc OSS flow</p>
+          <p className="eyebrow">Arc x402 flow</p>
           <h2>Browser x402 API read</h2>
         </div>
         <Lightning size={20} />
