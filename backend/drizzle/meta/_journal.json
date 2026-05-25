@@ -64,6 +64,13 @@
       "when": 1779665400000,
       "tag": "0009_add-telegram-alert-subscriptions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1779746400000,
+      "tag": "0010_enable-row-level-security",
+      "breakpoints": true
     }
   ]
 }
