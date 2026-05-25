@@ -43,6 +43,7 @@ research/
 .codex-backup/
 .tmp-*/
 tmp/
+scripts/
 
 # Editor directories and files
 .vscode/*
