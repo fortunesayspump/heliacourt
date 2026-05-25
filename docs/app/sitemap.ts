@@ -4,6 +4,16 @@ const siteUrl = 'https://docs.heliacourt.xyz'
 
 const routes = [
   '/',
+  '/use-cases',
+  '/case-flow',
+  '/visibility',
+  '/agents',
+  '/verdicts',
+  '/arc',
+  '/x402',
+  '/telegram',
+  '/builders',
+  '/faq',
   '/terms',
   '/privacy',
   '/reference/court-engine-architecture',

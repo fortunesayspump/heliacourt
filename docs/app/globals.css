@@ -151,6 +151,11 @@ h3 {
   color: var(--ag-cream);
 }
 
+.sidebar a.active {
+  color: var(--ag-ink);
+  background: var(--ag-inner-surface);
+}
+
 .docs-layout {
   display: grid;
   grid-template-columns: 260px minmax(0, 820px);
@@ -229,6 +234,31 @@ h3 {
 .doc-hero,
 .doc-section {
   padding: 0;
+}
+
+.doc-page {
+  margin-top: 0;
+}
+
+.doc-page h1 {
+  max-width: 720px;
+  margin-top: 14px;
+  color: var(--ag-ink);
+  font-family: var(--font-title);
+  font-size: clamp(38px, 6vw, 58px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+  text-wrap: balance;
+}
+
+.doc-page > .lead + p,
+.doc-page > .lead + .doc-table,
+.doc-page > .lead + .step-grid,
+.doc-page > .lead + dl,
+.doc-page > .lead + pre,
+.doc-page > .lead + .checklist {
+  margin-top: 24px;
 }
 
 .doc-hero {
@@ -424,7 +454,8 @@ h3 {
   text-transform: uppercase;
 }
 
-.identity dl {
+.identity dl,
+.doc-page dl {
   display: grid;
   margin: 22px 0;
   border: 1px solid var(--ag-border);
@@ -432,7 +463,8 @@ h3 {
   overflow: hidden;
 }
 
-.identity dl div {
+.identity dl div,
+.doc-page dl div {
   display: grid;
   grid-template-columns: 160px minmax(0, 1fr);
   gap: 14px;
@@ -441,7 +473,8 @@ h3 {
   background: var(--ag-inner-surface);
 }
 
-.identity dl div:last-child {
+.identity dl div:last-child,
+.doc-page dl div:last-child {
   border-bottom: 0;
 }
 
