@@ -404,6 +404,25 @@ h3 {
   line-height: 1.05;
 }
 
+.guide-block {
+  margin-top: 34px;
+}
+
+.guide-block h2 {
+  color: var(--ag-cream);
+  font-family: var(--font-title);
+  font-size: clamp(24px, 3vw, 32px);
+  font-weight: 700;
+  line-height: 1.08;
+}
+
+.guide-block p {
+  max-width: 680px;
+  margin-top: 10px;
+  color: var(--ag-muted);
+  font-size: 14px;
+}
+
 .doc-section > p {
   max-width: 680px;
   margin-top: 12px;
