@@ -1,4 +1,3 @@
-import { NextResponse } from 'next/server'
 import { proxyBackendJson } from '../../../../lib/backend-proxy'
 
 export async function GET(request: Request) {

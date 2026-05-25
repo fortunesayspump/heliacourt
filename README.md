@@ -129,6 +129,6 @@ Current architecture:
 - [docs/reference/production-intelligence-stack.md](docs/reference/production-intelligence-stack.md)
 - [backend/AGENT_TOOLS.md](backend/AGENT_TOOLS.md)
 
-## Code Availability
+## License
 
-This repository may be visible for review and deployment transparency, but no public reuse rights are granted. Keep generated files, logs, local screenshots, and secrets out of commits.
+Helia Court is open source under the [MIT License](LICENSE). See [CONTRIBUTING.md](CONTRIBUTING.md) for the local workflow and repo hygiene rules.
