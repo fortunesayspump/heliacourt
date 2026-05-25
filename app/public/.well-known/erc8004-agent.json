@@ -203,7 +203,7 @@
       ]
     },
     {
-      "name": "Web",
+      "name": "web",
       "description": "Website",
       "endpoint": "https://heliacourt.xyz",
       "version": "1.0.0"
@@ -494,11 +494,13 @@
   ],
   "supportedTrust": [
     "reputation",
-    "crypto-economic"
+    "crypto-economic",
+    "tee-attestation"
   ],
   "trustTypes": [
     "reputation",
-    "crypto-economic"
+    "crypto-economic",
+    "tee-attestation"
   ],
   "registrations": [
     {
