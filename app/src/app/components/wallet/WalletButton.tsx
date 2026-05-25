@@ -4,8 +4,9 @@ import { useAppKit } from '@reown/appkit/react'
 import { DotsThreeVertical, Plus, ShieldCheck, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useAccount, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
+import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
 import { appKitProjectId, arcTestnet } from '../../../lib/arc'
+import { getConnectedChainId, isArcTestnetChainId } from '../../../lib/chains'
 
 type WalletButtonProps = {
   label?: string
@@ -53,11 +54,13 @@ function AppKitWalletButton({
 }: WalletButtonProps) {
   const { open } = useAppKit()
   const { address, chainId, isConnected } = useAccount()
+  const activeChainId = useChainId()
   const { disconnect } = useDisconnect()
   const { switchChain, isPending: isSwitching } = useSwitchChain()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
-  const isWrongChain = isConnected && chainId !== arcTestnet.id
+  const connectedChainId = getConnectedChainId(chainId, activeChainId)
+  const isWrongChain = isConnected && !isArcTestnetChainId(connectedChainId)
 
   useEffect(() => {
     if (!menuOpen) return
@@ -116,7 +119,7 @@ function AppKitWalletButton({
               <img alt="" src="https://www.google.com/s2/favicons?domain=arc.network&sz=64" />
               <div>
                 <span>Network</span>
-                <strong>{chainId === arcTestnet.id ? arcTestnet.name : `Chain ${chainId ?? 'unknown'}`}</strong>
+                <strong>{isArcTestnetChainId(connectedChainId) ? arcTestnet.name : `Chain ${connectedChainId ?? 'unknown'}`}</strong>
               </div>
             </div>
           </div>
@@ -140,6 +143,7 @@ function InjectedWalletButton({
   showIcon = true,
 }: WalletButtonProps) {
   const { address, chainId, isConnected } = useAccount()
+  const activeChainId = useChainId()
   const { connectAsync, connectors, error, isPending } = useConnect()
   const { disconnect } = useDisconnect()
   const { switchChain, isPending: isSwitching } = useSwitchChain()
@@ -152,7 +156,8 @@ function InjectedWalletButton({
     () => connectors.find((item) => item.type === 'injected') ?? connectors[0],
     [connectors],
   )
-  const isWrongChain = isConnected && chainId !== arcTestnet.id
+  const connectedChainId = getConnectedChainId(chainId, activeChainId)
+  const isWrongChain = isConnected && !isArcTestnetChainId(connectedChainId)
   const hasError = attempted && (Boolean(error) || Boolean(localError))
 
   useEffect(() => {
@@ -236,7 +241,7 @@ function InjectedWalletButton({
               <img alt="" src="https://www.google.com/s2/favicons?domain=arc.network&sz=64" />
               <div>
                 <span>Network</span>
-                <strong>{chainId === arcTestnet.id ? arcTestnet.name : `Chain ${chainId ?? 'unknown'}`}</strong>
+                <strong>{isArcTestnetChainId(connectedChainId) ? arcTestnet.name : `Chain ${connectedChainId ?? 'unknown'}`}</strong>
               </div>
             </div>
           </div>

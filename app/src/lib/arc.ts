@@ -9,7 +9,7 @@ export const arcTestnet = defineChain({
   id: 5_042_002,
   name: 'Arc Testnet',
   nativeCurrency: {
-    decimals: 6,
+    decimals: 18,
     name: 'USDC',
     symbol: 'USDC',
   },
