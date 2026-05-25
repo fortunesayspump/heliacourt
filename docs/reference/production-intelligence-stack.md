@@ -57,7 +57,7 @@ DATABASE_URL=postgres://user:password@host:port/db
 HELIA_CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome
 HELIA_OCR_CACHE_PATH=/tmp/helia-court-ocr-cache
 SEARXNG_BASE_URL=https://your-searxng-service.up.railway.app
-HELIA_HEARING_MAX_CONCURRENT=1
+HELIA_HEARING_MAX_CONCURRENT=3
 HELIA_HEARING_TIMEOUT_MS=180000
 HELIA_HEARING_JOB_RETENTION_MS=3600000
 HELIA_HEARING_MAX_RETAINED_JOBS=100
@@ -85,3 +85,14 @@ Keep `OPENROUTER_API_KEY`, search provider keys, crawler keys, `SETTLEMENT_PRIVA
 - `GET /agents/hearing/jobs/:jobId`: poll for `queued`, `running`, `completed`, or `failed`.
 
 Use the job endpoint from the Vercel app for real hearings so the browser does not wait on a long crawler/agent run. With `DATABASE_URL` set, completed and partial hearings survive backend restarts.
+
+## Web and worker split
+
+Run the public API and hearing worker as two Railway services that point at the same Postgres database.
+
+- Web service command: `pnpm start:web`
+- Web service env: `HELIA_ENABLE_HEARING_WORKER=false`
+- Worker service command: `pnpm start:worker`
+- Worker service env: `HELIA_HEARING_MAX_CONCURRENT=3`
+
+Scale the worker, not the web service, when the hearing queue grows. A single worker can usually move from `3` toward `10` concurrent hearings after provider limits are verified. Keep one worker instance while using one settlement signer, because final onchain receipt writes are serialized inside a process to avoid nonce collisions. Multiple worker instances need separate settlement signers or a shared distributed nonce/settlement lock.

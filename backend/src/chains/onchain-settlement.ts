@@ -111,6 +111,8 @@ export type OnchainSettlementResult = {
   capped?: boolean
 }
 
+let signerWriteLock = Promise.resolve()
+
 export async function settleHearingOnchain(input: {
   marketCase: MarketCase
   artifacts: CourtArtifact[]
@@ -450,13 +452,30 @@ async function writeAndWait(
   publicClient: ReturnType<typeof createPublicClient>,
   request: Record<string, unknown>,
 ) {
-  const txHash = await walletClient.writeContract({
-    ...request,
-    account: walletClient.account!,
-    chain: arcTestnet,
-  } as never)
-  await publicClient.waitForTransactionReceipt({ hash: txHash })
-  return txHash
+  return withSignerWriteLock(async () => {
+    const txHash = await walletClient.writeContract({
+      ...request,
+      account: walletClient.account!,
+      chain: arcTestnet,
+    } as never)
+    await publicClient.waitForTransactionReceipt({ hash: txHash })
+    return txHash
+  })
+}
+
+async function withSignerWriteLock<T>(operation: () => Promise<T>) {
+  const previous = signerWriteLock
+  let release!: () => void
+  signerWriteLock = new Promise<void>((resolve) => {
+    release = resolve
+  })
+
+  await previous.catch(() => undefined)
+  try {
+    return await operation()
+  } finally {
+    release()
+  }
 }
 
 function hashStable(value: unknown): Hex {

@@ -14,10 +14,13 @@
     "build:marketing": "pnpm --dir marketing build",
     "build:docs": "pnpm --dir docs build",
     "build:backend": "pnpm --dir backend build",
+    "build:worker": "pnpm --dir backend build",
     "build:contracts": "pnpm --dir contracts build",
     "lint:app": "pnpm --dir app lint",
     "test:contracts": "pnpm --dir contracts test",
     "build": "pnpm build:app && pnpm build:marketing && pnpm build:docs && pnpm build:backend && pnpm build:contracts",
-    "check": "pnpm lint:app && pnpm build && pnpm test:contracts"
+    "check": "pnpm lint:app && pnpm build && pnpm test:contracts",
+    "start:worker": "pnpm --dir backend start:worker",
+    "start:web": "pnpm --dir backend start:web"
   }
 }
