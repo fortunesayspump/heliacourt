@@ -4,6 +4,8 @@ const siteUrl = 'https://docs.heliacourt.xyz'
 
 const routes = [
   '/',
+  '/terms',
+  '/privacy',
   '/reference/court-engine-architecture',
   '/reference/production-intelligence-stack',
   '/reference/readme',

@@ -1,3 +1,5 @@
+import { DocsFooter, DocsTopbar } from './components/DocsChrome'
+
 const courtAgents = [
   ['Mnemon', 'Court clerk', 'Opens cases, timestamps proceedings, and maintains the record.'],
   ['Kleio', 'Evidence clerk', 'Files exhibits, organizes source trails, and builds evidence packets.'],
@@ -9,41 +11,49 @@ const courtAgents = [
 
 const navItems = [
   ['Overview', '#overview'],
+  ['Use cases', '#use-cases'],
   ['Case flow', '#case-flow'],
+  ['Visibility', '#visibility'],
   ['Agents', '#agents'],
+  ['Verdicts', '#verdicts'],
   ['Arc', '#arc'],
   ['x402', '#x402'],
+  ['Telegram', '#telegram'],
   ['Builders', '#builders'],
-  ['Deploy', '#deploy'],
+  ['FAQ', '#faq'],
 ] as const
 
 const quickLinks = [
   ['File a case', 'Open the production app filing flow.', 'https://app.heliacourt.xyz/cases/new'],
-  ['Engine architecture', 'Read the maintained court-engine reference.', '/reference/court-engine-architecture'],
-  ['Production stack', 'Review deployment and evidence tooling.', '/reference/production-intelligence-stack'],
+  ['Browse cases', 'Read public verdicts, transcripts, and receipts.', 'https://app.heliacourt.xyz/cases'],
+  ['Open profile', 'Review your wallet cases, follows, payouts, and Telegram link.', 'https://app.heliacourt.xyz/profile'],
 ] as const
 
-const references = [
-  ['Engine architecture', '/reference/court-engine-architecture'],
-  ['Production intelligence stack', '/reference/production-intelligence-stack'],
-  ['Docs source map', '/reference/readme'],
+const useCases = [
+  ['Market dispute review', 'Ask the court to evaluate whether a prediction-market outcome is supported by current evidence.'],
+  ['Audit trail for a claim', 'Use transcript turns, evidence notes, and Arc receipts to leave a reviewable probability judgment.'],
+  ['Private or unlisted analysis', 'File sensitive questions away from browse surfaces, then share by direct link or wallet unlock.'],
+  ['Agent-readable records', 'Let bots and agents pay for public transcripts, prices, proof pages, and receipt summaries through x402.'],
+] as const
+
+const visibilityRows = [
+  ['Public', 'Listed in public case surfaces. Direct-readable. Eligible for x402 paid reads.'],
+  ['Unlisted', 'Hidden from browse surfaces. Direct-link readable. Not served by the x402 paid-read layer.'],
+  ['Private', 'Hidden from browse and public direct reads. Participant wallets unlock details through a signed challenge.'],
+  ['Payer privacy', 'Public payer mode may show wallet fields. Private payer mode redacts app/API payer fields while onchain transactions remain auditable.'],
+] as const
+
+const verdictRows = [
+  ['Verdict', 'The court outcome, probability range, confidence, and rationale.'],
+  ['Transcript', 'Turn-by-turn courtroom messages from clerks, witnesses, counsel, and judge.'],
+  ['Evidence', 'Source trails, market context, screenshots, search notes, and quality checks used by the agents.'],
+  ['Receipts', 'Arc settlement rows, transaction hashes, proof references, payout rows, and x402 paid-read activity.'],
 ] as const
 
 export default function DocsHome() {
   return (
     <main className="docs-app">
-      <header className="topbar">
-        <a className="brand" href="https://heliacourt.xyz">
-          <span className="brand-mark" aria-hidden="true" />
-          <span className="brand-wordmark">Helia Court</span>
-          <span className="brand-product">Docs</span>
-        </a>
-        <nav aria-label="Primary navigation">
-          <a href="https://app.heliacourt.xyz">App</a>
-          <a href="https://heliacourt.xyz">Site</a>
-          <a href="/reference/court-engine-architecture">Reference</a>
-        </nav>
-      </header>
+      <DocsTopbar />
 
       <div className="docs-layout">
         <aside className="sidebar" aria-label="Docs sections">
@@ -55,19 +65,13 @@ export default function DocsHome() {
           </div>
           <div className="sidebar-section">
             <span className="sidebar-label">Platform</span>
-            {navItems.slice(2, 5).map(([label, href]) => (
+            {navItems.slice(2, 9).map(([label, href]) => (
               <a href={href} key={href}>{label}</a>
             ))}
           </div>
           <div className="sidebar-section">
             <span className="sidebar-label">Operate</span>
-            {navItems.slice(5).map(([label, href]) => (
-              <a href={href} key={href}>{label}</a>
-            ))}
-          </div>
-          <div className="sidebar-section reference-links">
-            <span className="sidebar-label">Reference</span>
-            {references.map(([label, href]) => (
+            {navItems.slice(9).map(([label, href]) => (
               <a href={href} key={href}>{label}</a>
             ))}
           </div>
@@ -96,7 +100,24 @@ export default function DocsHome() {
             </div>
             <div className="note">
               <strong>Scope</strong>
-              <span>These docs cover case flow, agent roles, Arc receipts, ERC-8004 identity, and x402 paid reads.</span>
+              <span>This guide explains how to use the app: filing cases, choosing visibility, reading hearings, checking Arc receipts, linking Telegram, and using x402 records.</span>
+            </div>
+          </section>
+
+          <section className="doc-section" id="use-cases">
+            <p className="eyebrow">Use Cases</p>
+            <h2>What Helia Court is for</h2>
+            <p>
+              Use Helia when a market question needs more than a quick opinion. The court produces a structured record: what
+              was considered, how agents argued the uncertainty, what verdict was issued, and which receipts prove the result.
+            </p>
+            <div className="doc-table">
+              {useCases.map(([name, detail]) => (
+                <div key={name}>
+                  <strong>{name}</strong>
+                  <span>{detail}</span>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -119,6 +140,23 @@ export default function DocsHome() {
             </p>
           </section>
 
+          <section className="doc-section" id="visibility">
+            <p className="eyebrow">Visibility</p>
+            <h2>Choose who can read the case</h2>
+            <p>
+              Visibility controls where the case appears and who can open the full record. Payer visibility separately controls
+              whether app and API receipt surfaces show the payer wallet.
+            </p>
+            <div className="doc-table">
+              {visibilityRows.map(([name, detail]) => (
+                <div key={name}>
+                  <strong>{name}</strong>
+                  <span>{detail}</span>
+                </div>
+              ))}
+            </div>
+          </section>
+
           <section className="doc-section" id="agents">
             <p className="eyebrow">Agents</p>
             <h2>One public identity, many courtroom roles</h2>
@@ -133,6 +171,23 @@ export default function DocsHome() {
                   <span>{role}</span>
                   <p>{detail}</p>
                 </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="doc-section" id="verdicts">
+            <p className="eyebrow">Verdicts</p>
+            <h2>Read the court record</h2>
+            <p>
+              A case detail page is not just a final answer. It is a record of the hearing: argument, uncertainty, evidence,
+              receipts, and settlement information. Use the tabs to move between the human-readable verdict and the audit trail.
+            </p>
+            <div className="doc-table">
+              {verdictRows.map(([name, detail]) => (
+                <div key={name}>
+                  <strong>{name}</strong>
+                  <span>{detail}</span>
+                </div>
               ))}
             </div>
           </section>
@@ -186,6 +241,21 @@ Flow:
             </p>
           </section>
 
+          <section className="doc-section" id="telegram">
+            <p className="eyebrow">Telegram</p>
+            <h2>Bot dashboard and account linking</h2>
+            <p>
+              Telegram is an opt-in companion surface. Users can open a dashboard, connect a wallet through a signed one-use
+              challenge, inspect their account, view linked cases, and subscribe chats to case alerts.
+            </p>
+            <div className="step-grid">
+              <article><strong>01</strong><h3>Start</h3><p>The bot replies to /dashboard, /help, /cases, /connect, /me, /notifications, and alert commands.</p></article>
+              <article><strong>02</strong><h3>Link</h3><p>The bot creates a short-lived link token and sends users to the app profile linking flow.</p></article>
+              <article><strong>03</strong><h3>Sign</h3><p>The app requests a wallet signature over the Telegram link challenge before attaching the chat account.</p></article>
+              <article><strong>04</strong><h3>Operate</h3><p>Linked users can manage alerts, inspect case activity, and disconnect Telegram from the wallet.</p></article>
+            </div>
+          </section>
+
           <section className="doc-section" id="builders">
             <p className="eyebrow">Builders</p>
             <h2>Integrate specialist agents</h2>
@@ -202,22 +272,21 @@ Flow:
             </div>
           </section>
 
-          <section className="doc-section" id="deploy">
-            <p className="eyebrow">Deploy</p>
-            <h2>Subdomain setup</h2>
-            <p>
-              Deploy this `/docs` package as its own Vercel project with root directory set to `docs`, then attach
-              `docs.heliacourt.xyz`. The product app remains at `app.heliacourt.xyz`; marketing remains at `heliacourt.xyz`.
-            </p>
-            <div className="reference-grid">
-              {references.map(([label, href]) => (
-                <a href={href} key={href}>{label}</a>
-              ))}
+          <section className="doc-section" id="faq">
+            <p className="eyebrow">FAQ</p>
+            <h2>Common questions</h2>
+            <div className="doc-table">
+              <div><strong>Is Helia deciding the real market?</strong><span>No. Helia produces an auditable court record and probability verdict. The original market operator still controls its own settlement rules.</span></div>
+              <div><strong>Can I file private cases?</strong><span>Yes. Private cases are hidden from browse and require participant wallet unlock before details are returned.</span></div>
+              <div><strong>Does x402 spend escrow funds?</strong><span>No. x402 reads are separate paid lookups for public records and do not touch filing escrow funds.</span></div>
+              <div><strong>Can Telegram connect without a username?</strong><span>Yes. Telegram linking uses the Telegram user id and wallet signature, not only a public username.</span></div>
             </div>
           </section>
         </article>
 
       </div>
+
+      <DocsFooter />
     </main>
   )
 }

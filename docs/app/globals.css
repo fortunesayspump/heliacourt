@@ -372,7 +372,8 @@ h3 {
 
 .step-grid,
 .agent-table,
-.reference-grid {
+.reference-grid,
+.doc-table {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
@@ -380,7 +381,8 @@ h3 {
 }
 
 .step-grid article,
-.agent-table article {
+.agent-table article,
+.doc-table div {
   min-width: 0;
   min-height: 124px;
   padding: 16px;
@@ -397,7 +399,8 @@ h3 {
 }
 
 .step-grid h3,
-.agent-table strong {
+.agent-table strong,
+.doc-table strong {
   display: block;
   margin: 8px 0 4px;
   color: var(--ag-ink);
@@ -406,7 +409,8 @@ h3 {
 }
 
 .step-grid p,
-.agent-table p {
+.agent-table p,
+.doc-table span {
   color: var(--ag-muted);
   font-size: 13px;
 }
@@ -552,6 +556,70 @@ pre {
   margin-top: 6px;
 }
 
+.docs-footer {
+  display: flex;
+  width: min(1120px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 28px 0 44px;
+  border-top: 1px solid var(--ag-border);
+  gap: 18px;
+  color: var(--ag-muted);
+  font-size: 13px;
+}
+
+.docs-footer a {
+  color: var(--ag-muted);
+  font-weight: 800;
+}
+
+.docs-footer a:hover {
+  color: var(--ag-cream);
+}
+
+.legal-doc {
+  width: min(860px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 72px 0 48px;
+}
+
+.legal-doc h1 {
+  max-width: 760px;
+  margin-top: 14px;
+  color: var(--ag-ink);
+  font-family: var(--font-title);
+  font-size: clamp(40px, 7vw, 68px);
+  line-height: 0.98;
+}
+
+.legal-updated {
+  margin-top: 12px;
+  color: var(--ag-muted);
+  font-size: 13px;
+}
+
+.legal-doc .lead {
+  margin-top: 18px;
+}
+
+.legal-doc .doc-section {
+  margin-top: 36px;
+  padding-bottom: 36px;
+}
+
+.legal-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 10px;
+}
+
+.legal-link-row a {
+  color: var(--ag-cream);
+  font-weight: 850;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 @media (max-width: 1080px) {
   .docs-layout {
     grid-template-columns: 220px minmax(0, 1fr);
@@ -638,6 +706,7 @@ pre {
   .quick-grid,
   .step-grid,
   .agent-table,
+  .doc-table,
   .reference-grid,
   .identity dl div,
   .note {
