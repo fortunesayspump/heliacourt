@@ -12,6 +12,7 @@ import { env } from '../config/env.js'
 import type { CourtArtifact, CourtTranscriptTurn } from '../court/types.js'
 import { db } from '../db/client.js'
 import { x402Receipts } from '../db/schema.js'
+import { getReputationMeta } from '../shared/reputation-meta.js'
 
 const arcUsdcAddress = '0x3600000000000000000000000000000000000000'
 const gatewayWalletTestnet = '0x0077777d7EBA4688BDeF3E311b846F25870A19B9'
@@ -82,6 +83,12 @@ export async function x402Routes(app: FastifyInstance) {
       confidence: verdict?.confidence ?? null,
       recordHash: result?.recordHash ?? null,
       href: `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/cases/${encodeURIComponent(job.marketCase.id)}`,
+      reputation: getReputationMeta({
+        service: 'x402-price',
+        endpoint: request.url,
+        caseId: job.marketCase.id,
+        evidenceId: paid.txHash,
+      }),
     }
   })
 
@@ -97,6 +104,12 @@ export async function x402Routes(app: FastifyInstance) {
       paid,
       caseId: job.marketCase.id,
       turns: (result?.transcript ?? []).slice(-50),
+      reputation: getReputationMeta({
+        service: 'x402-transcript',
+        endpoint: request.url,
+        caseId: job.marketCase.id,
+        evidenceId: paid.txHash,
+      }),
     }
   })
 
@@ -112,6 +125,12 @@ export async function x402Routes(app: FastifyInstance) {
       paid,
       caseId: job.marketCase.id,
       receipts: result?.onchainSettlement?.receipts ?? [],
+      reputation: getReputationMeta({
+        service: 'x402-receipts',
+        endpoint: request.url,
+        caseId: job.marketCase.id,
+        evidenceId: paid.txHash,
+      }),
     }
   })
 
@@ -134,6 +153,12 @@ export async function x402Routes(app: FastifyInstance) {
       artifacts: result?.artifacts?.length ?? 0,
       receipts,
       proofUrl: `${env.HELIA_PUBLIC_APP_URL.replace(/\/$/, '')}/proof/${encodeURIComponent(job.marketCase.id)}`,
+      reputation: getReputationMeta({
+        service: 'x402-proof',
+        endpoint: request.url,
+        caseId: job.marketCase.id,
+        evidenceId: paid.txHash,
+      }),
     }
   })
 

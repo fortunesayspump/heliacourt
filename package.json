@@ -17,6 +17,7 @@
     "build:contracts": "pnpm --dir contracts build",
     "lint:app": "pnpm --dir app lint",
     "test:contracts": "pnpm --dir contracts test",
+    "testnet:activity": "node scripts/testnet-activity-runner.mjs",
     "build": "pnpm build:app && pnpm build:marketing && pnpm build:docs && pnpm build:backend && pnpm build:contracts",
     "check": "pnpm lint:app && pnpm build && pnpm test:contracts"
   }

@@ -68,6 +68,7 @@
     "agentCard": "https://heliacourt.xyz/.well-known/agent-card.json",
     "mcp": "https://app.heliacourt.xyz/api/mcp",
     "mcpDiscovery": "https://heliacourt.xyz/.well-known/mcp.json",
+    "reputationMeta": "https://app.heliacourt.xyz/api/reputation/meta",
     "x402Status": "https://helia-courtbackend-production.up.railway.app/x402/status",
     "telegram": "https://t.me/heliacourtbot",
     "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
@@ -272,6 +273,13 @@
       "endpoint": "https://app.heliacourt.xyz/api/mcp",
       "method": "POST",
       "protocol": "MCP"
+    },
+    {
+      "name": "reputation-meta",
+      "description": "ERC-8004 reputation metadata for user-submitted feedback after successful Helia Court service use.",
+      "endpoint": "https://app.heliacourt.xyz/api/reputation/meta?service=:service&caseId=:caseId",
+      "method": "GET",
+      "protocol": "ERC-8004"
     },
     {
       "name": "agent-hearing-job",

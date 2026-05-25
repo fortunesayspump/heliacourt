@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearings/index.js'
 import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
 import type { CaseType, MarketCase } from '../court/types.js'
+import { getReputationMeta } from '../shared/reputation-meta.js'
 
 const hearingRequestSchema = z.object({
   id: z.string().trim().optional(),
@@ -39,7 +40,15 @@ export async function agentRoutes(app: FastifyInstance) {
     try {
       const hearing = await runHearingNow(parsed.marketCase)
 
-      return reply.send(hearing)
+      return reply.send({
+        ...hearing,
+        reputation: getReputationMeta({
+          service: 'hearing',
+          endpoint: request.url,
+          caseId: parsed.marketCase.id,
+          evidenceId: hearing.recordHash,
+        }),
+      })
     } catch (error) {
       if (error instanceof HearingBusyError) {
         return reply.status(429).send({
@@ -57,7 +66,17 @@ export async function agentRoutes(app: FastifyInstance) {
 
     if (!parsed.ok) return reply.status(400).send(parsed.response)
 
-    return reply.status(202).send(await enqueueHearingJob(parsed.marketCase))
+    const job = await enqueueHearingJob(parsed.marketCase)
+
+    return reply.status(202).send({
+      ...job,
+      reputation: getReputationMeta({
+        service: 'hearing-job',
+        endpoint: request.url,
+        caseId: parsed.marketCase.id,
+        evidenceId: job.id,
+      }),
+    })
   })
 
   app.get('/agents/hearing/jobs/:jobId', async (request, reply) => {
@@ -67,7 +86,15 @@ export async function agentRoutes(app: FastifyInstance) {
     const job = await getHearingJob(params.data.jobId)
     if (!job) return reply.status(404).send({ error: 'hearing job not found' })
 
-    return reply.send(job)
+    return reply.send({
+      ...job,
+      reputation: getReputationMeta({
+        service: 'hearing-job-status',
+        endpoint: request.url,
+        caseId: job.marketCase.id,
+        evidenceId: job.id,
+      }),
+    })
   })
 }
 

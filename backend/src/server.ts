@@ -7,6 +7,7 @@ import { agentRoutes } from './routes/agents.js'
 import { caseRoutes } from './routes/cases.js'
 import { circleRoutes } from './routes/circle.js'
 import { healthRoutes } from './routes/health.js'
+import { reputationRoutes } from './routes/reputation.js'
 import { statsRoutes } from './routes/stats.js'
 import { telegramRoutes } from './routes/telegram/index.js'
 import { userRoutes } from './routes/users.js'
@@ -21,6 +22,7 @@ await app.register(cors, {
 })
 
 await app.register(healthRoutes)
+await app.register(reputationRoutes)
 await app.register(statsRoutes)
 await app.register(circleRoutes)
 await app.register(caseRoutes)
