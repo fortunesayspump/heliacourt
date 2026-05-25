@@ -4,7 +4,7 @@ import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../a
 import { env } from '../config/env.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { caseFollows } from '../db/schema.js'
+import { caseFollows, cases } from '../db/schema.js'
 import { notifyCaseFiled, notifyCaseFunded } from '../integrations/telegram.js'
 import { authorizeAdminRequest, canAccessCaseAction, canReadPrivateCase, caseFollowPurpose, consumeCaseActionChallenge, consumeCaseReadChallenge, formatValidationIssues, getCaseVisibility } from './cases.access.js'
 import { createCaseFollowChallenge, createPrivateCaseReadChallenge } from './cases.challenges.js'
@@ -41,6 +41,25 @@ export async function caseRoutes(app: FastifyInstance) {
     }
 
     return await summarizeCaseDetail(job, getCaseResult(job))
+  })
+
+  app.delete('/cases/:caseId', async (request, reply) => {
+    const admin = authorizeAdminRequest(request.headers)
+    if (!admin.ok) return reply.status(admin.status).send({ error: admin.error })
+    if (!isDatabaseConfigured) return reply.status(503).send({ error: 'database not configured' })
+
+    const { caseId } = request.params as { caseId: string }
+    const deleted = await db!
+      .delete(cases)
+      .where(eq(cases.id, caseId))
+      .returning({ id: cases.id })
+
+    if (!deleted.length) return reply.status(404).send({ error: 'case not found' })
+
+    return {
+      caseId,
+      deleted: true,
+    }
   })
 
   app.post('/cases/:caseId/challenge', async (request, reply) => {
