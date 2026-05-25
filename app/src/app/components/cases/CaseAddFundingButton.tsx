@@ -6,6 +6,7 @@ import { formatUnits, parseEventLogs, parseUnits } from 'viem'
 import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteContract } from 'wagmi'
 import { arcTestnet } from '../../../lib/arc'
 import { caseEscrowAbi, contractAddresses, erc20Abi } from '../../../lib/contracts'
+import { formatWalletError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
@@ -127,7 +128,7 @@ export function CaseAddFundingButton({ caseId, onchain }: { caseId: string; onch
       void balance.refetch()
       void allowance.refetch()
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Funding failed.', tone: 'error' })
+      setStatus({ text: formatWalletError(error, 'Funding failed.'), tone: 'error' })
     }
   }
 

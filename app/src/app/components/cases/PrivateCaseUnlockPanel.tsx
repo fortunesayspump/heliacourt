@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiCaseDetail } from '../../../lib/backend-data'
+import { formatSignatureError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
@@ -35,7 +36,7 @@ export function PrivateCaseUnlockPanel({ caseId }: { caseId: string }) {
       setStatus({ text: 'Sign in your wallet to unlock this private case...', tone: 'loading' })
       signature = await signMessageAsync({ message: challenge.message })
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Wallet signature was rejected', tone: 'error' })
+      setStatus({ text: formatSignatureError(error, 'Wallet signature was rejected'), tone: 'error' })
       return
     }
 

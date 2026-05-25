@@ -10,6 +10,7 @@ import { useAccount, usePublicClient, useReadContract, useSwitchChain, useWriteC
 import { arcTestnet } from '../../../lib/arc'
 import type { ApiCase } from '../../../lib/backend-data'
 import { caseEscrowAbi, contractAddresses, erc20Abi, hasCaseEscrowAddress } from '../../../lib/contracts'
+import { formatWalletError } from '../../../lib/wallet-errors'
 import { WalletButton } from '../wallet/WalletButton'
 
 type ExistingCase = {
@@ -315,7 +316,7 @@ export function CaseFilingFlow({
       void balance.refetch()
       router.push(`/cases/${txHash}`)
     } catch (error) {
-      setStatus({ tone: 'bad', text: error instanceof Error ? error.message : 'Case filing failed.' })
+      setStatus({ tone: 'bad', text: formatWalletError(error, 'Case filing failed.') })
     }
   }
 

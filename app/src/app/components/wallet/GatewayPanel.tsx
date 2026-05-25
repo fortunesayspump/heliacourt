@@ -5,6 +5,7 @@ import { formatUnits, parseUnits, zeroAddress } from 'viem'
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
 import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../../lib/contracts'
+import { formatWalletError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 
 const usdcDecimals = 6
@@ -238,8 +239,8 @@ function formatGatewayAmount(value: bigint) {
 }
 
 function formatGatewayError(error: unknown, fallback: string) {
-  const message = error instanceof Error ? error.message : String(error || fallback)
-  if (/user rejected|user denied|rejected the request/i.test(message)) return 'Transaction was rejected in the wallet.'
+  const message = formatWalletError(error, fallback)
+  if (message !== fallback && !/Request Arguments:|Contract Call:|Docs:|Version:/i.test(message)) return message
   if (/insufficient funds|exceeds the balance|gas required exceeds allowance/i.test(message)) {
     return 'Wallet needs enough Arc testnet USDC for the amount and gas before Gateway can move funds.'
   }

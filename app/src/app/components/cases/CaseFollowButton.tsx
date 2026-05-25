@@ -3,6 +3,7 @@
 import { Bell, BellSlash } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
+import { formatSignatureError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 import { WalletButton } from '../wallet/WalletButton'
 
@@ -86,7 +87,7 @@ export function CaseFollowButton({ caseId }: { caseId: string }) {
       setFollowing(payload.following)
       setStatus({ text: payload.following ? 'Following case' : 'Removed from watchlist', tone: 'success' })
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Follow update failed', tone: 'error' })
+      setStatus({ text: formatSignatureError(error, 'Follow update failed'), tone: 'error' })
     } finally {
       setPending(false)
     }

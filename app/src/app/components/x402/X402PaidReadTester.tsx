@@ -6,6 +6,7 @@ import { x402Client, x402HTTPClient } from '@x402/core/client'
 import { useEffect, useMemo, useState } from 'react'
 import { type Address } from 'viem'
 import { useAccount, useWalletClient } from 'wagmi'
+import { formatSignatureError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
 
 type X402Resource = 'price' | 'transcript' | 'receipts' | 'proof'
@@ -172,7 +173,7 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
       }))
       setStatus({ text: 'Paid read settled and returned.', tone: 'success' })
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'x402 paid read failed.', tone: 'error' })
+      setStatus({ text: formatSignatureError(error, 'x402 paid read failed.'), tone: 'error' })
     } finally {
       setBusy(false)
     }

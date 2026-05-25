@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../../lib/backend-data'
+import { formatSignatureError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusTone } from '../ui/ActionStatus'
 import { GatewayBalance } from '../wallet/GatewayBalance'
 import { WalletBalance } from '../wallet/WalletBalance'
@@ -168,7 +169,7 @@ export function ProfileAccountPanel() {
       setEditOpen(false)
     } catch (error) {
       setAccount(previousAccount)
-      setPanelStatus(error instanceof Error ? error.message : 'Profile save failed', 'error')
+      setPanelStatus(formatSignatureError(error, 'Profile save failed'), 'error')
     } finally {
       setSaving(false)
     }
@@ -236,7 +237,7 @@ export function ProfileAccountPanel() {
       setTelegramLinked(true)
       setPanelStatus('Telegram linked. Return to the bot and send /me.', 'success')
     } catch (error) {
-      setPanelStatus(error instanceof Error ? error.message : 'Telegram link failed', 'error')
+      setPanelStatus(formatSignatureError(error, 'Telegram link failed'), 'error')
     } finally {
       setTelegramLinking(false)
     }
