@@ -1,6 +1,7 @@
 'use client'
 
-import { ArrowClockwise, Receipt, ShieldCheck } from '@phosphor-icons/react'
+import { ArrowClockwise, Briefcase, Receipt, ShieldCheck, UsersThree } from '@phosphor-icons/react'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { normalizeActivity, type X402ActivitySnapshot } from '../../../lib/x402-activity'
 
@@ -49,29 +50,49 @@ export function X402ActivityPanel({ initialActivity }: { initialActivity: X402Ac
           <strong>{activity.totalUsdc} USDC</strong>
         </article>
         <article>
+          <UsersThree size={17} />
           <span>Payers</span>
           <strong>{activity.distinctPayers}</strong>
         </article>
         <article>
+          <Briefcase size={17} />
           <span>Cases</span>
           <strong>{activity.distinctCases}</strong>
         </article>
       </div>
 
       <div className="x402-activity-list">
-        {activity.recent.length ? activity.recent.map((receipt, index) => (
-          <article key={`${receipt.transactionId ?? receipt.caseId ?? 'x402'}-${index}`}>
-            <div>
-              <strong>{formatResource(receipt.resource)}</strong>
-              <span>{shortValue(receipt.caseId, 10, 8)}</span>
-            </div>
-            <div>
-              <code>{shortValue(receipt.transactionId, 8, 6) || 'pending tx'}</code>
-              <em>{receipt.amountUsdc ?? '0'} USDC</em>
-              <time>{formatDate(receipt.createdAt)}</time>
-            </div>
-          </article>
-        )) : (
+        {activity.recent.length ? activity.recent.map((receipt, index) => {
+          const caseHref = receipt.caseId ? `/cases/${receipt.caseId}?tab=receipts` : null
+          const txHref = getExplorerTxHref(receipt.transactionId)
+
+          return (
+            <article className="x402-activity-row" key={`${receipt.transactionId ?? receipt.caseId ?? 'x402'}-${index}`}>
+              {caseHref ? (
+                <Link className="x402-activity-case-link" href={caseHref}>
+                  <strong>{formatResource(receipt.resource)}</strong>
+                  <span>{shortValue(receipt.caseId, 10, 8)}</span>
+                </Link>
+              ) : (
+                <div className="x402-activity-case-link">
+                  <strong>{formatResource(receipt.resource)}</strong>
+                  <span>No case linked</span>
+                </div>
+              )}
+              <div>
+                {txHref ? (
+                  <a className="x402-activity-hash-link" href={txHref} target="_blank" rel="noreferrer">
+                    <code>{shortValue(receipt.transactionId, 8, 6)}</code>
+                  </a>
+                ) : (
+                  <code>{shortValue(receipt.transactionId, 8, 6) || 'pending tx'}</code>
+                )}
+                <em>{receipt.amountUsdc ?? '0'} USDC</em>
+                <time>{formatDate(receipt.createdAt)}</time>
+              </div>
+            </article>
+          )
+        }) : (
           <div className="x402-activity-empty">
             <strong>No paid reads yet</strong>
             <p>Run Pay and read above. Settled x402 calls will appear here with route, case, amount, and transaction id.</p>
@@ -93,6 +114,13 @@ function shortValue(value?: string | null, start = 8, end = 6) {
   if (!value) return ''
   if (value.length <= start + end + 3) return value
   return `${value.slice(0, start)}...${value.slice(-end)}`
+}
+
+function getExplorerTxHref(value?: string | null) {
+  if (!value) return null
+  const normalized = value.startsWith('0x') ? value : `0x${value}`
+  if (!/^0x[0-9a-fA-F]{64}$/.test(normalized)) return null
+  return `https://explorer.testnet.arc.network/tx/${normalized}`
 }
 
 function formatDate(value?: string | null) {

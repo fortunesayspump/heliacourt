@@ -405,14 +405,34 @@
   border-bottom: 1px solid rgba(34, 33, 29, 0.1);
 }
 
+.x402-activity-row {
+  transition: var(--surface-motion);
+}
+
+.x402-activity-row:hover {
+  background: var(--surface-inner-hover);
+}
+
 .x402-activity-list article:last-child {
   border-bottom: 0;
 }
 
-.x402-activity-list article > div {
+.x402-activity-list article > div,
+.x402-activity-case-link {
   display: grid;
   min-width: 0;
   gap: 5px;
+}
+
+.x402-activity-case-link,
+.x402-activity-hash-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.x402-activity-case-link:hover strong,
+.x402-activity-hash-link:hover code {
+  color: var(--ag-green);
 }
 
 .x402-activity-list article > div:last-child {
