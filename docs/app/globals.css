@@ -223,24 +223,17 @@ h3 {
 
 .content {
   min-width: 0;
-}
-
-.doc-hero,
-.doc-section,
-.markdown {
-  border: 1px solid var(--ag-border);
-  border-radius: 8px;
-  background: var(--ag-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 250, 242, 0.04);
+  padding: 4px 0 0;
 }
 
 .doc-hero,
 .doc-section {
-  padding: clamp(24px, 4vw, 36px);
+  padding: 0;
 }
 
 .doc-hero {
-  background: var(--ag-surface);
+  padding-bottom: 34px;
+  border-bottom: 1px solid var(--ag-border);
 }
 
 .breadcrumb {
@@ -303,7 +296,7 @@ h3 {
   padding: 16px;
   border: 1px solid var(--ag-border);
   border-radius: 8px;
-  background: rgba(20, 19, 15, 0.74);
+  background: var(--ag-surface);
   transition: border-color 160ms ease, background 160ms ease;
 }
 
@@ -344,7 +337,14 @@ h3 {
 }
 
 .doc-section {
-  margin-top: 18px;
+  margin-top: 42px;
+  padding-bottom: 42px;
+  border-bottom: 1px solid var(--ag-border);
+}
+
+.doc-section:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
 }
 
 .doc-section h2,
@@ -514,7 +514,11 @@ pre {
 }
 
 .markdown {
-  padding: clamp(24px, 4vw, 44px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
 }
 
 .markdown h1 {
@@ -610,7 +614,17 @@ pre {
   .doc-hero,
   .doc-section,
   .markdown {
-    padding: 22px;
+    padding-right: 0;
+    padding-left: 0;
+  }
+
+  .doc-hero {
+    padding-bottom: 28px;
+  }
+
+  .doc-section {
+    margin-top: 34px;
+    padding-bottom: 34px;
   }
 
   .doc-hero h1 {
