@@ -154,7 +154,7 @@ export function startHearingJobWorker() {
 
 export async function getHearingQueueStats() {
   if (isDatabaseConfigured) {
-    await recoverStaleDatabaseJobs(activeJobs)
+    await recoverStaleDatabaseJobs()
     const waiting = (await listDatabaseJobs()).filter((job) => job.status === 'queued').length
     return {
       backend: 'postgres',
@@ -198,7 +198,7 @@ export async function runHearingNow(marketCase: MarketCase) {
 }
 
 async function processQueue() {
-  if (isDatabaseConfigured) await recoverStaleDatabaseJobs(activeJobs)
+  if (isDatabaseConfigured) await recoverStaleDatabaseJobs()
 
   while (activeJobs < env.HELIA_HEARING_MAX_CONCURRENT) {
     const job = isDatabaseConfigured ? await claimDatabaseJob() : redis ? await popRedisJob() : popMemoryJob()
@@ -221,6 +221,7 @@ async function processQueue() {
     }
     job.result = liveResult
     void saveJob(job)
+    const heartbeat = startJobHeartbeat(job)
 
     void runWithOptionalTimeout(
       () => runHeliaiaConfiguredHearing(job.marketCase, {
@@ -282,6 +283,7 @@ async function processQueue() {
         return saveJob(job)
       })
       .finally(() => {
+        clearInterval(heartbeat)
         activeJobs = Math.max(0, activeJobs - 1)
         void pruneJobs()
         void processQueue()
@@ -289,7 +291,18 @@ async function processQueue() {
   }
 }
 
-async function saveLiveJobUpdate(job: HearingJob, stage: 'artifact' | 'turn') {
+function startJobHeartbeat(job: HearingJob) {
+  const intervalMs = Math.min(30_000, Math.max(5_000, Math.floor(env.HELIA_HEARING_STALE_RUNNING_MS / 3)))
+  const heartbeat = setInterval(() => {
+    if (job.status !== 'running') return
+    job.updatedAt = new Date().toISOString()
+    void saveLiveJobUpdate(job, 'heartbeat')
+  }, intervalMs)
+  heartbeat.unref()
+  return heartbeat
+}
+
+async function saveLiveJobUpdate(job: HearingJob, stage: 'artifact' | 'turn' | 'heartbeat') {
   await saveJob(job).catch((error) => {
     const message = error instanceof Error ? error.message : 'live hearing save failed'
     console.warn(JSON.stringify({

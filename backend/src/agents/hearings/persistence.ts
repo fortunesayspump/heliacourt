@@ -74,9 +74,7 @@ export async function findReusableDatabaseJob(marketCase: MarketCase) {
   return undefined
 }
 
-export async function recoverStaleDatabaseJobs(activeJobs: number) {
-  if (activeJobs > 0) return
-
+export async function recoverStaleDatabaseJobs() {
   const cutoff = new Date(Date.now() - env.HELIA_HEARING_STALE_RUNNING_MS)
   await db!
     .update(hearingJobs)
