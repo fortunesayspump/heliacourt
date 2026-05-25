@@ -1,7 +1,7 @@
 {
   "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "Helia Court",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "active": true,
   "agent_type": "service",
   "description": "Multi-agent forecasting court for prediction-market questions. Users file funded Arc escrow cases from Polymarket, Kalshi, or Manifold links; Helia Court runs evidence witnesses, counsel, verdicts, receipts, Telegram alerts, and x402 paid proof APIs.",
@@ -9,12 +9,12 @@
   "logo": "https://heliacourt.xyz/icon-temple-512.png",
   "avatar": "https://heliacourt.xyz/icon-temple-192.png",
   "operatorWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
-  "agentWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+  "agentWallet": "eip155:5042002:0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
   "website": "https://heliacourt.xyz",
   "domain": "heliacourt.xyz",
   "agent_url": "https://app.heliacourt.xyz",
   "a2a_endpoint": "https://app.heliacourt.xyz/api/a2a",
-  "a2a_version": "0.1.0",
+  "a2a_version": "0.3.0",
   "mcp_server": "https://app.heliacourt.xyz/api/mcp",
   "mcp_version": "2025-06-18",
   "x402Support": true,
@@ -71,7 +71,8 @@
     "reputationMeta": "https://app.heliacourt.xyz/api/reputation/meta",
     "x402Status": "https://helia-courtbackend-production.up.railway.app/x402/status",
     "telegram": "https://t.me/heliacourtbot",
-    "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+    "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json",
+    "oasf": "https://heliacourt.xyz/.well-known/agent.json"
   },
   "techStack": {
     "runtime": "Node.js",
@@ -165,6 +166,47 @@
     "telegram": "Opt-in wallet-linked bot for case lookup, transcript/receipt checks, follow alerts, and filing links."
   },
   "services": [
+    {
+      "name": "MCP",
+      "endpoint": "https://heliacourt.xyz/.well-known/mcp.json",
+      "version": "2025-06-18",
+      "mcpTools": [
+        "helia_queue_hearing",
+        "helia_get_hearing_job"
+      ],
+      "capabilities": []
+    },
+    {
+      "name": "A2A",
+      "endpoint": "https://heliacourt.xyz/.well-known/agent-card.json",
+      "version": "0.3.0",
+      "a2aSkills": [
+        "analytical_skills/data_analysis",
+        "natural_language_processing/information_retrieval_synthesis/search",
+        "problem_solving/strategic_thinking",
+        "specialized_skills/blockchain_expertise"
+      ]
+    },
+    {
+      "name": "OASF",
+      "endpoint": "https://heliacourt.xyz/.well-known/agent.json",
+      "version": "v0.8.0",
+      "skills": [
+        "analytical_skills/data_analysis",
+        "natural_language_processing/information_retrieval_synthesis/search",
+        "problem_solving/strategic_thinking",
+        "specialized_skills/blockchain_expertise"
+      ],
+      "domains": [
+        "finance_and_business/finance",
+        "technology/blockchain"
+      ]
+    },
+    {
+      "name": "web",
+      "endpoint": "https://heliacourt.xyz",
+      "version": "1.0.0"
+    },
     {
       "name": "marketing",
       "description": "Product overview and feature tour.",
@@ -457,5 +499,7 @@
       "agentId": 20245,
       "agentRegistry": "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
     }
-  ]
+  ],
+  "oasf_version": "v0.8.0",
+  "agentWalletAddress": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31"
 }

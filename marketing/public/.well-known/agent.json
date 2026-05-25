@@ -1,0 +1,23 @@
+{
+  "schema": "https://schema.oasf.agntcy.org/v0.8.0/agent.json",
+  "schema_version": "v0.8.0",
+  "name": "Helia Court",
+  "description": "Multi-agent forecasting court for prediction-market questions, evidence review, verdict generation, Arc escrow receipts, Telegram alerts, and x402 paid proof APIs.",
+  "version": "0.2.1",
+  "skills": [
+    "analytical_skills/data_analysis",
+    "natural_language_processing/information_retrieval_synthesis/search",
+    "problem_solving/strategic_thinking",
+    "specialized_skills/blockchain_expertise"
+  ],
+  "domains": [
+    "finance_and_business/finance",
+    "technology/blockchain"
+  ],
+  "endpoints": {
+    "web": "https://heliacourt.xyz",
+    "a2a": "https://heliacourt.xyz/.well-known/agent-card.json",
+    "mcp": "https://heliacourt.xyz/.well-known/mcp.json",
+    "app": "https://app.heliacourt.xyz"
+  }
+}
