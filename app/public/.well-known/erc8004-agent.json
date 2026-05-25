@@ -209,6 +209,11 @@
       "version": "1.0.0"
     },
     {
+      "name": "agentWallet",
+      "endpoint": "eip155:5042002:0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+      "version": "v1"
+    },
+    {
       "name": "marketing",
       "description": "Product overview and feature tour.",
       "endpoint": "https://heliacourt.xyz",
@@ -502,5 +507,6 @@
     }
   ],
   "oasf_version": "v0.8.0",
-  "agentWalletAddress": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31"
+  "agentWalletAddress": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+  "updatedAt": "2026-05-25T00:00:00Z"
 }

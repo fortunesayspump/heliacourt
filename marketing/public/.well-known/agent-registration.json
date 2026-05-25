@@ -1,0 +1,11 @@
+{
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+  "name": "Helia Court",
+  "registrations": [
+    {
+      "agentId": 20245,
+      "agentRegistry": "eip155:5042002:0x8004A818BFB912233c491871b3d84c89A494BD9e"
+    }
+  ],
+  "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+}
