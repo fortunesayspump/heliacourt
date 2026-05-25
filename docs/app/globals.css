@@ -91,25 +91,41 @@ h3 {
   min-width: 0;
 }
 
-.brand img {
-  width: 34px;
-  height: 34px;
+.brand-mark {
+  display: block;
+  width: 38px;
+  height: 38px;
   flex: 0 0 auto;
-  filter: invert(87%) sepia(18%) saturate(665%) hue-rotate(350deg) brightness(100%) contrast(91%);
+  color: var(--ag-cream);
+  background: currentColor;
+  mask: url("/assets/helia-temple-mark.svg") center / contain no-repeat;
+  -webkit-mask: url("/assets/helia-temple-mark.svg") center / contain no-repeat;
+  transition: color 180ms ease, transform 180ms ease;
 }
 
-.brand span {
-  color: var(--ag-muted);
-  font-size: 14px;
+.brand:hover .brand-mark {
+  color: var(--ag-ink);
+  transform: translateY(-1px) scale(1.035);
+}
+
+.brand-wordmark {
+  color: var(--ag-cream);
+  font-family: var(--font-logo);
+  font-size: 17px;
   font-weight: 700;
+  letter-spacing: 0.035em;
+  line-height: 0.95;
+  text-transform: uppercase;
   white-space: nowrap;
 }
 
-.brand strong {
-  color: var(--ag-cream);
-  font-family: var(--font-logo);
-  font-size: 15px;
-  font-weight: 700;
+.brand-product {
+  color: var(--ag-muted);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .topbar nav {
@@ -617,12 +633,21 @@ pre {
 }
 
 @media (max-width: 460px) {
-  .brand span {
-    font-size: 13px;
+  .brand {
+    gap: 10px;
   }
 
-  .brand strong {
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+
+  .brand-wordmark {
     font-size: 14px;
+  }
+
+  .brand-product {
+    font-size: 13px;
   }
 
   .doc-hero h1 {

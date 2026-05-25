@@ -34,8 +34,9 @@ export default function DocsHome() {
     <main className="docs-app">
       <header className="topbar">
         <a className="brand" href="https://heliacourt.xyz">
-          <img src="/assets/helia-temple-mark.svg" alt="" />
-          <span><strong>Helia Court</strong> Docs</span>
+          <span className="brand-mark" aria-hidden="true" />
+          <span className="brand-wordmark">Helia Court</span>
+          <span className="brand-product">Docs</span>
         </a>
         <nav aria-label="Primary navigation">
           <a href="https://app.heliacourt.xyz">App</a>
