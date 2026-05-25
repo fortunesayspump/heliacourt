@@ -203,7 +203,8 @@
       ]
     },
     {
-      "name": "web",
+      "name": "Web",
+      "description": "Website",
       "endpoint": "https://heliacourt.xyz",
       "version": "1.0.0"
     },
