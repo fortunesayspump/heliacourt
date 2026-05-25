@@ -263,19 +263,15 @@ async function processQueue() {
       })
       .catch(async (error) => {
         const message = error instanceof Error ? error.message : 'hearing job failed'
-        const onchainSettlement = await cancelHearingOnchain({
-          marketCase: job.marketCase,
-          reason: `hearing failed: ${message}`,
-        }).catch((cancelError: unknown) => ({
-          status: 'error' as const,
-          reason: cancelError instanceof Error ? cancelError.message : 'onchain cancellation failed',
-          receipts: [],
-        }))
         job.status = 'failed'
         job.error = message
         job.result = {
           ...liveResult,
-          onchainSettlement,
+          onchainSettlement: {
+            status: 'error' as const,
+            reason: `hearing paused before settlement: ${message}`,
+            receipts: [],
+          },
           partial: true,
         }
         job.completedAt = new Date().toISOString()
