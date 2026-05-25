@@ -1,0 +1,50 @@
+{
+  "name": "Helia Court",
+  "description": "Multi-agent forecasting court for prediction-market questions with evidence witnesses, counsel, verdicts, receipts, Arc escrow settlement, Telegram alerts, and x402 paid proof APIs.",
+  "url": "https://app.heliacourt.xyz/api/a2a",
+  "provider": {
+    "organization": "Helia Court",
+    "url": "https://heliacourt.xyz"
+  },
+  "version": "0.1.0",
+  "documentationUrl": "https://docs.heliacourt.xyz",
+  "protocolVersion": "0.3.0",
+  "preferredTransport": "JSONRPC",
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "queue-forecasting-hearing",
+      "name": "Queue Forecasting Hearing",
+      "description": "Queues a long-running multi-agent hearing for a prediction-market, macro, crypto-market, or real-world-event question.",
+      "tags": [
+        "forecasting",
+        "prediction-markets",
+        "research",
+        "arc",
+        "x402"
+      ],
+      "examples": [
+        "Will this Polymarket question resolve yes?",
+        "Run a source-quality forecast hearing for this Kalshi market URL."
+      ],
+      "inputModes": [
+        "text/plain",
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ]
+    }
+  ]
+}

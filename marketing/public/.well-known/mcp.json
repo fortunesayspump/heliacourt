@@ -1,0 +1,19 @@
+{
+  "name": "helia-court-mcp",
+  "description": "MCP server for queuing and checking Helia Court multi-agent forecasting hearings.",
+  "version": "0.1.0",
+  "protocol": "MCP",
+  "protocolVersion": "2025-06-18",
+  "transport": "streamable-http",
+  "endpoint": "https://app.heliacourt.xyz/api/mcp",
+  "tools": [
+    {
+      "name": "helia_queue_hearing",
+      "description": "Queue a multi-agent forecasting hearing."
+    },
+    {
+      "name": "helia_get_hearing_job",
+      "description": "Fetch a queued hearing job by id."
+    }
+  ]
+}

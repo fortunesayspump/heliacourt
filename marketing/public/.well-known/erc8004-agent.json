@@ -9,7 +9,110 @@
   "logo": "https://heliacourt.xyz/icon-temple-512.png",
   "avatar": "https://heliacourt.xyz/icon-temple-192.png",
   "operatorWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+  "agentWallet": "0x90CBB847E0B2DF4b7aa03433fdD48E42587E2d31",
+  "website": "https://heliacourt.xyz",
+  "domain": "heliacourt.xyz",
+  "agent_url": "https://app.heliacourt.xyz",
+  "a2a_endpoint": "https://app.heliacourt.xyz/api/a2a",
+  "a2a_version": "0.1.0",
+  "mcp_server": "https://app.heliacourt.xyz/api/mcp",
+  "mcp_version": "2025-06-18",
   "x402Support": true,
+  "x402_supported": true,
+  "supported_protocols": [
+    "A2A",
+    "MCP",
+    "Web",
+    "x402",
+    "Telegram",
+    "ERC-8004"
+  ],
+  "protocols": [
+    "ERC-8004",
+    "x402",
+    "A2A",
+    "MCP",
+    "Telegram",
+    "Arc CaseEscrow",
+    "Circle Gateway"
+  ],
+  "categories": [
+    "Forecasting",
+    "Prediction Markets",
+    "Research",
+    "Payments",
+    "Automation"
+  ],
+  "capabilities": [
+    "prediction-market research",
+    "multi-agent deliberation",
+    "web evidence gathering",
+    "source quality review",
+    "onchain evidence analysis",
+    "visual evidence analysis",
+    "verdict generation",
+    "Arc USDC escrow settlement",
+    "x402 paid proof APIs",
+    "Telegram alerts"
+  ],
+  "endpoints": {
+    "web": "https://heliacourt.xyz",
+    "app": "https://app.heliacourt.xyz",
+    "docs": "https://docs.heliacourt.xyz",
+    "api": "https://helia-courtbackend-production.up.railway.app",
+    "health": "https://helia-courtbackend-production.up.railway.app/health",
+    "stats": "https://helia-courtbackend-production.up.railway.app/stats",
+    "agentRegistry": "https://helia-courtbackend-production.up.railway.app/agents/registry",
+    "hearingJobs": "https://app.heliacourt.xyz/api/agents/hearing/jobs",
+    "a2a": "https://app.heliacourt.xyz/api/a2a",
+    "agentCard": "https://heliacourt.xyz/.well-known/agent-card.json",
+    "mcp": "https://app.heliacourt.xyz/api/mcp",
+    "mcpDiscovery": "https://heliacourt.xyz/.well-known/mcp.json",
+    "x402Status": "https://helia-courtbackend-production.up.railway.app/x402/status",
+    "telegram": "https://t.me/heliacourtbot",
+    "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
+  },
+  "techStack": {
+    "runtime": "Node.js",
+    "language": "TypeScript",
+    "frontend": "Next.js",
+    "backend": "Fastify worker API",
+    "database": "Postgres",
+    "blockchain": "Arc Testnet via viem",
+    "payments": [
+      "Arc USDC escrow",
+      "Circle Gateway x402"
+    ],
+    "protocols": [
+      "ERC-8004",
+      "x402",
+      "Telegram",
+      "wallet signatures"
+    ]
+  },
+  "computeConstraints": {
+    "maxConcurrentHearings": 1,
+    "jobMode": "queued long-running hearings",
+    "paidReadPrice": "0.01 USDC",
+    "visibilityModes": [
+      "public",
+      "unlisted",
+      "private"
+    ],
+    "supportedInputLinks": [
+      "Polymarket",
+      "Kalshi",
+      "Manifold",
+      "web evidence URLs",
+      "image evidence URLs"
+    ]
+  },
+  "coverage": {
+    "agentSeats": "21 court agents",
+    "witnessClasses": "prediction markets, news, onchain, weather, web scrape, visual, source quality, timeline, research, quant, social count",
+    "caseVisibility": "public, unlisted, private",
+    "paymentRails": "Arc USDC escrow and Circle Gateway x402"
+  },
   "supportedMarkets": [
     "Polymarket",
     "Kalshi",
@@ -122,6 +225,71 @@
       "protocol": "Web"
     },
     {
+      "name": "health",
+      "description": "Live backend health, queue, worker, database, and onchain configuration check.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/health",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
+      "name": "stats",
+      "description": "Public case, agent, receipt, Telegram, and x402 integration statistics.",
+      "endpoint": "https://app.heliacourt.xyz/api/stats",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
+      "name": "agent-registry",
+      "description": "Machine-readable roster of court agents, seats, tool capabilities, prices, versions, and onchain profiles.",
+      "endpoint": "https://helia-courtbackend-production.up.railway.app/agents/registry",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
+      "name": "a2a-agent-card",
+      "description": "A2A agent card for discovering Helia Court skills, transport, and JSON-RPC endpoint.",
+      "endpoint": "https://heliacourt.xyz/.well-known/agent-card.json",
+      "method": "GET",
+      "protocol": "A2A"
+    },
+    {
+      "name": "a2a-jsonrpc",
+      "description": "A2A JSON-RPC endpoint for message/send, tasks/send, and tasks/get hearing workflows.",
+      "endpoint": "https://app.heliacourt.xyz/api/a2a",
+      "method": "POST",
+      "protocol": "A2A"
+    },
+    {
+      "name": "mcp-discovery",
+      "description": "MCP discovery metadata for Helia Court hearing queue and job status tools.",
+      "endpoint": "https://heliacourt.xyz/.well-known/mcp.json",
+      "method": "GET",
+      "protocol": "MCP"
+    },
+    {
+      "name": "mcp-server",
+      "description": "Streamable HTTP MCP JSON-RPC endpoint exposing helia_queue_hearing and helia_get_hearing_job tools.",
+      "endpoint": "https://app.heliacourt.xyz/api/mcp",
+      "method": "POST",
+      "protocol": "MCP"
+    },
+    {
+      "name": "agent-hearing-job",
+      "description": "Queue a long-running multi-agent hearing for a prediction-market, macro, crypto-market, or real-world-event question.",
+      "endpoint": "https://app.heliacourt.xyz/api/agents/hearing/jobs",
+      "method": "POST",
+      "protocol": "HTTP",
+      "paymentRequired": true,
+      "paymentRail": "Arc CaseEscrow USDC"
+    },
+    {
+      "name": "agent-hearing-job-status",
+      "description": "Poll a queued hearing job until the court transcript, verdict, receipts, and settlement artifacts are ready.",
+      "endpoint": "https://app.heliacourt.xyz/api/agents/hearing/jobs/:jobId",
+      "method": "GET",
+      "protocol": "HTTP"
+    },
+    {
       "name": "telegram-bot",
       "description": "Opt-in Helia Court Telegram bot.",
       "endpoint": "https://t.me/heliacourtbot",
@@ -159,7 +327,7 @@
     {
       "name": "x402-status",
       "description": "Discover x402 receiver, Arc USDC price, network, and paid resource paths.",
-      "endpoint": "https://helia-courtbackend-production.up.railway.app/x402/status",
+      "endpoint": "https://app.heliacourt.xyz/api/x402/status",
       "method": "GET",
       "protocol": "x402 discovery"
     },
