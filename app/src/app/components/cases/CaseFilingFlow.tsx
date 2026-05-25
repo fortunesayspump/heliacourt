@@ -174,7 +174,7 @@ export function CaseFilingFlow({
         const priorAutofill = autofilledFieldsRef.current
 
         setQuestion((current) => canAutofill(current, priorAutofill.question) && nextQuestion ? nextQuestion : current)
-        setContext((current) => canAutofill(current, priorAutofill.context) && nextContext ? nextContext : current)
+        setContext((current) => canAutofillMarketContext(current, priorAutofill.context, predictionMarketLink) && nextContext ? nextContext : current)
         setHorizon((current) => canAutofill(current, priorAutofill.horizon) && nextHorizon ? nextHorizon : current)
         setAutofilledFields({
           question: nextQuestion,
@@ -517,6 +517,10 @@ function canAutofill(current: string, previousAutofill?: string) {
   return !current.trim() || Boolean(previousAutofill && current === previousAutofill)
 }
 
+function canAutofillMarketContext(current: string, previousAutofill: string | undefined, nextMarketLink: string) {
+  return canAutofill(current, previousAutofill) || hasDifferentSupportedMarketLink(current, nextMarketLink)
+}
+
 function buildAutofillContext(preview: LinkPreview, marketLink: string) {
   const contractLines = preview.contracts?.length
     ? [
@@ -526,18 +530,29 @@ function buildAutofillContext(preview: LinkPreview, marketLink: string) {
           contract.ticker ? `Ticker: ${contract.ticker}` : '',
           contract.horizon ? `Horizon: ${contract.horizon}` : '',
           contract.price ? `Last price: ${contract.price}` : '',
-          contract.rules ? `Rules: ${contract.rules}` : '',
+          contract.rules && !hasDifferentSupportedMarketLink(contract.rules, marketLink) ? `Rules: ${contract.rules}` : '',
         ].filter(Boolean).join('\n')),
       ].join('\n\n')
     : ''
   const lines = [
     preview.market ? `Market: ${preview.market}` : '',
-    preview.description ? `Description: ${preview.description}` : '',
+    preview.description && !hasDifferentSupportedMarketLink(preview.description, marketLink) ? `Description: ${preview.description}` : '',
     contractLines,
-    preview.rules ? `Resolution rules: ${preview.rules}` : '',
+    preview.rules && !hasDifferentSupportedMarketLink(preview.rules, marketLink) ? `Resolution rules: ${preview.rules}` : '',
     `Primary market: ${marketLink}`,
   ]
   return lines.filter(Boolean).join('\n\n')
+}
+
+function hasDifferentSupportedMarketLink(text: string, expectedMarketLink: string) {
+  const expected = normalizeUrl(expectedMarketLink)
+  if (!expected) return false
+  const urls = text.match(/https?:\/\/[^\s)]+/gi) ?? []
+  return urls.some((url) => {
+    const normalized = normalizeUrl(url)
+    if (!normalized || !isSupportedPredictionMarketLink(normalized)) return false
+    return normalized !== expected
+  })
 }
 
 function formatMarketHorizon(value?: string) {
@@ -586,12 +601,13 @@ function normalizeSearchText(value: string) {
 }
 
 function normalizeUrl(value: string) {
+  const cleaned = value.trim().replace(/[),.;\]]+$/, '')
   try {
-    const url = new URL(value)
+    const url = new URL(cleaned)
     url.hash = ''
     return url.toString().replace(/\/$/, '').toLowerCase()
   } catch {
-    return value.trim().replace(/\/$/, '').toLowerCase()
+    return cleaned.replace(/\/$/, '').toLowerCase()
   }
 }
 

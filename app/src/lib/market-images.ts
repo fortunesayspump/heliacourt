@@ -20,7 +20,7 @@ export type MarketPreviewContract = {
 
 const marketImageTimeoutMs = Number(process.env.MARKET_IMAGE_TIMEOUT_MS ?? 8000)
 const marketImageRetries = Number(process.env.MARKET_IMAGE_RETRIES ?? 2)
-const marketPreviewCacheVersion = 'event-bundles-v4'
+const marketPreviewCacheVersion = 'event-bundles-v5'
 const imageCache = new Map<string, Promise<string | undefined>>()
 const previewCache = new Map<string, Promise<MarketPreview | undefined>>()
 
