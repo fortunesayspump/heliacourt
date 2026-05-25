@@ -140,7 +140,7 @@
       "reputationRegistry": "0x8004B663056A597Dffe9eCcC1965A193B7388713",
       "validationRegistry": "0x8004Cb1BF31DAf7788923b405b754f57acEB4272",
       "registrationTx": "https://testnet.arcscan.app/tx/0xb0aa3a9ef0d05878def0523c730c018d85c8b0bc8cf45d47c0a0262b35444ea3",
-      "latestURIUpdateTx": "https://testnet.arcscan.app/tx/0xd571d5bf8937d74b64c8ad2bc17fe9c3e58b67dd7f59566a96fba9800eb5f204",
+      "latestURIUpdateTx": "https://testnet.arcscan.app/tx/0x83b967833836be0a544194bf4b32eaec428aaa267c0c56c3837d73bd72f48caf",
       "agentURI": "https://heliacourt.xyz/.well-known/erc8004-agent.json"
     }
   },
