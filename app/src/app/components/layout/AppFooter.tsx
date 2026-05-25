@@ -32,6 +32,8 @@ export function AppFooter() {
               <TelegramLogo size={16} weight="fill" />
               Telegram
             </a>
+            <Link href="/terms">Terms</Link>
+            <Link href="/privacy">Privacy</Link>
             <span className="footer-network-line">Arc Testnet · USDC receipts</span>
           </div>
           <span className="footer-copyright">© 2026 Helia Court</span>

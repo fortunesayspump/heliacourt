@@ -2,7 +2,7 @@ import type { MetadataRoute } from 'next'
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://heliacourt.xyz'
 
-const routes = ['/', '/agents', '/help', '/protocol'] as const
+const routes = ['/', '/agents', '/help', '/protocol', '/terms', '/privacy'] as const
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date()

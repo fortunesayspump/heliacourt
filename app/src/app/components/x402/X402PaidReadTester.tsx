@@ -162,6 +162,14 @@ export function X402PaidReadTester({ suggestedCaseId }: { suggestedCaseId?: stri
         setPolicySpentMicroUsdc((value) => value + amountMicroUsdc)
         setPolicyReadsUsed((value) => value + 1)
       }
+      window.dispatchEvent(new CustomEvent('helia:x402-paid-read', {
+        detail: {
+          resource,
+          caseId: trimmedCaseId,
+          amountMicroUsdc,
+          settlement: settled,
+        },
+      }))
       setStatus({ text: 'Paid read settled and returned.', tone: 'success' })
     } catch (error) {
       setStatus({ text: error instanceof Error ? error.message : 'x402 paid read failed.', tone: 'error' })

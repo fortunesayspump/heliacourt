@@ -2,7 +2,7 @@
 
 import { ArrowClockwise, DownloadSimple, UploadSimple } from '@phosphor-icons/react'
 import { formatUnits, parseUnits, zeroAddress } from 'viem'
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
 import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../../lib/contracts'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
@@ -42,9 +42,18 @@ export function GatewayPanel() {
   const gatewayWithdrawing = getBigint(balances.data?.[2]?.result)
   const gatewayWithdrawable = getBigint(balances.data?.[3]?.result)
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     await Promise.all([allowance.refetch(), balances.refetch()])
-  }
+  }, [allowance, balances])
+
+  useEffect(() => {
+    const refreshAfterPaidRead = () => {
+      if (!address || !isConnected) return
+      void refresh()
+    }
+    window.addEventListener('helia:x402-paid-read', refreshAfterPaidRead)
+    return () => window.removeEventListener('helia:x402-paid-read', refreshAfterPaidRead)
+  }, [address, isConnected, refresh])
 
   async function deposit() {
     if (!isConnected || !address || !publicClient) {
@@ -86,7 +95,7 @@ export function GatewayPanel() {
       setStatus({ text: `Deposited ${formatUnits(amount, usdcDecimals)} USDC to Gateway.`, tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Gateway deposit failed.', tone: 'error' })
+      setStatus({ text: formatGatewayError(error, 'Gateway deposit failed.'), tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -120,7 +129,7 @@ export function GatewayPanel() {
       setStatus({ text: 'Withdrawal requested. Complete it when the withdrawable balance is ready.', tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Gateway withdrawal request failed.', tone: 'error' })
+      setStatus({ text: formatGatewayError(error, 'Gateway withdrawal request failed.'), tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -149,7 +158,7 @@ export function GatewayPanel() {
       setStatus({ text: 'Gateway withdrawal completed.', tone: 'success' })
       await refresh()
     } catch (error) {
-      setStatus({ text: error instanceof Error ? error.message : 'Gateway withdrawal failed.', tone: 'error' })
+      setStatus({ text: formatGatewayError(error, 'Gateway withdrawal failed.'), tone: 'error' })
     } finally {
       setBusy(false)
     }
@@ -226,4 +235,15 @@ function formatGatewayAmount(value: bigint) {
   const parsed = Number(formatUnits(value, usdcDecimals))
   if (parsed >= 1) return parsed.toLocaleString(undefined, { maximumFractionDigits: 2 })
   return parsed.toLocaleString(undefined, { maximumFractionDigits: 4 })
+}
+
+function formatGatewayError(error: unknown, fallback: string) {
+  const message = error instanceof Error ? error.message : String(error || fallback)
+  if (/user rejected|user denied|rejected the request/i.test(message)) return 'Transaction was rejected in the wallet.'
+  if (/insufficient funds|exceeds the balance|gas required exceeds allowance/i.test(message)) {
+    return 'Wallet needs enough Arc testnet USDC for the amount and gas before Gateway can move funds.'
+  }
+  if (/allowance|approve/i.test(message)) return 'Gateway approval did not complete. Approve USDC spending, then try again.'
+  if (/withdrawable|initiateWithdrawal/i.test(message)) return 'Request the withdrawal first, then complete it once Gateway marks it withdrawable.'
+  return message || fallback
 }

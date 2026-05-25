@@ -2,9 +2,12 @@ import { Bank, Code, Lightning, Receipt, ShieldCheck } from '@phosphor-icons/rea
 import { AppFooter } from '../components/layout/AppFooter'
 import { AppHeader } from '../components/layout/AppHeader'
 import { GatewayPanel } from '../components/wallet/GatewayPanel'
+import { X402ActivityPanel } from '../components/x402/X402ActivityPanel'
 import { X402PaidReadTester } from '../components/x402/X402PaidReadTester'
 import { backendUrl } from '../../lib/backend-url'
+import { normalizeActivity, type X402ActivitySnapshot } from '../../lib/x402-activity'
 import '../page.css'
+import './x402.css'
 
 export const dynamic = 'force-dynamic'
 
@@ -59,6 +62,7 @@ export default async function X402Page() {
 
         <GatewayPanel />
         <X402PaidReadTester suggestedCaseId={activity.latest?.caseId ?? null} />
+        <X402ActivityPanel initialActivity={activity} />
 
         <section className="panel x402-guide-panel">
           <div className="panel-heading">
@@ -153,14 +157,7 @@ type X402Status = {
   resources: string[]
 }
 
-type X402Activity = {
-  totalPaidReads: number
-  totalUsdc: string
-  averageUsdc: string
-  latest?: {
-    caseId?: string
-  } | null
-}
+type X402Activity = X402ActivitySnapshot
 
 async function getX402Status(): Promise<X402Status> {
   try {
@@ -181,13 +178,8 @@ async function getX402Activity(): Promise<X402Activity> {
   try {
     const response = await fetch(`${backendUrl}/x402/activity`, { cache: 'no-store' })
     if (!response.ok) return emptyX402Activity()
-    const payload = await response.json() as Partial<X402Activity>
-    return {
-      totalPaidReads: Number(payload.totalPaidReads ?? 0),
-      totalUsdc: payload.totalUsdc ?? '0',
-      averageUsdc: payload.averageUsdc ?? '0',
-      latest: payload.latest ?? null,
-    }
+    const payload = await response.json() as Partial<X402ActivitySnapshot>
+    return normalizeActivity(payload)
   } catch {
     return emptyX402Activity()
   }
@@ -206,7 +198,10 @@ function emptyX402Activity(): X402Activity {
     totalPaidReads: 0,
     totalUsdc: '0',
     averageUsdc: '0',
+    distinctPayers: 0,
+    distinctCases: 0,
     latest: null,
+    recent: [],
   }
 }
 

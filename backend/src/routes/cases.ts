@@ -1,20 +1,19 @@
-import { randomUUID } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearings/index.js'
 import { env } from '../config/env.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 import { db, isDatabaseConfigured } from '../db/client.js'
-import { authChallenges, caseFollows, caseParticipants, onchainReceipts } from '../db/schema.js'
+import { caseFollows } from '../db/schema.js'
 import { notifyCaseFiled, notifyCaseFunded } from '../integrations/telegram.js'
-import { authorizeAdminRequest, buildCaseFollowChallengeMessage, buildCaseReadChallengeMessage, canAccessCaseAction, canReadPrivateCase, caseFollowPurpose, caseReadPurpose, consumeCaseActionChallenge, consumeCaseReadChallenge, formatValidationIssues, getCaseVisibility } from './cases.access.js'
+import { authorizeAdminRequest, canAccessCaseAction, canReadPrivateCase, caseFollowPurpose, consumeCaseActionChallenge, consumeCaseReadChallenge, formatValidationIssues, getCaseVisibility } from './cases.access.js'
+import { createCaseFollowChallenge, createPrivateCaseReadChallenge } from './cases.challenges.js'
 import { verifyCaseCancellationReceipt, verifyCaseFundingReceipt, verifyCaseOpenedReceipt } from './cases.onchain.js'
 import { getCaseRecordedReceipts, getCaseResult, getRecordedReceiptLedgerRows, isPublicListCase, summarizeCase, summarizeCaseDetail, summarizeLedgerRows } from './cases.presenter.js'
+import { recordCaseAddedFunding, recordCaseCancellation, recordCaseOpen } from './cases.receipts.js'
 import { ensureUser, findCaseJob, isFollowingCase } from './cases.repository.js'
 import { addFundingReceiptSchema, cancelCaseReceiptSchema, caseAccessChallengeSchema, createCaseSchema, followCaseSchema, signedCaseAccessSchema } from './cases.schemas.js'
 import { createCaseId, isSupportedPredictionMarketLink, normalizeWallet, supportedPredictionMarketHosts } from './cases.utils.js'
-
-const CHALLENGE_TTL_MS = 5 * 60 * 1000
 
 export async function caseRoutes(app: FastifyInstance) {
   app.get('/cases', async () => {
@@ -58,36 +57,7 @@ export async function caseRoutes(app: FastifyInstance) {
     if (!await canReadPrivateCase(job, wallet)) return reply.status(403).send({ error: 'wallet is not a participant on this private case' })
 
     await ensureUser(wallet)
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + CHALLENGE_TTL_MS)
-    const nonce = randomUUID()
-    const message = buildCaseReadChallengeMessage({
-      wallet,
-      caseId: job.marketCase.id,
-      nonce,
-      issuedAt: now,
-      expiresAt,
-    })
-
-    await db!
-      .insert(authChallenges)
-      .values({
-        id: randomUUID(),
-        wallet,
-        nonce,
-        message,
-        purpose: caseReadPurpose(job.marketCase.id),
-        expiresAt,
-        createdAt: now,
-      })
-
-    return {
-      wallet,
-      caseId: job.marketCase.id,
-      nonce,
-      message,
-      expiresAt: expiresAt.toISOString(),
-    }
+    return createPrivateCaseReadChallenge({ wallet, caseId: job.marketCase.id })
   })
 
   app.post('/cases/:caseId/private', async (request, reply) => {
@@ -133,38 +103,12 @@ export async function caseRoutes(app: FastifyInstance) {
     if (!await canAccessCaseAction(job, wallet)) return reply.status(403).send({ error: 'wallet is not a participant on this private case' })
 
     await ensureUser(wallet)
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + CHALLENGE_TTL_MS)
-    const nonce = randomUUID()
-    const message = buildCaseFollowChallengeMessage({
-      wallet,
-      caseId: job.marketCase.id,
-      nonce,
-      issuedAt: now,
-      expiresAt,
-    })
-
-    await db!
-      .insert(authChallenges)
-      .values({
-        id: randomUUID(),
-        wallet,
-        nonce,
-        message,
-        purpose: caseFollowPurpose(job.marketCase.id),
-        expiresAt,
-        createdAt: now,
-      })
-
     const following = await isFollowingCase({ caseId: job.marketCase.id, wallet })
+    const challenge = await createCaseFollowChallenge({ wallet, caseId: job.marketCase.id })
 
     return {
-      wallet,
-      caseId: job.marketCase.id,
+      ...challenge,
       following,
-      nonce,
-      message,
-      expiresAt: expiresAt.toISOString(),
     }
   })
 
@@ -257,42 +201,14 @@ export async function caseRoutes(app: FastifyInstance) {
     }))
     if (!verified.ok) return reply.status(400).send({ error: verified.error })
 
-    const now = new Date()
-    await ensureUser(wallet)
-    await db!
-      .insert(caseParticipants)
-      .values({
-        id: `${job.marketCase.id}:${wallet}:backer`,
-        caseId: job.marketCase.id,
-        wallet,
-        role: 'backer',
-        createdAt: now,
-      })
-      .onConflictDoNothing()
-
-    const payload = {
-      type: 'case-added-funding',
+    await recordCaseAddedFunding({
+      job,
       wallet,
       amountUsdc: verified.amountUsdc,
       onchainCaseId: job.marketCase.onchain.caseId,
-    }
-    await db!
-      .insert(onchainReceipts)
-      .values({
-        id: `${job.id}:case-added-funding:${parsed.data.txHash}`,
-        caseId: job.marketCase.id,
-        jobId: job.id,
-        chainId: parsed.data.chainId,
-        txHash: parsed.data.txHash,
-        receiptType: 'case-added-funding',
-        recordHash: null,
-        payload,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: onchainReceipts.id,
-        set: { payload },
-      })
+      chainId: parsed.data.chainId,
+      txHash: parsed.data.txHash,
+    })
 
     void notifyCaseFunded({
       caseId: job.marketCase.id,
@@ -342,31 +258,14 @@ export async function caseRoutes(app: FastifyInstance) {
     }))
     if (!verified.ok) return reply.status(400).send({ error: verified.error })
 
-    const now = new Date()
-    await ensureUser(wallet)
-    const payload = {
-      type: 'case-cancelled',
+    await recordCaseCancellation({
+      job,
       wallet,
       refundUsdc: verified.refundUsdc,
       onchainCaseId: job.marketCase.onchain.caseId,
-    }
-    await db!
-      .insert(onchainReceipts)
-      .values({
-        id: `${job.id}:case-cancelled:${parsed.data.txHash}`,
-        caseId: job.marketCase.id,
-        jobId: job.id,
-        chainId: parsed.data.chainId,
-        txHash: parsed.data.txHash,
-        receiptType: 'case-cancel',
-        recordHash: null,
-        payload,
-        createdAt: now,
-      })
-      .onConflictDoUpdate({
-        target: onchainReceipts.id,
-        set: { payload },
-      })
+      chainId: parsed.data.chainId,
+      txHash: parsed.data.txHash,
+    })
 
     return {
       caseId: job.marketCase.id,
@@ -469,28 +368,17 @@ export async function caseRoutes(app: FastifyInstance) {
       createdAt: new Date().toISOString(),
     }
     const job = await enqueueHearingJob(marketCase)
-    if (isDatabaseConfigured) {
-      await db!
-        .insert(onchainReceipts)
-        .values({
-          id: `${job.id}:case-open:${data.onchain.txHash}`,
-          caseId: marketCase.id,
-          jobId: job.id,
-          chainId: data.onchain.chainId,
-          txHash: data.onchain.txHash,
-          receiptType: 'case-open',
-          recordHash: data.onchain.questionHash,
-          payload: {
-            type: 'case-open',
-            wallet: opened.petitioner,
-            amountUsdc: opened.budgetUsdc,
-            onchainCaseId: data.onchain.caseId,
-            metadataURI: opened.metadataURI,
-          },
-          createdAt: new Date(),
-        })
-        .onConflictDoNothing()
-    }
+    await recordCaseOpen({
+      jobId: job.id,
+      marketCase,
+      chainId: data.onchain.chainId,
+      txHash: data.onchain.txHash,
+      recordHash: data.onchain.questionHash,
+      petitioner: opened.petitioner,
+      budgetUsdc: opened.budgetUsdc,
+      onchainCaseId: data.onchain.caseId,
+      metadataURI: opened.metadataURI,
+    })
 
     void notifyCaseFiled({
       caseId: marketCase.id,

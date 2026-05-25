@@ -6,6 +6,7 @@ import { AppHeader } from '../../components/layout/AppHeader'
 import { getBackendCaseDetail, type ApiCourtArtifact } from '../../../lib/backend-data'
 import { backendUrl } from '../../../lib/backend-url'
 import '../../page.css'
+import './proof.css'
 
 export const dynamic = 'force-dynamic'
 

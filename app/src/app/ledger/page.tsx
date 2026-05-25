@@ -6,6 +6,7 @@ import { AppFooter } from '../components/layout/AppFooter'
 import { getBackendLedgerRows, type ApiLedgerRow } from '../../lib/backend-data'
 import { backendUrl } from '../../lib/backend-url'
 import '../page.css'
+import './ledger.css'
 
 export default function LedgerPage() {
   return (

@@ -2745,6 +2745,16 @@ body,
   color: #fffaf2 !important;
 }
 
+.footer-network-row > a:not(.footer-telegram-link) {
+  color: rgba(255, 250, 242, 0.76);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.footer-network-row > a:not(.footer-telegram-link):hover {
+  color: #fffaf2;
+}
+
 .agent-grid article,
 .steps article,
 .doc-grid article,
@@ -3152,6 +3162,76 @@ body,
   width: 22px;
   height: 22px;
   object-fit: contain;
+}
+
+.legal-page {
+  min-height: 100svh;
+  background: var(--ag-page);
+}
+
+.legal-shell {
+  width: min(860px, calc(100% - 44px));
+  margin: 0 auto;
+  padding: 72px 0 96px;
+}
+
+.legal-shell h1 {
+  margin-top: 12px;
+  color: var(--ag-ink);
+  font-family: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+  font-size: clamp(42px, 7vw, 70px);
+  line-height: 0.98;
+}
+
+.legal-updated,
+.legal-lead,
+.legal-section p {
+  color: var(--ag-muted);
+}
+
+.legal-updated {
+  margin-top: 12px;
+  font-size: 13px;
+}
+
+.legal-lead {
+  max-width: 720px;
+  margin-top: 18px;
+  font-size: 17px;
+  line-height: 1.6;
+}
+
+.legal-section {
+  margin-top: 36px;
+  padding-top: 30px;
+  border-top: 1px solid var(--ag-border);
+}
+
+.legal-section h2 {
+  color: var(--ag-ink);
+  font-size: clamp(26px, 3vw, 34px);
+  line-height: 1.05;
+}
+
+.legal-section p {
+  margin-top: 14px;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.legal-section a,
+.legal-links a {
+  color: var(--ag-cream);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 42px;
+  font-weight: 800;
 }
 
 /* Final mixed Helia Court theme: dark-first with intentional light parchment sections. */
