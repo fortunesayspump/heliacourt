@@ -1,10 +1,10 @@
 'use client'
 
-import { useAppKit } from '@reown/appkit/react'
+import { useAppKit, useAppKitAccount, useDisconnect as useAppKitDisconnect } from '@reown/appkit/react'
 import { DotsThreeVertical, Plus, ShieldCheck, UserCircle, Wallet } from '@phosphor-icons/react/ssr'
 import Link from 'next/link'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useAccount, useChainId, useConnect, useDisconnect, useSwitchChain } from 'wagmi'
+import { useAccount, useChainId, useConnect, useDisconnect, useReconnect, useSwitchChain } from 'wagmi'
 import { appKitProjectId, arcTestnet } from '../../../lib/arc'
 import { getConnectedChainId, isArcTestnetChainId } from '../../../lib/chains'
 
@@ -17,6 +17,10 @@ type WalletButtonProps = {
 
 function shortAddress(address: `0x${string}`) {
   return `${address.slice(0, 6)}...${address.slice(-4)}`
+}
+
+function isHexAddress(address?: string): address is `0x${string}` {
+  return /^0x[a-fA-F0-9]{40}$/.test(address ?? '')
 }
 
 export function WalletButton({
@@ -53,14 +57,30 @@ function AppKitWalletButton({
   showIcon = true,
 }: WalletButtonProps) {
   const { open } = useAppKit()
+  const appKitAccount = useAppKitAccount({ namespace: 'eip155' })
   const { address, chainId, isConnected } = useAccount()
   const activeChainId = useChainId()
   const { disconnect } = useDisconnect()
+  const { disconnect: disconnectAppKit } = useAppKitDisconnect()
+  const { reconnect, isPending: isReconnecting } = useReconnect()
   const { switchChain, isPending: isSwitching } = useSwitchChain()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const resyncAttemptedRef = useRef(false)
+  const appKitAddress = isHexAddress(appKitAccount.address) ? appKitAccount.address : undefined
+  const displayAddress = address ?? appKitAddress
+  const isWalletConnected = isConnected || Boolean(appKitAccount.isConnected && appKitAddress)
   const connectedChainId = getConnectedChainId(chainId, activeChainId)
-  const isWrongChain = isConnected && !isArcTestnetChainId(connectedChainId)
+  const isWrongChain = isWalletConnected && !isArcTestnetChainId(connectedChainId)
+
+  useEffect(() => {
+    if (isConnected || !appKitAccount.isConnected || !appKitAddress || isReconnecting || resyncAttemptedRef.current) {
+      return
+    }
+
+    resyncAttemptedRef.current = true
+    reconnect()
+  }, [appKitAccount.isConnected, appKitAddress, isConnected, isReconnecting, reconnect])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -81,7 +101,7 @@ function AppKitWalletButton({
     }
   }, [menuOpen])
 
-  if (isConnected && address && isWrongChain) {
+  if (isWalletConnected && displayAddress && isWrongChain) {
     return (
       <button className={className} type="button" onClick={() => switchChain({ chainId: arcTestnet.id })}>
         {showIcon ? <ShieldCheck size={16} /> : null}
@@ -90,12 +110,12 @@ function AppKitWalletButton({
     )
   }
 
-  if (isConnected && address) {
+  if (isWalletConnected && displayAddress) {
     return (
       <div className="wallet-menu" ref={menuRef}>
         <button className={className} type="button" onClick={() => setMenuOpen((value) => !value)}>
           {showIcon ? <Wallet size={16} /> : null}
-          {connectedLabel ?? shortAddress(address)}
+          {isReconnecting && !isConnected ? 'Syncing wallet...' : connectedLabel ?? shortAddress(displayAddress)}
           <DotsThreeVertical size={15} />
         </button>
         {menuOpen ? (
@@ -111,6 +131,7 @@ function AppKitWalletButton({
             <button type="button" onClick={() => {
               setMenuOpen(false)
               disconnect()
+              void disconnectAppKit({ namespace: 'eip155' })
             }}>
               <Wallet size={15} />
               Disconnect
