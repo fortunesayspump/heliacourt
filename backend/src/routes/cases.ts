@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { and, eq } from 'drizzle-orm'
 import type { FastifyInstance } from 'fastify'
 import { enqueueHearingJob, listHearingJobs, retryOnchainSettlement } from '../agents/hearings/index.js'
@@ -12,7 +13,7 @@ import { verifyCaseCancellationReceipt, verifyCaseFundingReceipt, verifyCaseOpen
 import { getCaseRecordedReceipts, getCaseResult, getRecordedReceiptLedgerRows, isPublicListCase, summarizeCase, summarizeCaseDetail, summarizeLedgerRows } from './cases.presenter.js'
 import { recordCaseAddedFunding, recordCaseCancellation, recordCaseOpen } from './cases.receipts.js'
 import { ensureUser, findCaseJob, isFollowingCase } from './cases.repository.js'
-import { addFundingReceiptSchema, cancelCaseReceiptSchema, caseAccessChallengeSchema, createCaseSchema, followCaseSchema, signedCaseAccessSchema } from './cases.schemas.js'
+import { addFundingReceiptSchema, adminSeedCasesSchema, cancelCaseReceiptSchema, caseAccessChallengeSchema, createCaseSchema, followCaseSchema, signedCaseAccessSchema } from './cases.schemas.js'
 import { createCaseId, isSupportedPredictionMarketLink, normalizeWallet, supportedPredictionMarketHosts } from './cases.utils.js'
 
 export async function caseRoutes(app: FastifyInstance) {
@@ -60,6 +61,61 @@ export async function caseRoutes(app: FastifyInstance) {
       caseId,
       deleted: true,
     }
+  })
+
+  app.post('/cases/admin/bulk', async (request, reply) => {
+    const admin = authorizeAdminRequest(request.headers)
+    if (!admin.ok) return reply.status(admin.status).send({ error: admin.error })
+
+    const parsed = adminSeedCasesSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        error: 'invalid admin case seed request',
+        issues: formatValidationIssues(parsed.error),
+      })
+    }
+
+    const seeded = []
+    const rejected = []
+    for (const data of parsed.data.cases) {
+      const predictionMarketLink = data.links.find(isSupportedPredictionMarketLink)
+      if (!predictionMarketLink) {
+        rejected.push({
+          question: data.question,
+          error: 'prediction market link required',
+          supportedMarkets: supportedPredictionMarketHosts,
+        })
+        continue
+      }
+
+      const marketCase: MarketCase = {
+        id: data.id ?? createAdminSeedCaseId(data.question, predictionMarketLink),
+        question: data.question,
+        context: [
+          data.context || undefined,
+          `Prediction market: ${predictionMarketLink}`,
+        ].filter(Boolean).join('\n\n'),
+        links: data.links.filter(Boolean),
+        imageUrl: data.imageUrl,
+        type: data.type as CaseType,
+        visibility: data.visibility,
+        payerVisibility: data.payerVisibility,
+        createdAt: data.createdAt ?? new Date().toISOString(),
+      }
+      const job = await enqueueHearingJob(marketCase)
+      seeded.push({
+        caseId: marketCase.id,
+        jobId: job.id,
+        status: job.status,
+        title: marketCase.question,
+      })
+    }
+
+    return reply.status(seeded.length ? 202 : 400).send({
+      status: seeded.length ? 'queued' : 'rejected',
+      seeded,
+      rejected,
+    })
   })
 
   app.post('/cases/:caseId/challenge', async (request, reply) => {
@@ -412,4 +468,14 @@ export async function caseRoutes(app: FastifyInstance) {
       job,
     })
   })
+}
+
+function createAdminSeedCaseId(question: string, marketLink: string) {
+  const slug = question
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 42)
+  const digest = createHash('sha256').update(`${question}:${marketLink}`).digest('hex').slice(0, 12)
+  return `market-${slug || 'case'}-${digest}`
 }

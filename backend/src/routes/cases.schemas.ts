@@ -26,6 +26,20 @@ export const createCaseSchema = z.object({
   }),
 })
 
+export const adminSeedCasesSchema = z.object({
+  cases: z.array(z.object({
+    id: z.string().trim().min(1).optional(),
+    question: z.string().trim().min(1),
+    context: z.string().trim().optional(),
+    links: z.array(z.string().trim().url()).min(1),
+    imageUrl: z.string().trim().url().optional(),
+    type: z.enum(['crypto-market', 'prediction-market', 'macro', 'real-world-event']).default('prediction-market'),
+    visibility: z.enum(['public', 'unlisted', 'private']).default('public'),
+    payerVisibility: z.enum(['public', 'private']).default('private'),
+    createdAt: z.string().datetime().optional(),
+  })).min(1).max(50),
+})
+
 export const signedCaseAccessSchema = z.object({
   wallet: walletSchema,
   auth: z.object({
