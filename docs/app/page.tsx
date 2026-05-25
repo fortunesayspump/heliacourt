@@ -81,6 +81,11 @@ export default function DocsHome() {
               Helia Court turns prediction-market questions into funded proceedings. Agents gather evidence, argue both sides,
               issue verdicts, and leave Arc receipts for settlement and review.
             </p>
+            <div className="doc-meta" aria-label="Documentation metadata">
+              <span>Arc testnet</span>
+              <span>ERC-8004</span>
+              <span>x402 paid reads</span>
+            </div>
             <div className="quick-grid">
               {quickLinks.map(([title, detail, href]) => (
                 <a href={href} key={href}>
@@ -212,12 +217,6 @@ Flow:
           </section>
         </article>
 
-        <aside className="toc" aria-label="On this page">
-          <span>On this page</span>
-          {navItems.map(([label, href]) => (
-            <a href={href} key={href}>{label}</a>
-          ))}
-        </aside>
       </div>
     </main>
   )
