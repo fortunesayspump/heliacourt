@@ -43,6 +43,7 @@ research/
 .codex-backup/
 .tmp-*/
 tmp/
+tmp-voiceover/
 scripts/
 local/
 
