@@ -34,6 +34,8 @@ async function planWitnessToolsWithAi(agentId: string, marketCase: MarketCase, i
       'Select only the tools needed for this witness to answer the current court instruction.',
       'The witness is an AI with tools: do not rely on keyword templates, reason from the actual question, context, instruction, and witness role.',
       'Choose primary tools for direct evidence. Add supporting tools only when they materially reduce uncertainty or can verify a gap.',
+      'When an instruction includes candidate source URLs from prior evidence, a scraper/source-quality/timeline/research witness should inspect those URLs before asking the user for links.',
+      'For unresolved will-markets, prefer tools that test catalysts, blockers, timing windows, and mechanism evidence instead of only checking whether the event already happened.',
       'If this witness lacks the right tool, choose no tool or one narrow supporting check; the speaking AI can request another witness later.',
       'Return JSON only.',
     ].join('\n'),
@@ -100,7 +102,7 @@ function planWitnessToolsDeterministically(agentId: string, marketCase: MarketCa
 function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: string): ToolIntent[] {
   switch (agentId) {
     case 'web-scraper-witness':
-      return [{ capability: 'web_page_scrape', reason: 'Aletheia needs to scrape supplied URLs and extract exact page claims, dates, and relevance to the resolution rule.' }]
+      return [{ capability: 'web_page_scrape', reason: 'Aletheia needs to scrape supplied or ledger-discovered URLs and extract exact page claims, dates, source trails, and relevance to the resolution rule.' }]
     case 'visual-evidence-witness':
       return [{ capability: 'visual_page_analysis', reason: 'Eikon needs to inspect supplied images or screenshots for visible text, charts, timestamps, logos, and visual-only evidence.' }]
     case 'pythia-prediction-witness': {

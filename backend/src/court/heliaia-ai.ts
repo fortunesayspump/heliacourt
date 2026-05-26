@@ -98,7 +98,11 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
     const fallbackFactory = fallbackFactories[agentId]
     if (!fallbackFactory) throw new Error(`No fallback runner for ${agentId}`)
 
-    const effectiveInstruction = buildEffectiveInstruction(agentId, step, transcript)
+    const effectiveInstruction = appendSourceTrailInstruction(
+      agentId,
+      buildEffectiveInstruction(agentId, step, transcript),
+      artifacts,
+    )
     const toolEvidence = await getWitnessToolEvidence(agentId, marketCase, effectiveInstruction)
     const evidenceLedger = buildEvidenceLedger({
       marketCase,
@@ -271,6 +275,75 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
     artifacts,
     transcript,
     recordHash: createDemoRecordHash(marketCase.id, artifacts),
+  }
+}
+
+function appendSourceTrailInstruction(agentId: string, instruction: string, artifacts: CourtArtifact[]) {
+  if (agentId !== 'web-scraper-witness' && agentId !== 'skepsis-source-quality-witness' && agentId !== 'chronos-timeline-witness' && agentId !== 'sophia-research-witness') {
+    return instruction
+  }
+
+  const sourceUrls = artifacts
+    .flatMap((artifact) => artifact.toolEvidence ?? [])
+    .filter((evidence) => evidence.capability === 'web_news_search' || evidence.capability === 'prediction_market_data' || evidence.capability === 'web_page_scrape')
+    .flatMap((evidence) => evidence.sources.flatMap((source) => {
+      if (!source.url || !/^https?:\/\//i.test(source.url)) return []
+      return [{
+        capability: evidence.capability,
+        title: source.title,
+        url: source.url,
+        observedAt: source.observedAt,
+      }]
+    }))
+    .sort((left, right) => scoreReusableSource(right) - scoreReusableSource(left))
+
+  const seen = new Set<string>()
+  const reusable = sourceUrls.filter((source) => {
+    const key = normalizeSourceUrl(source.url)
+    if (!key || seen.has(key)) return false
+    seen.add(key)
+    return true
+  }).slice(0, 8)
+
+  if (!reusable.length) return instruction
+
+  const sourceTrail = reusable
+    .map((source, index) => `${index + 1}. ${source.title} (${source.capability}) ${source.url}`)
+    .join('\n')
+
+  return `${instruction}\n\nCandidate source URLs already discovered in the evidence ledger. If the live request asks for cited, discovered, catalyst, blocker, source-quality, or date verification, inspect these before asking the user for a URL:\n${sourceTrail}`
+}
+
+function scoreReusableSource(source: { capability: string; title: string; url: string; observedAt?: string }) {
+  const host = getHostname(source.url)
+  let score = 0
+  if (source.capability === 'web_news_search') score += 8
+  if (source.capability === 'web_page_scrape') score += 5
+  if (source.capability === 'prediction_market_data') score += 2
+  if (!/polymarket\.com|kalshi\.com|manifold\.markets/i.test(host)) score += 5
+  if (/\b(reuters|apnews|state\.gov|defense|gov|fifa|uefa|official|xinhua|pla|mnd|congress|sec|cftc)\b/i.test(`${host} ${source.title}`)) score += 4
+  if (source.observedAt && !Number.isNaN(Date.parse(source.observedAt))) score += 1
+  return score
+}
+
+function normalizeSourceUrl(value: string) {
+  try {
+    const url = new URL(value)
+    url.hash = ''
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|fbclid|gclid|mc_)/i.test(key)) url.searchParams.delete(key)
+    }
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
+function getHostname(value: string) {
+  try {
+    return new URL(value).hostname.replace(/^www\./i, '').toLowerCase()
+  } catch {
+    return ''
   }
 }
 

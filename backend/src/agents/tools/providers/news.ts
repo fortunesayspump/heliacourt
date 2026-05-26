@@ -738,6 +738,13 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
   const resolutionQuery = `${base} resolution criteria official source`
   const timingQuery = `${entities || base} timeline deadline reported confirmed`
   const credibilityQuery = `${entities || base} latest credible reporting source`
+  const catalystQueries = getCatalystQueries({
+    base,
+    entities: entities || base,
+    genres,
+    quotedTerms,
+    instruction,
+  })
   const exactEntityQueries = exactEntities
     ? [
         `${exactEntities} ${genres.join(' ')} latest credible reporting`,
@@ -765,10 +772,61 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
       ]
     : []
 
-  return [...new Set([base, ...exactEntityQueries, ...liveQueries, ...transcriptQueries, genreQuery, officialQuery, resolutionQuery, timingQuery, credibilityQuery])]
+  return [...new Set([base, ...exactEntityQueries, ...liveQueries, ...transcriptQueries, ...catalystQueries, genreQuery, officialQuery, resolutionQuery, timingQuery, credibilityQuery])]
     .map((item) => getCaseSearchQuery(item))
     .filter(Boolean)
     .slice(0, 14)
+}
+
+function getCatalystQueries({
+  base,
+  entities,
+  genres,
+  quotedTerms,
+  instruction,
+}: {
+  base: string
+  entities: string
+  genres: ReturnType<typeof getMarketGenres>
+  quotedTerms: string
+  instruction: string
+}) {
+  const queries: string[] = []
+  const requestedCatalyst = /\b(catalyst|mechanism|pathway|trigger|blocker|buildup|preparation|exercise|official statement|source gap)\b/i.test(instruction)
+
+  if (requestedCatalyst || genres.includes('geopolitics')) {
+    queries.push(
+      `${entities} military exercises buildup official statement latest`,
+      `${entities} trigger escalation warning signs latest`,
+      `${entities} defense ministry official statement drills`,
+      `${entities} satellite logistics troop movement reporting`,
+    )
+  }
+
+  if (requestedCatalyst || genres.includes('politics')) {
+    queries.push(
+      `${entities} campaign polling official filing latest`,
+      `${entities} endorsement fundraising ballot access latest`,
+      `${entities} election catalyst blocker credible reporting`,
+    )
+  }
+
+  if (requestedCatalyst || genres.includes('business') || genres.includes('science-tech')) {
+    queries.push(
+      `${entities} announcement milestone revenue official source latest`,
+      `${entities} launch roadmap delay catalyst latest`,
+      `${entities} ${quotedTerms || 'market question'} evidence blocker source`,
+    )
+  }
+
+  if (requestedCatalyst || genres.includes('sports')) {
+    queries.push(
+      `${entities} official team news injuries roster odds latest`,
+      `${entities} schedule qualification standings official source`,
+    )
+  }
+
+  return queries.length ? queries : [`${base} catalyst blocker latest evidence`]
 }
 
 function getQuotedTerms(value: string) {

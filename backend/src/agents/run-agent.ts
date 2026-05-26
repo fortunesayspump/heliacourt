@@ -183,6 +183,8 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           'ask another agent when their tools or role would help',
           'for unresolved will-markets, test catalysts and pathways before treating non-occurrence as decisive',
           'for multi-outcome events, name the filed contract and sibling outcomes that matter',
+          'when search has already found URLs, tell scraper/source-quality/timeline witnesses to inspect those URLs instead of asking the user for links',
+          'treat market odds as calibration, not proof; do not call odds stale without volume/history evidence',
           'say uncertainty plainly',
         ],
         avoid: [
@@ -271,7 +273,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
         rule: 'If your tools cannot answer the live question, set requestedAgentId/request for the best matching witness instead of guessing. If that witness/tool already failed on the same point, change strategy: ask for a catalyst/pathway, source alternative, sibling outcome comparison, confidence cap, or move to counsel clash.',
         examplesByCapability: [
           { need: 'fresh public facts or headlines', agentId: 'hermes-news-witness' },
-          { need: 'exact source page content or cited URL text', agentId: 'web-scraper-witness' },
+          { need: 'exact source page content, cited URL text, or search-discovered source inspection', agentId: 'web-scraper-witness' },
           { need: 'screenshot, image, chart, or page visual reading', agentId: 'visual-evidence-witness' },
           { need: 'social profile, post, follower, tweet, or mention counts', agentId: 'social-count-witness' },
           { need: 'wallet, contract, token, or exchange-flow data', agentId: 'argos-onchain-witness' },
