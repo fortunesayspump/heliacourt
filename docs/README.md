@@ -2,6 +2,8 @@
 
 This directory is also the standalone docs app for `docs.heliacourt.xyz`.
 
+For builders using the repo as a template, start with the root [STARTER_KIT.md](../STARTER_KIT.md). This docs package is the public product documentation site; the starter guide explains the repo layout, customization points, and deployment shape.
+
 Run it locally with:
 
 ```bash
