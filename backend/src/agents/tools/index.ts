@@ -17,7 +17,7 @@ const toolEvidenceCacheTtlMs = 2 * 60 * 1000
 export async function getWitnessToolEvidence(agentId: string, marketCase: MarketCase, instruction = ''): Promise<ToolEvidence[]> {
   if (process.env.HELIA_AI_TOOL_LOOP !== 'false') {
     const loopEvidence = await runAiToolLoop(agentId, marketCase, instruction)
-    if (loopEvidence?.length) return loopEvidence
+    if (loopEvidence?.length) return await enrichWeakEvidence(agentId, marketCase, instruction, [], loopEvidence)
   }
 
   const plan = await planWitnessTools(agentId, marketCase, instruction)
@@ -33,12 +33,14 @@ export async function getWitnessToolEvidence(agentId: string, marketCase: Market
     })
   }
 
-  return evidence.map((item, index) => ({
+  const selectedEvidence: ToolEvidence[] = evidence.map((item, index) => ({
     ...item,
     selected: true,
     relevance: index < plan.primaryCount ? 'primary' : item.status === 'ok' ? 'supporting' : 'low',
     plannerReason: intents[index]?.reason,
   }))
+
+  return await enrichWeakEvidence(agentId, marketCase, instruction, intents, selectedEvidence)
 }
 
 async function runAiToolLoop(agentId: string, marketCase: MarketCase, instruction: string): Promise<ToolEvidence[] | undefined> {
@@ -67,7 +69,7 @@ async function runAiToolLoop(agentId: string, marketCase: MarketCase, instructio
     evidence.push({
       ...item,
       selected: true,
-      relevance: index === 0 ? 'primary' : item.status === 'ok' ? 'supporting' : 'low',
+      relevance: (index === 0 ? 'primary' : item.status === 'ok' ? 'supporting' : 'low') as ToolEvidence['relevance'],
       plannerReason: decision.reason ?? `AI witness called ${decision.capability}.`,
     })
 
@@ -78,7 +80,7 @@ async function runAiToolLoop(agentId: string, marketCase: MarketCase, instructio
       evidence.push({
         ...visualEvidence,
         selected: true,
-        relevance: visualEvidence.status === 'ok' ? 'supporting' : 'low',
+        relevance: (visualEvidence.status === 'ok' ? 'supporting' : 'low') as ToolEvidence['relevance'],
         plannerReason: fallbackVisualReason,
       })
     }
@@ -206,6 +208,78 @@ function isWeakTextExtraction(evidence: ToolEvidence) {
 
   return /\b(blocked|access denied|forbidden|captcha|bot protection|login|sign up|javascript|js-only|empty|shell|waf|challenge|no readable text|no visual target|did not expose|could not be inspected|unavailable)\b/i.test(text)
     || /does not prove: the page did not expose/i.test(text)
+}
+
+async function enrichWeakEvidence(agentId: string, marketCase: MarketCase, instruction: string, intents: ToolIntent[], evidence: ToolEvidence[]) {
+  const repairs = getRepairIntents(agentId, marketCase, instruction, intents, evidence)
+  if (!repairs.length) return evidence
+
+  const repairedEvidence = [...evidence]
+  for (const repair of repairs) {
+    if (repairedEvidence.some((item) => item.capability === repair.capability)) continue
+    const item = await runToolIntentWithTimeout(repair.capability, marketCase, instruction)
+    repairedEvidence.push({
+      ...item,
+      selected: true,
+      relevance: (item.status === 'ok' ? 'supporting' : 'low') as ToolEvidence['relevance'],
+      plannerReason: repair.reason,
+    })
+  }
+
+  return repairedEvidence
+}
+
+function getRepairIntents(agentId: string, marketCase: MarketCase, instruction: string, intents: ToolIntent[], evidence: ToolEvidence[]): ToolIntent[] {
+  const repairs: ToolIntent[] = []
+  const text = `${marketCase.question} ${marketCase.context ?? ''} ${marketCase.links?.join(' ') ?? ''} ${instruction}`.toLowerCase()
+  const hasCapability = (capability: ToolEvidence['capability']) =>
+    intents.some((intent) => intent.capability === capability) || evidence.some((item) => item.capability === capability)
+  const isWeak = (capability: ToolEvidence['capability']) => evidence.some((item) => item.capability === capability && (item.status !== 'ok' || item.relevance === 'low' || isWeakTextExtraction(item)))
+  const isSports = /\b(sport|sports|game|match|team|player|squad|roster|national team|fifa|world cup|nba|mlb|nfl|nhl|tennis|atp|wta|ipl|score)\b/i.test(text)
+  const isMarket = marketCase.type === 'prediction-market' || /\b(polymarket|kalshi|manifold|odds|liquidity|market price|contract|outcome)\b/i.test(text)
+  const hasUrl = /https?:\/\//i.test(text)
+  const needsFreshContext = /\b(will|before|by|deadline|horizon|announce|launch|win|reach|above|below|close|deal|agreement|law|election)\b/i.test(text)
+
+  if (isSports && isWeak('sports_data') && !hasCapability('web_news_search')) {
+    repairs.push({ capability: 'web_news_search', reason: 'Repair context: sports provider evidence was empty/weak, so search fresh official score, roster, status, or news sources before testimony.' })
+  }
+
+  if (isSports && isWeak('sports_data') && hasUrl && !hasCapability('web_page_scrape')) {
+    repairs.push({ capability: 'web_page_scrape', reason: 'Repair context: sports provider evidence was weak, so scrape supplied market/source links for exact status and resolution text.' })
+  }
+
+  if (isMarket && isWeak('prediction_market_data') && !hasCapability('web_page_scrape')) {
+    repairs.push({ capability: 'web_page_scrape', reason: 'Repair context: prediction-market API evidence was empty/weak, so scrape the linked market/event page for outcomes, rules, and sibling contracts.' })
+  }
+
+  if (isMarket && isWeak('prediction_market_data') && !hasCapability('web_news_search')) {
+    repairs.push({ capability: 'web_news_search', reason: 'Repair context: market API evidence was weak, so search for the exact market/question and related catalysts before testimony.' })
+  }
+
+  if (isWeak('web_page_scrape') && !hasCapability('visual_page_analysis') && canUseVisualFallback(marketCase, instruction)) {
+    repairs.push({ capability: 'visual_page_analysis', reason: 'Repair context: page scraping was blocked, empty, or JS-heavy, so inspect a rendered screenshot for visible source content.' })
+  }
+
+  if (needsFreshContext && evidence.every((item) => item.status !== 'ok') && !hasCapability('web_news_search')) {
+    repairs.push({ capability: 'web_news_search', reason: 'Repair context: all selected tools failed; perform broad fresh-source discovery so the witness can state the best available evidence and limits.' })
+  }
+
+  if (agentId !== 'sophia-research-witness' && evidence.filter((item) => item.status !== 'ok' || item.relevance === 'low').length >= 2 && !hasCapability('web_news_search')) {
+    repairs.push({ capability: 'web_news_search', reason: 'Repair context: multiple tools were weak; use broad source discovery to avoid a dead-end handoff loop.' })
+  }
+
+  return dedupeRepairIntents(repairs).slice(0, 3)
+}
+
+function dedupeRepairIntents(intents: ToolIntent[]) {
+  const seen = new Set<ToolEvidence['capability']>()
+  const output: ToolIntent[] = []
+  for (const intent of intents) {
+    if (seen.has(intent.capability)) continue
+    seen.add(intent.capability)
+    output.push(intent)
+  }
+  return output
 }
 
 async function runCachedToolIntent(capability: ToolEvidence['capability'], marketCase: MarketCase, instruction = '') {

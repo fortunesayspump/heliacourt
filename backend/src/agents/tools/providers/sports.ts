@@ -112,7 +112,7 @@ export async function getSportsEvidence(marketCase: MarketCase, instruction = ''
       provider: process.env.THE_ODDS_API_KEY ? 'sportsdb+the-odds-api' : 'sportsdb',
       query,
       fetchedAt,
-      status: observations.length ? 'ok' : 'empty',
+      status: sources.length ? 'ok' : 'empty',
       observations,
       sources,
     }
