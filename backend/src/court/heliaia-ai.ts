@@ -262,6 +262,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
   }
 
   for (const [index, step] of procedure.entries()) {
+    await pushPreVerdictRescue(step)
     if (shouldSkipRedundantPlannedStep(step, procedure[index + 1], transcript)) continue
     const direction = buildMagistrateDirectionTurn(marketCase, step, transcript)
     await appendTurn(direction)
@@ -275,6 +276,27 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
     artifacts,
     transcript,
     recordHash: createDemoRecordHash(marketCase.id, artifacts),
+  }
+
+  async function pushPreVerdictRescue(step: CourtProcedureStep) {
+    if (!['closing', 'risk-instruction', 'calibration', 'verdict'].includes(step.phase)) return
+    if (dynamicHandoffs >= maxDynamicHandoffs) return
+
+    const rescue = planPreVerdictRescue(step, artifacts)
+    if (!rescue) return
+    if (isDuplicativeHandoff(rescue.agentId, rescue.request, artifacts)) return
+
+    dynamicHandoffs += 1
+    const rescueStep: CourtProcedureStep = {
+      agentId: rescue.agentId,
+      phase: 'direct',
+      stage: `Pre-verdict evidence rescue: ${rescue.agentId}`,
+      issue: step.issue ?? 'critical pre-verdict evidence gap',
+      request: rescue.request,
+    }
+    const direction = buildMagistrateDirectionTurn(marketCase, rescueStep, transcript)
+    await appendTurn(direction)
+    await push(rescueStep)
   }
 }
 
@@ -570,6 +592,59 @@ function planAdaptiveFollowUp(
         agentId: 'skepsis-source-quality-witness',
         request: `Skepsis, grade whether the sources for ${issue} are official, fresh, direct to the resolution rule, or merely background. Name what forecast weight the court should allow.`,
       }
+    }
+  }
+
+  return undefined
+}
+
+function planPreVerdictRescue(
+  step: CourtProcedureStep,
+  artifacts: CourtArtifact[],
+): { agentId: string; request: string } | undefined {
+  const recent = artifacts.slice(-10)
+  const text = recent
+    .map((artifact) => `${artifact.agentId} ${artifact.summary} ${artifact.transcriptMessage ?? ''} ${(artifact.risks ?? []).join(' ')} ${artifact.request ?? ''}`)
+    .join(' ')
+  if (!/\b(missing|gap|need|needs|unresolved|not found|empty|cannot confirm|no official|not ready|blocker)\b/i.test(text)) return undefined
+
+  const called = (agentId: string) => artifacts.filter((artifact) => artifact.agentId === agentId).length
+  const phaseContext = step.phase === 'verdict'
+    ? 'Final chance before verdict.'
+    : 'Before closing and risk calibration.'
+
+  if (/\b(primary calendar|filing deadline|ballot access|election calendar|deadline|days remain|days remaining|schedule|event window)\b/i.test(text) && called('chronos-timeline-witness') < 3) {
+    return {
+      agentId: 'chronos-timeline-witness',
+      request: `${phaseContext} Resolve the timing gap with search, scrape, and calendar evidence: exact deadline/window, official source checked, days remaining, and whether the missing date should cap confidence or change probability.`,
+    }
+  }
+
+  if (/\b(order\s*book|bid[- ]?ask|spread|depth|volume history|recent trade|market freshness|stale quote|price moved)\b/i.test(text) && called('pythia-prediction-witness') < 3) {
+    return {
+      agentId: 'pythia-prediction-witness',
+      request: `${phaseContext} Resolve the market microstructure gap: top bid/ask, spread/depth, volume/activity if available, sibling outcomes, and whether freshness supports copying, fading, or only lightly weighting the price.`,
+    }
+  }
+
+  if (/\b(sports|scoreboard|bracket|playoff|standings|roster|squad|fixture|match status|game status|nba|mlb|fifa|tennis|atp|wta|ipl)\b/i.test(text) && called('notus-weather-data-witness') < 3) {
+    return {
+      agentId: 'notus-weather-data-witness',
+      request: `${phaseContext} Resolve the sports data gap using structured sports sources and fallbacks: live/final status, schedule/standings/bracket context, official source path checked, and whether an empty provider result is a technical gap or evidence.`,
+    }
+  }
+
+  if (/\b(official source|resolution rule|exact rule|source quality|source directness|page source|scrape|blocked|js-rendered|primary source)\b/i.test(text) && called('skepsis-source-quality-witness') < 3) {
+    return {
+      agentId: 'skepsis-source-quality-witness',
+      request: `${phaseContext} Resolve the source-quality gap: grade officialness, freshness, directness to the resolution rule, blocked/JS limitations, and what forecast weight the court may safely allow.`,
+    }
+  }
+
+  if (/\b(catalyst|mechanism|pathway|trigger|blocker|loophole|background only)\b/i.test(text) && called('sophia-research-witness') < 2) {
+    return {
+      agentId: 'sophia-research-witness',
+      request: `${phaseContext} Synthesize the remaining forecast gap: concrete Yes catalysts, No blockers, source trail, timing fit, and whether the record supports a verdict or only a confidence cap.`,
     }
   }
 
