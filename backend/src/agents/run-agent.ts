@@ -50,14 +50,15 @@ export async function runPromptedAgent({
     ? result.content.requestedAgentId
     : inferredRequest?.agentId
   const rawRequest = result.content.request ?? inferredRequest?.request
-  const requestedAgentId = getUsableRequestedAgentId(candidateRequestedAgentId, rawRequest, context)
+  const routedRequest = routeRequestedAgent(candidateRequestedAgentId, rawRequest)
+  const requestedAgentId = getUsableRequestedAgentId(routedRequest.agentId, routedRequest.request, context)
 
   return await finalizeArtifact(withRunMetadata({
       ...fallback,
       summary: result.content.summary ?? `${agent.name} answered the court.`,
       transcriptMessage: result.content.message ?? `${agent.name} could not produce a courtroom message.`,
       requestedAgentId,
-      request: requestedAgentId ? rawRequest : undefined,
+      request: requestedAgentId ? routedRequest.request : undefined,
       confidence: result.content.confidence ?? fallback.confidence,
       claims: result.content.claims?.length ? result.content.claims : [],
       risks: result.content.risks?.length ? result.content.risks : [],
@@ -71,6 +72,19 @@ export async function runPromptedAgent({
       model: result.model,
       runMode: agent.runMode,
     }), context)
+}
+
+function routeRequestedAgent(agentId: string | undefined, request: string | undefined) {
+  if (!agentId || !request) return { agentId, request }
+
+  if (agentId === 'web-scraper-witness' && /\b(order\s*book|bid[- ]?ask|spread|depth|best bid|best ask|clob|stale quote|market freshness|volume history|recent trades?)\b/i.test(request)) {
+    return {
+      agentId: 'pythia-prediction-witness',
+      request: `Pythia, use prediction-market/CLOB data rather than page scraping for this market microstructure request: ${request}`,
+    }
+  }
+
+  return { agentId, request }
 }
 
 function inferSpokenHandoff(message: string | undefined, request: string | undefined, currentAgentId: string) {

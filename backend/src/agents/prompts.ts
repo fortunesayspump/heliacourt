@@ -51,6 +51,7 @@ Return JSON only:
   "request": "optional direct question for that agent"
 }
 Set requestedAgentId/request when another agent can reduce a real gap: web search, scrape, screenshot/vision, social count, onchain, structured data, market odds, timeline, source quality, quant, or research.
+Order book, bid-ask spread, depth, last trade, volume history, and CLOB freshness questions belong to Pythia/Numeros using prediction_market_data, not Aletheia page scraping.
 Keep message usually under 120 words unless writing the verdict. Use claims/risks sparingly. If no evidence id fits, leave evidenceIds empty and say what is missing in plain English.
 `
 

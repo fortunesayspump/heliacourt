@@ -9,6 +9,19 @@ type PolymarketMarket = {
   endDate?: string
   liquidity?: string
   volume?: string
+  volume24hr?: number
+  volume1wk?: number
+  volume1mo?: number
+  volumeClob?: number
+  liquidityClob?: number
+  bestBid?: number
+  bestAsk?: number
+  spread?: number
+  lastTradePrice?: number
+  updatedAt?: string
+  acceptingOrders?: boolean
+  enableOrderBook?: boolean
+  clobTokenIds?: string
   outcomePrices?: string
   outcomes?: string
   description?: string
@@ -87,6 +100,14 @@ type CoinGeckoSimplePrice = Record<
 
 type JsonRecord = Record<string, unknown>
 
+type PolymarketOrderBook = {
+  market?: string
+  asset_id?: string
+  timestamp?: string
+  bids?: Array<{ price?: string; size?: string }>
+  asks?: Array<{ price?: string; size?: string }>
+}
+
 export async function getPredictionMarketEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
   const query = getCaseSearchQuery(marketCase.question)
   const fetchedAt = new Date().toISOString()
@@ -119,15 +140,22 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
       .filter((market) => !isPlaceholderMarketText(getPolymarketMarketText(market)))
       .slice(0, directPolymarketKeys.size ? 12 : 5)
 
+    const directPolymarketBooks = new Map<string, string>()
+    for (const market of relevantMarkets.filter((market) => directPolymarketKeys.has(getPolymarketKey(market) ?? ''))) {
+      const summary = await getPolymarketOrderBookSummary(market).catch(() => undefined)
+      if (summary) directPolymarketBooks.set(getPolymarketKey(market) ?? market.question ?? '', summary)
+    }
+
     for (const market of relevantMarkets) {
       const liquidity = market.liquidity ? Number(market.liquidity).toLocaleString('en-US', { maximumFractionDigits: 0 }) : 'unknown'
       const sourceKind = directPolymarketKeys.has(getPolymarketKey(market) ?? '') ? 'direct linked market/event' : 'search match'
-      observations.push(`Polymarket ${sourceKind}: ${market.question} has about ${liquidity} liquidity.${formatPolymarketOutcomes(market)}`)
+      const orderBookSummary = directPolymarketBooks.get(getPolymarketKey(market) ?? market.question ?? '') ?? formatPolymarketMarketMicrostructure(market)
+      observations.push(`Polymarket ${sourceKind}: ${market.question} has about ${liquidity} liquidity.${formatPolymarketOutcomes(market)}${orderBookSummary ? ` ${orderBookSummary}` : ''}`)
       sources.push({
         title: market.question ?? 'Polymarket market',
         url: market.sourceUrl ?? (market.eventSlug && market.slug ? `https://polymarket.com/event/${market.eventSlug}/${market.slug}` : market.slug ? `https://polymarket.com/event/${market.slug}` : undefined),
-        observedAt: market.endDate,
-        value: market.outcomePrices,
+        observedAt: market.updatedAt ?? market.endDate,
+        value: [market.outcomePrices, orderBookSummary].filter(Boolean).join(' | '),
       })
     }
 
@@ -560,6 +588,81 @@ function formatPolymarketOutcomes(market: PolymarketMarket) {
   return realPairs.length ? ` Outcomes: ${realPairs.slice(0, 8).join(', ')}.` : ''
 }
 
+function formatPolymarketMarketMicrostructure(market: PolymarketMarket) {
+  const parts = [
+    typeof market.bestBid === 'number' ? `best bid ${formatProbabilityText(market.bestBid)}` : undefined,
+    typeof market.bestAsk === 'number' ? `best ask ${formatProbabilityText(market.bestAsk)}` : undefined,
+    typeof market.spread === 'number' ? `spread ${(market.spread * 100).toFixed(2)} points` : undefined,
+    typeof market.lastTradePrice === 'number' ? `last trade ${formatProbabilityText(market.lastTradePrice)}` : undefined,
+    typeof market.volume24hr === 'number' ? `24h volume $${market.volume24hr.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : undefined,
+    typeof market.volume1wk === 'number' ? `1w volume $${market.volume1wk.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : undefined,
+    market.updatedAt ? `updated ${market.updatedAt}` : undefined,
+    market.acceptingOrders === false ? 'not accepting orders' : market.acceptingOrders === true ? 'accepting orders' : undefined,
+  ].filter(Boolean)
+
+  return parts.length ? `Order-book/microstructure: ${parts.join(', ')}.` : ''
+}
+
+async function getPolymarketOrderBookSummary(market: PolymarketMarket) {
+  const tokenIds = parseTextArray(market.clobTokenIds)
+  const outcomes = parseTextArray(market.outcomes)
+  const yesIndex = Math.max(0, outcomes.findIndex((outcome) => /^yes$/i.test(outcome)))
+  const yesTokenId = tokenIds[yesIndex] ?? tokenIds[0]
+  if (!yesTokenId || market.enableOrderBook === false) return formatPolymarketMarketMicrostructure(market)
+
+  const book = await fetchJson<PolymarketOrderBook>(`https://clob.polymarket.com/book?token_id=${encodeURIComponent(yesTokenId)}`)
+  const topBid = getTopBid(book)
+  const topAsk = getTopAsk(book)
+  const spread = typeof topBid?.price === 'number' && typeof topAsk?.price === 'number' ? topAsk.price - topBid.price : undefined
+  const bidDepthOneCent = sumDepthNear(book.bids, topBid?.price, 'bid')
+  const askDepthOneCent = sumDepthNear(book.asks, topAsk?.price, 'ask')
+  const timestamp = book.timestamp && /^\d+$/.test(book.timestamp)
+    ? new Date(Number(book.timestamp)).toISOString()
+    : market.updatedAt
+  const parts = [
+    topBid ? `CLOB top bid ${formatProbabilityText(topBid.price)} for ${formatSize(topBid.size)} shares` : undefined,
+    topAsk ? `top ask ${formatProbabilityText(topAsk.price)} for ${formatSize(topAsk.size)} shares` : undefined,
+    typeof spread === 'number' && Number.isFinite(spread) ? `bid-ask spread ${(spread * 100).toFixed(2)} points` : undefined,
+    typeof bidDepthOneCent === 'number' ? `bid depth within 1 point ${formatSize(bidDepthOneCent)} shares` : undefined,
+    typeof askDepthOneCent === 'number' ? `ask depth within 1 point ${formatSize(askDepthOneCent)} shares` : undefined,
+    typeof market.volume24hr === 'number' ? `24h volume $${market.volume24hr.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : undefined,
+    typeof market.volume1wk === 'number' ? `1w volume $${market.volume1wk.toLocaleString('en-US', { maximumFractionDigits: 0 })}` : undefined,
+    timestamp ? `book/market timestamp ${timestamp}` : undefined,
+  ].filter(Boolean)
+
+  return parts.length ? `Order book: ${parts.join(', ')}.` : formatPolymarketMarketMicrostructure(market)
+}
+
+function getTopBid(book: PolymarketOrderBook) {
+  return parseBookSide(book.bids).sort((left, right) => right.price - left.price)[0]
+}
+
+function getTopAsk(book: PolymarketOrderBook) {
+  return parseBookSide(book.asks).sort((left, right) => left.price - right.price)[0]
+}
+
+function parseBookSide(side?: Array<{ price?: string; size?: string }>) {
+  return (side ?? [])
+    .map((level) => ({
+      price: Number(level.price),
+      size: Number(level.size),
+    }))
+    .filter((level) => Number.isFinite(level.price) && Number.isFinite(level.size))
+}
+
+function sumDepthNear(side: PolymarketOrderBook['bids'] | PolymarketOrderBook['asks'], topPrice: number | undefined, direction: 'bid' | 'ask') {
+  if (typeof topPrice !== 'number') return undefined
+  const levels = parseBookSide(side)
+  const threshold = direction === 'bid' ? topPrice - 0.01 : topPrice + 0.01
+  return levels
+    .filter((level) => direction === 'bid' ? level.price >= threshold : level.price <= threshold)
+    .reduce((sum, level) => sum + level.size, 0)
+}
+
+function formatSize(value: number) {
+  return value.toLocaleString('en-US', { maximumFractionDigits: value >= 100 ? 0 : 2 })
+}
+
 async function fetchPolymarketEventPageFallbacks(question: string) {
   const candidates = getPolymarketEventSlugCandidates(question)
   const results = await Promise.allSettled(candidates.map((slug) => fetchPolymarketEventPage(slug)))
@@ -797,9 +900,9 @@ function parseTextArray(value: unknown): string[] {
   }
 }
 
-function formatProbabilityText(value: string) {
+function formatProbabilityText(value: string | number) {
   const numeric = Number(value)
-  if (!Number.isFinite(numeric)) return value
+  if (!Number.isFinite(numeric)) return String(value)
   return numeric <= 1 ? `${Math.round(numeric * 100)}%` : `${Math.round(numeric)}%`
 }
 
