@@ -25,6 +25,8 @@ type CoinGeckoSimplePrice = Record<string, {
 
 type CoinGeckoMarketChart = {
   prices?: Array<[number, number]>
+  total_volumes?: Array<[number, number]>
+  market_caps?: Array<[number, number]>
 }
 
 const cryptoDisplay: Record<string, { symbol: string; name: string }> = {
@@ -176,13 +178,20 @@ async function getCryptoMarketDataEvidence(assetIds: string[], marketText: strin
         value: String(quote.usd),
       })
 
-      const realizedVolatility = await getCryptoRealizedVolatility(assetId)
-      if (realizedVolatility) {
-        observations.push(`${asset.symbol}/USD 30-day realized volatility is about ${realizedVolatility.annualizedPercent.toFixed(1)}% annualized from CoinGecko daily closes.`)
+      const chartStats = await getCryptoChartStats(assetId)
+      if (chartStats) {
+        observations.push(`${asset.symbol}/USD 30-day realized volatility is about ${chartStats.annualizedPercent.toFixed(1)}% annualized from CoinGecko daily closes.`)
+        observations.push(
+          `${asset.symbol}/USD trend: 7d return ${formatPercent(chartStats.sevenDayReturnPercent)}, 30d return ${formatPercent(chartStats.thirtyDayReturnPercent)}, 30d range ${formatUsd(chartStats.low30d)}-${formatUsd(chartStats.high30d)}, max drawdown ${formatPercent(chartStats.maxDrawdownPercent)}.`,
+        )
+        if (chartStats.latestVolume) {
+          observations.push(`${asset.symbol}/USD latest daily chart volume is about ${formatUsd(chartStats.latestVolume)}.`)
+        }
         sources.push({
           title: `${asset.symbol}/USD CoinGecko 30-day market chart`,
           url: `https://api.coingecko.com/api/v3/coins/${assetId}/market_chart?vs_currency=usd&days=30&interval=daily`,
-          value: `${realizedVolatility.annualizedPercent.toFixed(1)}% annualized`,
+          observedAt: chartStats.lastObservedAt,
+          value: `${chartStats.annualizedPercent.toFixed(1)}% annualized; 7d ${formatPercent(chartStats.sevenDayReturnPercent)}; 30d ${formatPercent(chartStats.thirtyDayReturnPercent)}`,
         })
       }
     }
@@ -197,21 +206,50 @@ async function getCryptoMarketDataEvidence(assetIds: string[], marketText: strin
   }
 }
 
-async function getCryptoRealizedVolatility(assetId: string) {
+async function getCryptoChartStats(assetId: string) {
   const chart = await fetchJson<CoinGeckoMarketChart>(
     `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(assetId)}/market_chart?vs_currency=usd&days=30&interval=daily`,
   )
-  const prices = (chart.prices ?? []).map(([, price]) => price).filter((price) => Number.isFinite(price) && price > 0)
+  const pricePoints = (chart.prices ?? []).filter(([, price]) => Number.isFinite(price) && price > 0)
+  const prices = pricePoints.map(([, price]) => price)
   const returns = prices.slice(1).map((price, index) => Math.log(price / prices[index])).filter((value) => Number.isFinite(value))
   if (returns.length < 7) return undefined
 
   const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length
   const variance = returns.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / Math.max(1, returns.length - 1)
   const dailyVolatility = Math.sqrt(variance)
+  const latest = prices.at(-1)
+  const sevenDaysAgo = prices.at(Math.max(0, prices.length - 8))
+  const first = prices[0]
+  const high30d = Math.max(...prices)
+  const low30d = Math.min(...prices)
+  const maxDrawdownPercent = getMaxDrawdownPercent(prices)
+  const latestVolume = (chart.total_volumes ?? []).map(([, value]) => value).filter((value) => Number.isFinite(value) && value > 0).at(-1)
 
   return {
     annualizedPercent: dailyVolatility * Math.sqrt(365) * 100,
+    sevenDayReturnPercent: latest && sevenDaysAgo ? ((latest / sevenDaysAgo) - 1) * 100 : 0,
+    thirtyDayReturnPercent: latest && first ? ((latest / first) - 1) * 100 : 0,
+    high30d,
+    low30d,
+    maxDrawdownPercent,
+    latestVolume,
+    lastObservedAt: pricePoints.at(-1)?.[0] ? new Date(pricePoints.at(-1)![0]).toISOString() : undefined,
   }
+}
+
+function getMaxDrawdownPercent(prices: number[]) {
+  let peak = prices[0] ?? 0
+  let maxDrawdown = 0
+
+  for (const price of prices) {
+    peak = Math.max(peak, price)
+    if (peak > 0) {
+      maxDrawdown = Math.min(maxDrawdown, ((price / peak) - 1) * 100)
+    }
+  }
+
+  return maxDrawdown
 }
 
 function formatUsd(value: number) {
@@ -220,4 +258,9 @@ function formatUsd(value: number) {
     currency: 'USD',
     maximumFractionDigits: value >= 100 ? 0 : 2,
   }).format(value)
+}
+
+function formatPercent(value: number) {
+  if (!Number.isFinite(value)) return 'unknown'
+  return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
 }

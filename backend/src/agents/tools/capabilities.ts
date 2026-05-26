@@ -17,14 +17,14 @@ export type ToolCapabilityDescriptor = {
 
 export function executableCapabilities() {
   return [
-    { capability: 'prediction_market_data', description: 'Polymarket/Kalshi/Manifold odds, liquidity, market existence, and crypto target context.' },
-    { capability: 'market_data', description: 'Crypto/equity/commodity quote and price-distance data.' },
-    { capability: 'web_news_search', description: 'Fresh web/news/source discovery and headline flow.' },
+    { capability: 'prediction_market_data', description: 'Polymarket/Kalshi/Manifold odds, liquidity, order-book/depth/activity, market existence, and crypto target context.' },
+    { capability: 'market_data', description: 'Crypto/equity/commodity quote, price distance, 7d/30d trend, realized volatility, drawdown, and volume context.' },
+    { capability: 'web_news_search', description: 'Fresh web/news/source discovery, headline flow, source coverage, authority mix, and freshness checks.' },
     { capability: 'web_page_scrape', description: 'Exact supplied or discovered URL extraction, dates, page claims, and source trails.' },
     { capability: 'visual_page_analysis', description: 'Screenshot/image/page visual reading, visible text, charts, odds, labels, logos, and timestamps.' },
     { capability: 'social_activity_data', description: 'Public social profile/post/follower/count evidence and social fallback reads.' },
-    { capability: 'onchain_data', description: 'Public RPC address-level wallet/contract/token-flow context.' },
-    { capability: 'weather_data', description: 'Weather conditions and forecast by extracted location.' },
+    { capability: 'onchain_data', description: 'Arc/Ethereum/Solana public RPC address-level wallet, contract, nonce, and transaction context.' },
+    { capability: 'weather_data', description: 'Weather conditions, 72h precipitation, 7d daily forecast, and threshold risk flags by extracted location.' },
     { capability: 'sports_data', description: 'Sports events, teams, schedules, rosters, odds, and result context.' },
     { capability: 'calendar_data', description: 'Holidays, business days, deadlines, and operational calendar context.' },
   ] satisfies ToolCapabilityDescriptor[]

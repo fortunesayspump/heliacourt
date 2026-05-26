@@ -107,8 +107,8 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       return [{ capability: 'visual_page_analysis', reason: 'Eikon needs to inspect supplied images or screenshots for visible text, charts, timestamps, logos, and visual-only evidence.' }]
     case 'pythia-prediction-witness': {
       const intents: ToolIntent[] = [{ capability: 'prediction_market_data', reason: 'Pythia needs market odds, crypto prices, liquidity, and target-distance context for prediction-market testimony.' }]
-      if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5})\b/.test(marketCase.question)) {
-        intents.push({ capability: 'market_data', reason: 'The question mentions equities or ticker-like symbols, so tradfi quote data may support the market read.' })
+      if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5}|btc|bitcoin|eth|ethereum|sol|solana|crypto|price target)\b/i.test(marketCase.question)) {
+        intents.push({ capability: 'market_data', reason: 'The question mentions tradfi/crypto price context, so quote, trend, volatility, and target-distance data may support the market read.' })
       }
       return intents
     }
@@ -128,7 +128,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       if (/\b(sport|sports|game|match|team|player|squad|roster|national team|fifa|world cup|win|cover|score)\b/i.test(text)) {
         intents.push({ capability: 'sports_data', reason: 'The question looks sports-specific, so event and odds data may be relevant.' })
       }
-      if (/\b(holiday|calendar|business day|port|flight|shipment|logistics|market open|market close)\b/i.test(text)) {
+      if (/\b(holiday|calendar|business day|deadline|horizon|expiry|expires|by|before|after|date|port|flight|shipment|logistics|market open|market close)\b/i.test(text)) {
         intents.push({ capability: 'calendar_data', reason: 'The question may depend on public holidays, market/business days, or operational-calendar context.' })
       }
       if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5})\b/.test(marketCase.question)) {
@@ -175,6 +175,7 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
   const isTimeSensitive = /\b(within|next|today|tomorrow|hours?|days?|week|deadline|horizon|expiry|after|before)\b/i.test(text)
   const isAddressOrFlow = /\b(0x[a-f0-9]{40}|wallet|onchain|exchange flow|address|stablecoin|transfer|bridge|mint|burn)\b/i.test(text)
   const isStock = /\b(stock|equity|shares|\$[A-Z]{1,5}\b|nvidia|tesla|apple|microsoft|google|meta|amazon|coinbase|mstr)\b/i.test(marketCase.question)
+  const isSports = /\b(vs\.?|versus|nba|nfl|mlb|nhl|epl|ufc|soccer|football|basketball|baseball|hockey|tennis|atp|wta|roland garros|ipl|cricket|match|game|player|squad|roster|national team|world cup|fifa|spread|total)\b/i.test(text)
   const asksForExactSources = /https?:\/\//i.test(text) || /\b(scrape|website|url|page|official|credible|source|reported|article|forecast|roster|squad|fifa|weather site)\b/i.test(text)
   const asksVisualEvidence = /\b(image|photo|picture|screenshot|visual|chart|graph|map|diagram|tweet image|market card|read image|screen grab|screengrab)\b/i.test(text)
   const suppliedSocialProfile = /https?:\/\/(?:www\.)?(?:tiktok\.com\/@|instagram\.com\/|x\.com\/|twitter\.com\/|youtube\.com\/@)/i.test(text)
@@ -201,14 +202,17 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
   if (agentId !== 'pythia-prediction-witness' && !has('prediction_market_data') && (isCrypto || marketCase.type === 'prediction-market' || /\b(polymarket|kalshi|manifold|prediction market|odds|price target|reach|above|below|close)\b/i.test(text))) {
     intents.push({ capability: 'prediction_market_data', reason: 'Supporting context: prediction-market and price-distance evidence can help compare factual testimony against market-implied expectations.' })
   }
-  if (!has('market_data') && isStock) {
-    intents.push({ capability: 'market_data', reason: 'Supporting context: stock/equity quote data can anchor claims about current market movement.' })
+  if (!has('market_data') && (isStock || isCrypto)) {
+    intents.push({ capability: 'market_data', reason: 'Supporting context: quote, trend, realized volatility, and drawdown data can anchor numerical claims about current market movement.' })
+  }
+  if (!has('sports_data') && isSports) {
+    intents.push({ capability: 'sports_data', reason: 'Supporting context: sports markets need schedule, live/final status, team/player, and event data before counsel argues from generic sports narratives.' })
   }
   if (agentId !== 'argos-onchain-witness' && !has('onchain_data') && isAddressOrFlow) {
     intents.push({ capability: 'onchain_data', reason: 'Supporting context: address or transfer language requires address-level public RPC checks before anyone argues flow.' })
   }
-  if (!has('calendar_data') && isTimeSensitive && /\b(port|flight|shipment|logistics|business day|holiday|market open|market close|settlement)\b/i.test(text)) {
-    intents.push({ capability: 'calendar_data', reason: 'Supporting context: timing, holidays, and operational calendars can limit or explain the event horizon.' })
+  if (!has('calendar_data') && isTimeSensitive) {
+    intents.push({ capability: 'calendar_data', reason: 'Supporting context: deadlines, days remaining, business days, holidays, and operational calendars can limit or explain the event horizon.' })
   }
   if (agentId !== 'web-scraper-witness' && !has('web_page_scrape') && (asksForExactSources || isEventOrOperational)) {
     intents.push({ capability: 'web_page_scrape', reason: 'Supporting context: exact page extraction can verify what cited or search-discovered sources actually say.' })

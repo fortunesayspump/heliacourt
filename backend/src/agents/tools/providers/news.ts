@@ -143,8 +143,10 @@ export async function getNewsEvidence(marketCase: MarketCase, instruction = ''):
     .map((result, index) => (result.status === 'rejected' ? providerNames[index] : null))
     .filter((provider): provider is string => Boolean(provider))
   const hasFreshNewsLikeProvider = items.some((item) => item.source && !referenceProviders.has(item.source))
+  const sourceSummary = summarizeSearchSourceCoverage(items)
   const observations = [
     searchPlan.rationale ? `Search plan: ${searchPlan.rationale}` : undefined,
+    sourceSummary,
     ...(items.length && !hasFreshNewsLikeProvider
       ? ['No dedicated fresh-news provider returned direct recent news evidence; remaining hits are reference, academic, or community search context.']
       : []),
@@ -175,6 +177,40 @@ function describeSourceKind(source?: string) {
   if (!source) return 'web search result'
   if (referenceProviders.has(source)) return `${source} reference result`
   return `${source} web/news result`
+}
+
+function summarizeSearchSourceCoverage(items: SearchItem[]) {
+  if (!items.length) return undefined
+  const domains = [...new Set(items.map((item) => getDomain(item.url)).filter(Boolean))]
+  const officialLike = items.filter((item) => /\b(gov|mil|int|fifa|uefa|nba|nfl|mlb|nhl|reuters|apnews|sec|cftc|fed|who|cdc|state\.gov|defense)\b/i.test(`${getDomain(item.url)} ${item.title}`))
+  const datedItems = items
+    .map((item) => ({ ...item, time: parseObservedTime(item.observedAt) }))
+    .filter((item) => typeof item.time === 'number')
+    .sort((left, right) => (right.time ?? 0) - (left.time ?? 0))
+  const newest = datedItems[0]
+  const providerMix = [...new Set(items.map((item) => item.source).filter(Boolean))].slice(0, 6).join(', ')
+
+  return [
+    `Search coverage: ${items.length} relevant result(s) across ${domains.length || 'unknown'} domain(s)`,
+    providerMix ? `providers ${providerMix}` : undefined,
+    officialLike.length ? `${officialLike.length} official/primary/high-authority-looking result(s)` : 'no obvious official/primary source in top results',
+    newest?.observedAt ? `freshest dated result: ${newest.title} (${newest.observedAt})` : 'no reliable publication date in result metadata',
+  ].filter(Boolean).join('; ') + '.'
+}
+
+function getDomain(value?: string) {
+  if (!value) return ''
+  try {
+    return new URL(value).hostname.replace(/^www\./i, '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+
+function parseObservedTime(value?: string) {
+  if (!value) return undefined
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 async function getBraveResults(query: string | string[]): Promise<SearchItem[]> {

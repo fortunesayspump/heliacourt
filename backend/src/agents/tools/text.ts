@@ -230,7 +230,7 @@ export function getPossibleLocation(question: string) {
   const prepositionLocation = cleanLocationCandidate(prepositionMatch?.[1])
   if (prepositionLocation) return prepositionLocation
 
-  const affectedPlaceMatch = question.match(/\b(?:disrupt|affect|impact|delay|close|open|hit|strike|flood|rain over|rain in)\s+([A-Z][A-Za-z\s,.-]{2,60})(?:\?|,|\.| after| before| within| by| on| in | next|$)/)
+  const affectedPlaceMatch = question.match(/\b(?:disrupt|affect|impact|delay|close|open|hit|strike|flood|rain over|rain in)\s+([A-Z][A-Za-z\s,.-]{2,60})(?:\?|,|\.| after| before| within| by| on| in | this| next| today| tomorrow|$)/)
   const affectedPlace = cleanLocationCandidate(affectedPlaceMatch?.[1])
   if (affectedPlace) return affectedPlace
 
@@ -241,7 +241,7 @@ function cleanLocationCandidate(location: string | undefined) {
   if (!location) return undefined
   const cleaned = location
     .replace(/\b(?:disrupt|affect|impact|delay|close|open|win|lose|by|on)\b.*$/i, '')
-    .replace(/\b(?:port|ports|airport|airports|logistics|shipping|market|markets|weather|forecast|case|cases|outbreak|event|events|interview|price|prices|odds|hearing)\b.*$/i, '')
+    .replace(/\b(?:port|ports|airport|airports|logistics|shipping|market|markets|weather|forecast|case|cases|outbreak|event|events|interview|price|prices|odds|hearing|this week|next week|today|tomorrow|weekend)\b.*$/i, '')
     .replace(/\s+/g, ' ')
     .replace(/[,.\s]+$/g, '')
     .trim()

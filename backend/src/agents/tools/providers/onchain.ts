@@ -32,6 +32,8 @@ const evmRpcUrls = (process.env.EVM_PUBLIC_RPC_URLS ?? process.env.EVM_PUBLIC_RP
   .split(',')
   .map((url) => url.trim())
   .filter(Boolean)
+const arcRpcUrl = process.env.ARC_RPC_URL
+const arcExplorerBaseUrl = process.env.ARC_EXPLORER_BASE_URL ?? 'https://testnet.arcscan.app'
 const solanaRpcUrl = process.env.SOLANA_PUBLIC_RPC_URL ?? 'https://api.mainnet-beta.solana.com'
 
 export async function getOnchainEvidence(marketCase: MarketCase, instruction = ''): Promise<ToolEvidence> {
@@ -58,6 +60,11 @@ export async function getOnchainEvidence(marketCase: MarketCase, instruction = '
   const errors: string[] = []
 
   for (const address of evmAddresses.slice(0, 2)) {
+    const arcEvidence = await getArcRpcEvidence(address)
+    observations.push(...arcEvidence.observations)
+    sources.push(...arcEvidence.sources)
+    if (arcEvidence.error) errors.push(arcEvidence.error)
+
     const evidence = await getEvmPublicRpcEvidence(address)
     observations.push(...evidence.observations)
     sources.push(...evidence.sources)
@@ -88,11 +95,31 @@ export async function getOnchainEvidence(marketCase: MarketCase, instruction = '
   }
 }
 
+async function getArcRpcEvidence(address: string): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
+  if (!arcRpcUrl) {
+    return {
+      observations: [],
+      sources: [],
+      error: 'ARC_RPC_URL is not configured; skipped Arc testnet RPC account read.',
+    }
+  }
+
+  return tryGetEvmPublicRpcEvidence(arcRpcUrl, address, {
+    chainLabel: 'Arc testnet',
+    nativeSymbol: 'ARC native gas',
+    explorerBaseUrl: arcExplorerBaseUrl,
+  })
+}
+
 async function getEvmPublicRpcEvidence(address: string): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
   const errors: string[] = []
 
   for (const rpcUrl of evmRpcUrls) {
-    const result = await tryGetEvmPublicRpcEvidence(rpcUrl, address)
+    const result = await tryGetEvmPublicRpcEvidence(rpcUrl, address, {
+      chainLabel: 'Ethereum',
+      nativeSymbol: 'ETH',
+      explorerBaseUrl: 'https://etherscan.io',
+    })
     if (result.observations.length) return result
     if (result.error) errors.push(`${new URL(rpcUrl).hostname}: ${result.error}`)
   }
@@ -104,7 +131,11 @@ async function getEvmPublicRpcEvidence(address: string): Promise<Pick<ToolEviden
   }
 }
 
-async function tryGetEvmPublicRpcEvidence(rpcUrl: string, address: string): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
+async function tryGetEvmPublicRpcEvidence(
+  rpcUrl: string,
+  address: string,
+  options: { chainLabel: string; nativeSymbol: string; explorerBaseUrl?: string },
+): Promise<Pick<ToolEvidence, 'observations' | 'sources' | 'error'>> {
   try {
     const [balance, transactionCount] = await Promise.all([
       postJson<JsonRpcResponse<string>>(rpcUrl, {
@@ -125,14 +156,15 @@ async function tryGetEvmPublicRpcEvidence(rpcUrl: string, address: string): Prom
       throw new Error(balance.error?.message ?? transactionCount.error?.message ?? 'EVM RPC error')
     }
 
-    const eth = balance.result ? Number(BigInt(balance.result)) / 1e18 : 0
+    const nativeBalance = balance.result ? Number(BigInt(balance.result)) / 1e18 : 0
     const nonce = transactionCount.result ? Number(BigInt(transactionCount.result)) : 0
+    const explorerUrl = options.explorerBaseUrl ? `${options.explorerBaseUrl.replace(/\/$/, '')}/address/${address}` : undefined
 
     return {
       observations: [
-        `${address} has about ${eth.toFixed(4)} ETH on Ethereum public RPC (${new URL(rpcUrl).hostname}). Public RPC also reports account nonce ${nonce.toLocaleString('en-US')}; for contracts this is not token-transfer volume or full contract activity.`,
+        `${address} has about ${nativeBalance.toFixed(4)} ${options.nativeSymbol} on ${options.chainLabel} RPC (${new URL(rpcUrl).hostname}). Public RPC also reports account nonce ${nonce.toLocaleString('en-US')}; for contracts this is account-level context, not token-transfer volume or full indexed activity.`,
       ],
-      sources: [{ title: `${address} on Etherscan`, url: `https://etherscan.io/address/${address}`, value: `${eth}` }],
+      sources: [{ title: `${address} on ${options.chainLabel}`, url: explorerUrl, value: `${nativeBalance}` }],
     }
   } catch (error) {
     return {
@@ -233,6 +265,10 @@ async function getSolanaPublicRpcEvidence(address: string): Promise<Pick<ToolEvi
 
 function getProviderName() {
   const providers = ['public-evm-rpc', 'public-solana-rpc']
+
+  if (arcRpcUrl) {
+    providers.unshift('arc-rpc')
+  }
 
   if (process.env.ETHERSCAN_API_KEY) {
     providers.push('etherscan-v2')

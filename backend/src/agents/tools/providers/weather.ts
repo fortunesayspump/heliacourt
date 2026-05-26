@@ -32,6 +32,21 @@ type ForecastResponse = {
     precipitation?: string
     precipitation_probability?: string
   }
+  daily?: {
+    time?: string[]
+    temperature_2m_max?: number[]
+    temperature_2m_min?: number[]
+    precipitation_sum?: number[]
+    precipitation_probability_max?: number[]
+    wind_speed_10m_max?: number[]
+  }
+  daily_units?: {
+    temperature_2m_max?: string
+    temperature_2m_min?: string
+    precipitation_sum?: string
+    precipitation_probability_max?: string
+    wind_speed_10m_max?: string
+  }
 }
 
 export async function getWeatherEvidence(marketCase: MarketCase, instruction = ''): Promise<ToolEvidence> {
@@ -71,11 +86,12 @@ export async function getWeatherEvidence(marketCase: MarketCase, instruction = '
     }
 
     const forecast = await fetchJson<ForecastResponse>(
-      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,precipitation,wind_speed_10m&hourly=precipitation,precipitation_probability&forecast_days=3`,
+      `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,precipitation,wind_speed_10m&hourly=precipitation,precipitation_probability&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&forecast_days=7`,
     )
     const current = forecast.current
     const units = forecast.current_units
     const next72h = summarizeNext72hPrecipitation(forecast)
+    const dailyRisk = summarizeDailyWeatherRisk(forecast)
 
     return {
       capability: 'weather_data',
@@ -87,6 +103,7 @@ export async function getWeatherEvidence(marketCase: MarketCase, instruction = '
         ? [
             `${place.name ?? location}, ${place.country ?? ''}: ${current.temperature_2m}${units?.temperature_2m ?? ''}, precipitation ${current.precipitation}${units?.precipitation ?? ''}, wind ${current.wind_speed_10m}${units?.wind_speed_10m ?? ''}.`,
             next72h,
+            dailyRisk,
           ]
             .filter((observation): observation is string => Boolean(observation))
         : [`No current weather returned for ${location}.`],
@@ -98,10 +115,10 @@ export async function getWeatherEvidence(marketCase: MarketCase, instruction = '
           value: current?.temperature_2m?.toString(),
         },
         {
-          title: `Open-Meteo 72 hour precipitation forecast for ${place.name ?? location}`,
+          title: `Open-Meteo 7 day forecast for ${place.name ?? location}`,
           url: `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}`,
           observedAt: forecast.hourly?.time?.[0],
-          value: next72h,
+          value: [next72h, dailyRisk].filter(Boolean).join(' '),
         },
       ],
     }
@@ -117,6 +134,48 @@ export async function getWeatherEvidence(marketCase: MarketCase, instruction = '
       error: error instanceof Error ? error.message : 'Weather tool failed',
     }
   }
+}
+
+function summarizeDailyWeatherRisk(forecast: ForecastResponse) {
+  const dates = forecast.daily?.time ?? []
+  const highs = forecast.daily?.temperature_2m_max ?? []
+  const lows = forecast.daily?.temperature_2m_min ?? []
+  const precipitation = forecast.daily?.precipitation_sum ?? []
+  const probabilities = forecast.daily?.precipitation_probability_max ?? []
+  const winds = forecast.daily?.wind_speed_10m_max ?? []
+  const days = Math.min(dates.length, Math.max(highs.length, lows.length, precipitation.length, winds.length), 7)
+
+  if (!days) return undefined
+
+  const highValues = highs.slice(0, days).filter(Number.isFinite)
+  const lowValues = lows.slice(0, days).filter(Number.isFinite)
+  const precipitationValues = precipitation.slice(0, days).filter(Number.isFinite)
+  const probabilityValues = probabilities.slice(0, days).filter(Number.isFinite)
+  const windValues = winds.slice(0, days).filter(Number.isFinite)
+  const maxPrecipitation = precipitationValues.length ? Math.max(...precipitationValues) : undefined
+  const maxProbability = probabilityValues.length ? Math.max(...probabilityValues) : undefined
+  const maxWind = windValues.length ? Math.max(...windValues) : undefined
+  const maxHigh = highValues.length ? Math.max(...highValues) : undefined
+  const minLow = lowValues.length ? Math.min(...lowValues) : undefined
+  const wetDays = precipitationValues.filter((value) => value > 0).length
+  const riskFlags = [
+    typeof maxPrecipitation === 'number' && maxPrecipitation >= 25 ? 'heavy-rain risk' : undefined,
+    typeof maxWind === 'number' && maxWind >= 45 ? 'high-wind risk' : undefined,
+    typeof maxHigh === 'number' && maxHigh >= 35 ? 'heat risk' : undefined,
+    typeof minLow === 'number' && minLow <= 0 ? 'freezing risk' : undefined,
+  ].filter(Boolean)
+  const precipitationUnit = forecast.daily_units?.precipitation_sum ?? 'mm'
+  const temperatureUnit = forecast.daily_units?.temperature_2m_max ?? 'C'
+  const windUnit = forecast.daily_units?.wind_speed_10m_max ?? 'km/h'
+
+  return [
+    `Open-Meteo 7-day daily forecast: wet days ${wetDays}/${days}`,
+    typeof maxPrecipitation === 'number' ? `max daily precipitation ${maxPrecipitation.toFixed(1)}${precipitationUnit}` : undefined,
+    typeof maxProbability === 'number' ? `max precipitation probability ${maxProbability}${forecast.daily_units?.precipitation_probability_max ?? '%'}` : undefined,
+    typeof maxWind === 'number' ? `max wind ${maxWind.toFixed(1)}${windUnit}` : undefined,
+    typeof maxHigh === 'number' && typeof minLow === 'number' ? `temperature range ${minLow.toFixed(1)}-${maxHigh.toFixed(1)}${temperatureUnit}` : undefined,
+    riskFlags.length ? `flags: ${riskFlags.join(', ')}` : 'no threshold weather risk flag in daily forecast',
+  ].filter(Boolean).join(', ') + '.'
 }
 
 function summarizeNext72hPrecipitation(forecast: ForecastResponse) {

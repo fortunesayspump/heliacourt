@@ -109,10 +109,10 @@ export async function getSportsEvidence(marketCase: MarketCase, instruction = ''
 
     return {
       capability: 'sports_data',
-      provider: process.env.THE_ODDS_API_KEY ? 'sportsdb+the-odds-api' : 'sportsdb',
+      provider: process.env.THE_ODDS_API_KEY ? 'sportsdb+espn+the-odds-api' : 'sportsdb+espn',
       query,
       fetchedAt,
-      status: sources.length ? 'ok' : 'empty',
+      status: observations.length ? 'ok' : 'empty',
       observations,
       sources,
     }
@@ -141,10 +141,18 @@ async function getEspnScoreboardObservations(text: string, query: string) {
   const dates = getEspnDateCandidates(text)
   const terms = getSportsTerms(`${text} ${query}`)
   const seenEvents = new Set<string>()
+  const checkedUrls: ToolEvidence['sources'] = []
+  const checkedLabels = new Set<string>()
 
   for (const league of leagues.slice(0, 4)) {
+    checkedLabels.add(league.label)
     for (const date of dates.slice(0, 3)) {
       const url = `https://site.api.espn.com/apis/site/v2/sports/${league.sport}/${league.league}/scoreboard${date ? `?dates=${date}` : ''}`
+      checkedUrls.push({
+        title: `${league.label} ESPN scoreboard${date ? ` ${date}` : ''}`,
+        url: `https://www.espn.com/${league.sport}/${league.league}/scoreboard`,
+        observedAt: date || undefined,
+      })
       const payload = await fetchJson<EspnScoreboard>(url).catch(() => undefined)
       const events = payload?.events ?? []
       const relevantEvents = events
@@ -172,7 +180,9 @@ async function getEspnScoreboardObservations(text: string, query: string) {
   }
 
   if (!observations.length && leagues.length) {
-    observations.push(`ESPN scoreboard fallback checked ${leagues.map((league) => league.label).join(', ')} but found no matching live/final event for "${query}".`)
+    const dateText = dates.slice(0, 3).filter(Boolean).join(', ') || 'current scoreboard'
+    observations.push(`ESPN scoreboard fallback checked ${[...checkedLabels].join(', ')} for ${dateText} but found no matching live/final event for "${query}". This is a checked-data gap, not proof that the event does not exist.`)
+    sources.push(...checkedUrls.slice(0, 6))
   }
 
   return { observations, sources }
