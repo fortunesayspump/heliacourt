@@ -50,28 +50,50 @@ type KalshiMarketsResponse = {
     liquidity?: number
     liquidity_dollars?: string
     volume?: number
+    volume_24h_fp?: string
     volume_fp?: string
+    open_interest_fp?: string
     yes_bid?: number
     yes_ask?: number
+    yes_bid_dollars?: string
+    yes_ask_dollars?: string
+    yes_bid_size_fp?: string
+    yes_ask_size_fp?: string
+    no_bid_dollars?: string
+    no_ask_dollars?: string
+    no_bid_size_fp?: string
+    no_ask_size_fp?: string
     last_price?: number
     last_price_dollars?: string
+    previous_price_dollars?: string
+    previous_yes_bid_dollars?: string
+    previous_yes_ask_dollars?: string
     rules_primary?: string
     rules_secondary?: string
     status?: string
+    updated_time?: string
   }>
 }
 
 type KalshiMarket = NonNullable<KalshiMarketsResponse['markets']>[number]
 
 type ManifoldMarket = {
+  id?: string
   question?: string
   url?: string
   slug?: string
+  createdTime?: number
   closeTime?: number
   probability?: number
   totalLiquidity?: number
+  pool?: Record<string, number>
   volume?: number
   volume24Hours?: number
+  uniqueBettorCount?: number
+  lastUpdatedTime?: number
+  lastBetTime?: number
+  mechanism?: string
+  outcomeType?: string
   isResolved?: boolean
   answers?: Array<{
     id?: string
@@ -106,6 +128,27 @@ type PolymarketOrderBook = {
   timestamp?: string
   bids?: Array<{ price?: string; size?: string }>
   asks?: Array<{ price?: string; size?: string }>
+}
+
+type KalshiOrderBook = {
+  orderbook_fp?: {
+    yes_dollars?: Array<[string, string]>
+    no_dollars?: Array<[string, string]>
+  }
+}
+
+type ManifoldBet = {
+  outcome?: string
+  amount?: number
+  orderAmount?: number
+  shares?: number
+  probBefore?: number
+  probAfter?: number
+  limitProb?: number
+  isFilled?: boolean
+  isCancelled?: boolean
+  createdTime?: number
+  updatedTime?: number
 }
 
 export async function getPredictionMarketEvidence(marketCase: MarketCase): Promise<ToolEvidence> {
@@ -214,12 +257,13 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     for (const market of relevantKalshiMarkets) {
       const price = market.last_price_dollars ?? (typeof market.last_price === 'number' ? `${market.last_price} cents` : 'unknown price')
       const sourceKind = directKalshiTickers.has(market.ticker) ? 'direct linked market' : 'search match'
-      observations.push(`Kalshi ${sourceKind}: ${market.title ?? market.ticker ?? 'market'} last traded around ${price}.`)
+      const marketStructure = await getKalshiOrderBookSummary(market).catch(() => formatKalshiMarketMicrostructure(market))
+      observations.push(`Kalshi ${sourceKind}: ${market.title ?? market.ticker ?? 'market'} last traded around ${price}.${marketStructure ? ` ${marketStructure}` : ''}`)
       sources.push({
         title: market.title ?? market.ticker ?? 'Kalshi market',
         url: market.ticker && market.event_ticker ? `https://kalshi.com/markets/${market.event_ticker.split('-')[0]?.toLowerCase()}/${market.event_ticker.toLowerCase()}` : 'https://kalshi.com/markets',
-        observedAt: market.close_time ?? market.expected_expiration_time,
-        value: [price, market.rules_primary].filter(Boolean).join(' | '),
+        observedAt: market.updated_time ?? market.close_time ?? market.expected_expiration_time,
+        value: [price, marketStructure, market.rules_primary].filter(Boolean).join(' | '),
       })
     }
 
@@ -256,7 +300,8 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
       .filter((market) => directManifoldKeys.has(getManifoldKey(market) ?? '') || hasMarketRelevance(searchTerms, getManifoldMarketText(market), requiredTerms))
       .filter((market) => !isPlaceholderMarketText(getManifoldMarketText(market)))
       .filter((market) => !isUnrelatedConditionalMarket(market.question, marketCase.question))
-      .sort((a, b) => getMarketScore(b, marketCase.question, usdTarget) - getMarketScore(a, marketCase.question, usdTarget))
+      .sort((a, b) => getDirectMarketPriority(b, directManifoldKeys, getManifoldKey) - getDirectMarketPriority(a, directManifoldKeys, getManifoldKey)
+        || getMarketScore(b, marketCase.question, usdTarget) - getMarketScore(a, marketCase.question, usdTarget))
     const directHorizonManifoldMarkets = shortHorizonHours
       ? manifoldCandidates.filter((market) => isWithinHorizon(market.closeTime, shortHorizonHours))
       : manifoldCandidates
@@ -276,12 +321,13 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
           : 'unknown'
       const horizonLabel = shortHorizonHours && !isWithinHorizon(market.closeTime, shortHorizonHours) ? 'indirect horizon' : 'matching horizon'
       const sourceKind = directManifoldKeys.has(getManifoldKey(market) ?? '') ? 'direct linked market/event' : horizonLabel
-      observations.push(`Manifold (${sourceKind}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.${formatManifoldAnswers(market)}`)
+      const activitySummary = await getManifoldActivitySummary(market).catch(() => formatManifoldMarketMicrostructure(market))
+      observations.push(`Manifold (${sourceKind}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.${formatManifoldAnswers(market)}${activitySummary ? ` ${activitySummary}` : ''}`)
       sources.push({
         title: market.question ?? 'Manifold market',
         url: market.sourceUrl ?? market.url ?? 'https://manifold.markets/',
-        observedAt: market.closeTime ? new Date(market.closeTime).toISOString() : fetchedAt,
-        value: probability,
+        observedAt: formatManifoldTime(market.lastUpdatedTime) ?? (market.closeTime ? new Date(market.closeTime).toISOString() : fetchedAt),
+        value: [probability, activitySummary].filter(Boolean).join(' | '),
       })
     }
 
@@ -663,6 +709,86 @@ function formatSize(value: number) {
   return value.toLocaleString('en-US', { maximumFractionDigits: value >= 100 ? 0 : 2 })
 }
 
+function formatKalshiMarketMicrostructure(market: KalshiMarket) {
+  const parts = [
+    market.yes_bid_dollars ? `yes bid ${formatDollarProbability(market.yes_bid_dollars)}` : typeof market.yes_bid === 'number' ? `yes bid ${market.yes_bid}c` : undefined,
+    market.yes_ask_dollars ? `yes ask ${formatDollarProbability(market.yes_ask_dollars)}` : typeof market.yes_ask === 'number' ? `yes ask ${market.yes_ask}c` : undefined,
+    market.yes_bid_size_fp ? `bid size ${formatSize(Number(market.yes_bid_size_fp))} contracts` : undefined,
+    market.yes_ask_size_fp ? `ask size ${formatSize(Number(market.yes_ask_size_fp))} contracts` : undefined,
+    market.volume_24h_fp ? `24h volume ${formatSize(Number(market.volume_24h_fp))} contracts` : undefined,
+    market.volume_fp ? `total volume ${formatSize(Number(market.volume_fp))} contracts` : undefined,
+    market.open_interest_fp ? `open interest ${formatSize(Number(market.open_interest_fp))} contracts` : undefined,
+    market.updated_time ? `updated ${market.updated_time}` : undefined,
+    market.status ? `status ${market.status}` : undefined,
+  ].filter(Boolean)
+
+  const spread = getKalshiSpread(market)
+  if (typeof spread === 'number') parts.splice(2, 0, `bid-ask spread ${(spread * 100).toFixed(1)} cents`)
+
+  return parts.length ? `Order-book/microstructure: ${parts.join(', ')}.` : ''
+}
+
+async function getKalshiOrderBookSummary(market: KalshiMarket) {
+  if (!market.ticker) return formatKalshiMarketMicrostructure(market)
+  const book = await fetchJson<KalshiOrderBook>(`https://external-api.kalshi.com/trade-api/v2/markets/${encodeURIComponent(market.ticker)}/orderbook`)
+  const yesBids = parseKalshiBookSide(book.orderbook_fp?.yes_dollars)
+  const noBids = parseKalshiBookSide(book.orderbook_fp?.no_dollars)
+  const topYesBid = yesBids.sort((left, right) => right.price - left.price)[0]
+  const topNoBid = noBids.sort((left, right) => right.price - left.price)[0]
+  const impliedYesAsk = topNoBid ? 1 - topNoBid.price : parseDollarProbability(market.yes_ask_dollars)
+  const yesBid = topYesBid?.price ?? parseDollarProbability(market.yes_bid_dollars)
+  const spread = typeof yesBid === 'number' && typeof impliedYesAsk === 'number' ? impliedYesAsk - yesBid : getKalshiSpread(market)
+  const bidDepth = sumKalshiDepthNear(yesBids, yesBid, 'bid')
+  const askDepth = sumKalshiDepthNear(noBids, topNoBid?.price, 'no-bid-as-yes-ask')
+  const parts = [
+    typeof yesBid === 'number' ? `top yes bid ${formatProbabilityText(yesBid)}` : undefined,
+    typeof impliedYesAsk === 'number' ? `implied yes ask ${formatProbabilityText(impliedYesAsk)}` : undefined,
+    typeof spread === 'number' && Number.isFinite(spread) ? `bid-ask spread ${(spread * 100).toFixed(1)} cents` : undefined,
+    typeof bidDepth === 'number' ? `yes bid depth within 1 cent ${formatSize(bidDepth)} contracts` : undefined,
+    typeof askDepth === 'number' ? `yes ask depth within 1 cent ${formatSize(askDepth)} contracts` : undefined,
+    market.volume_24h_fp ? `24h volume ${formatSize(Number(market.volume_24h_fp))} contracts` : undefined,
+    market.volume_fp ? `total volume ${formatSize(Number(market.volume_fp))} contracts` : undefined,
+    market.open_interest_fp ? `open interest ${formatSize(Number(market.open_interest_fp))} contracts` : undefined,
+    market.updated_time ? `updated ${market.updated_time}` : undefined,
+  ].filter(Boolean)
+
+  return parts.length ? `Order book: ${parts.join(', ')}.` : formatKalshiMarketMicrostructure(market)
+}
+
+function parseKalshiBookSide(levels?: Array<[string, string]>) {
+  return (levels ?? [])
+    .map(([price, size]) => ({
+      price: Number(price),
+      size: Number(size),
+    }))
+    .filter((level) => Number.isFinite(level.price) && Number.isFinite(level.size))
+}
+
+function getKalshiSpread(market: KalshiMarket) {
+  const bid = parseDollarProbability(market.yes_bid_dollars) ?? (typeof market.yes_bid === 'number' ? market.yes_bid / 100 : undefined)
+  const ask = parseDollarProbability(market.yes_ask_dollars) ?? (typeof market.yes_ask === 'number' ? market.yes_ask / 100 : undefined)
+  return typeof bid === 'number' && typeof ask === 'number' ? ask - bid : undefined
+}
+
+function parseDollarProbability(value?: string) {
+  if (!value) return undefined
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : undefined
+}
+
+function formatDollarProbability(value: string) {
+  const numeric = parseDollarProbability(value)
+  return typeof numeric === 'number' ? formatProbabilityText(numeric) : value
+}
+
+function sumKalshiDepthNear(levels: Array<{ price: number; size: number }>, topPrice: number | undefined, direction: 'bid' | 'no-bid-as-yes-ask') {
+  if (typeof topPrice !== 'number') return undefined
+  const threshold = direction === 'bid' ? topPrice - 0.01 : topPrice - 0.01
+  return levels
+    .filter((level) => level.price >= threshold)
+    .reduce((sum, level) => sum + level.size, 0)
+}
+
 async function fetchPolymarketEventPageFallbacks(question: string) {
   const candidates = getPolymarketEventSlugCandidates(question)
   const results = await Promise.allSettled(candidates.map((slug) => fetchPolymarketEventPage(slug)))
@@ -1033,6 +1159,55 @@ function getManifoldMarketText(market: ManifoldMarket) {
   ].filter(Boolean).join(' ')
 }
 
+function formatManifoldMarketMicrostructure(market: ManifoldMarket) {
+  const parts = [
+    typeof market.volume24Hours === 'number' ? `24h volume ${formatSize(market.volume24Hours)} mana` : undefined,
+    typeof market.volume === 'number' ? `total volume ${formatSize(market.volume)} mana` : undefined,
+    typeof market.uniqueBettorCount === 'number' ? `${market.uniqueBettorCount} unique bettors` : undefined,
+    market.lastBetTime ? `last bet ${formatManifoldTime(market.lastBetTime)}` : undefined,
+    market.lastUpdatedTime ? `updated ${formatManifoldTime(market.lastUpdatedTime)}` : undefined,
+    market.mechanism ? `mechanism ${market.mechanism}` : undefined,
+    market.outcomeType ? `outcome type ${market.outcomeType}` : undefined,
+    market.pool ? `pool ${formatManifoldPool(market.pool)}` : undefined,
+  ].filter(Boolean)
+
+  return parts.length ? `Activity/microstructure: ${parts.join(', ')}.` : ''
+}
+
+async function getManifoldActivitySummary(market: ManifoldMarket) {
+  const base = formatManifoldMarketMicrostructure(market)
+  if (!market.id) return base
+  const bets = await fetchJson<ManifoldBet[]>(`https://api.manifold.markets/v0/bets?contractId=${encodeURIComponent(market.id)}&limit=5`).catch(() => [])
+  const filled = bets.filter((bet) => bet.isFilled !== false && !bet.isCancelled)
+  const latest = filled[0] ?? bets[0]
+  const recentMove = latest && typeof latest.probBefore === 'number' && typeof latest.probAfter === 'number'
+    ? `latest public bet moved probability ${formatProbabilityText(latest.probBefore)} -> ${formatProbabilityText(latest.probAfter)} on ${formatManifoldTime(latest.createdTime)}`
+    : undefined
+  const openOrders = bets.filter((bet) => bet.isFilled === false && !bet.isCancelled && typeof bet.limitProb === 'number')
+    .slice(0, 3)
+    .map((bet) => `${bet.outcome ?? 'order'} limit ${formatProbabilityText(bet.limitProb ?? 0)} amount ${formatSize(Math.abs(bet.orderAmount ?? bet.amount ?? 0))}`)
+  const parts = [
+    base.replace(/\.$/, ''),
+    recentMove,
+    openOrders.length ? `visible open/recent limit orders: ${openOrders.join('; ')}` : undefined,
+  ].filter(Boolean)
+
+  return parts.length ? `${parts.join('. ')}.` : ''
+}
+
+function formatManifoldPool(pool: Record<string, number>) {
+  return Object.entries(pool)
+    .map(([key, value]) => `${key} ${formatSize(value)}`)
+    .slice(0, 4)
+    .join(', ')
+}
+
+function formatManifoldTime(value?: number) {
+  if (!value) return undefined
+  const ms = value > 10_000_000_000 ? value : value * 1000
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined
+}
+
 function formatManifoldAnswers(market: ManifoldMarket) {
   const answers = market.answers
     ?.map((answer) => {
@@ -1072,6 +1247,10 @@ function dedupeKalshiMarkets(markets: NonNullable<KalshiMarketsResponse['markets
   }
 
   return output
+}
+
+function getDirectMarketPriority<T>(market: T, directKeys: Set<string>, getKey: (item: T) => string | undefined) {
+  return directKeys.has(getKey(market) ?? '') ? 1 : 0
 }
 
 function getShortHorizonHours(question: string) {
