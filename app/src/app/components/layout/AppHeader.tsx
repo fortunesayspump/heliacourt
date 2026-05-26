@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Briefcase, CurrencyCircleDollar, House, Question, Receipt, UsersThree } from '@phosphor-icons/react/ssr'
 import { NotificationsMenu } from './NotificationsMenu'
-import { GatewayBalance } from '../wallet/GatewayBalance'
 import { WalletBalance } from '../wallet/WalletBalance'
 import { WalletButton } from '../wallet/WalletButton'
 
@@ -42,7 +41,6 @@ export function AppHeader({ active }: AppHeaderProps) {
         <div className="app-header-wallet">
           <NotificationsMenu />
           <WalletBalance compact label="Wallet" />
-          <GatewayBalance compact />
           <WalletButton className="wallet-connect-button" />
         </div>
       </div>

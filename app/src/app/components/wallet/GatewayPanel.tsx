@@ -4,6 +4,7 @@ import { ArrowClockwise, DownloadSimple, UploadSimple } from '@phosphor-icons/re
 import { formatUnits, parseUnits, zeroAddress } from 'viem'
 import { useCallback, useEffect, useState } from 'react'
 import { useAccount, usePublicClient, useReadContract, useReadContracts, useWriteContract } from 'wagmi'
+import { arcTestnet } from '../../../lib/arc'
 import { contractAddresses, erc20Abi, gatewayWalletAbi } from '../../../lib/contracts'
 import { formatWalletError } from '../../../lib/wallet-errors'
 import { ActionStatus, type ActionStatusState } from '../ui/ActionStatus'
@@ -13,7 +14,7 @@ const zero = BigInt(0)
 
 export function GatewayPanel() {
   const { address, isConnected } = useAccount()
-  const publicClient = usePublicClient()
+  const publicClient = usePublicClient({ chainId: arcTestnet.id })
   const { writeContractAsync } = useWriteContract()
   const [depositAmount, setDepositAmount] = useState('0.01')
   const [withdrawAmount, setWithdrawAmount] = useState('0.01')
@@ -21,21 +22,33 @@ export function GatewayPanel() {
   const [busy, setBusy] = useState(false)
 
   const allowance = useReadContract({
+    chainId: arcTestnet.id,
     abi: erc20Abi,
     address: contractAddresses.usdc,
     functionName: 'allowance',
     args: address ? [address, contractAddresses.gatewayWallet] : undefined,
-    query: { enabled: Boolean(address && isConnected) },
+    query: {
+      enabled: Boolean(address && isConnected && contractAddresses.gatewayWallet !== zeroAddress),
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+    },
   })
 
   const balances = useReadContracts({
+    chainId: arcTestnet.id,
     contracts: address ? [
       { abi: erc20Abi, address: contractAddresses.usdc, functionName: 'balanceOf', args: [address] },
       { abi: gatewayWalletAbi, address: contractAddresses.gatewayWallet, functionName: 'availableBalance', args: [contractAddresses.usdc, address] },
       { abi: gatewayWalletAbi, address: contractAddresses.gatewayWallet, functionName: 'withdrawingBalance', args: [contractAddresses.usdc, address] },
       { abi: gatewayWalletAbi, address: contractAddresses.gatewayWallet, functionName: 'withdrawableBalance', args: [contractAddresses.usdc, address] },
     ] : [],
-    query: { enabled: Boolean(address && isConnected) },
+    query: {
+      enabled: Boolean(address && isConnected && contractAddresses.gatewayWallet !== zeroAddress),
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+    },
   })
 
   const walletBalance = getBigint(balances.data?.[0]?.result)
@@ -95,6 +108,7 @@ export function GatewayPanel() {
       await publicClient.waitForTransactionReceipt({ hash: depositHash })
       setStatus({ text: `Deposited ${formatUnits(amount, usdcDecimals)} USDC to Gateway.`, tone: 'success' })
       await refresh()
+      window.dispatchEvent(new Event('helia:gateway-balance-updated'))
     } catch (error) {
       setStatus({ text: formatGatewayError(error, 'Gateway deposit failed.'), tone: 'error' })
     } finally {
@@ -129,6 +143,7 @@ export function GatewayPanel() {
       await publicClient.waitForTransactionReceipt({ hash })
       setStatus({ text: 'Withdrawal requested. Complete it when the withdrawable balance is ready.', tone: 'success' })
       await refresh()
+      window.dispatchEvent(new Event('helia:gateway-balance-updated'))
     } catch (error) {
       setStatus({ text: formatGatewayError(error, 'Gateway withdrawal request failed.'), tone: 'error' })
     } finally {
@@ -158,6 +173,7 @@ export function GatewayPanel() {
       await publicClient.waitForTransactionReceipt({ hash })
       setStatus({ text: 'Gateway withdrawal completed.', tone: 'success' })
       await refresh()
+      window.dispatchEvent(new Event('helia:gateway-balance-updated'))
     } catch (error) {
       setStatus({ text: formatGatewayError(error, 'Gateway withdrawal failed.'), tone: 'error' })
     } finally {

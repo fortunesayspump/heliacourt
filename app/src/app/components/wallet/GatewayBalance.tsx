@@ -1,7 +1,9 @@
 'use client'
 
-import { formatUnits } from 'viem'
+import { useEffect } from 'react'
+import { formatUnits, zeroAddress } from 'viem'
 import { useAccount, useReadContracts } from 'wagmi'
+import { arcTestnet } from '../../../lib/arc'
 import { contractAddresses, gatewayWalletAbi } from '../../../lib/contracts'
 
 type GatewayBalanceProps = {
@@ -14,6 +16,7 @@ const usdcDecimals = 6
 export function GatewayBalance({ className, compact = false }: GatewayBalanceProps) {
   const { address, isConnected } = useAccount()
   const balances = useReadContracts({
+    chainId: arcTestnet.id,
     contracts: address ? [
       {
         abi: gatewayWalletAbi,
@@ -28,8 +31,26 @@ export function GatewayBalance({ className, compact = false }: GatewayBalancePro
         args: [contractAddresses.usdc, address],
       },
     ] : [],
-    query: { enabled: Boolean(address && isConnected) },
+    query: {
+      enabled: Boolean(address && isConnected && contractAddresses.gatewayWallet !== zeroAddress),
+      refetchOnMount: 'always',
+      refetchOnWindowFocus: true,
+      staleTime: 0,
+    },
   })
+
+  useEffect(() => {
+    const refresh = () => {
+      if (!address || !isConnected) return
+      void balances.refetch()
+    }
+    window.addEventListener('helia:gateway-balance-updated', refresh)
+    window.addEventListener('helia:x402-paid-read', refresh)
+    return () => {
+      window.removeEventListener('helia:gateway-balance-updated', refresh)
+      window.removeEventListener('helia:x402-paid-read', refresh)
+    }
+  }, [address, balances, isConnected])
 
   if (!isConnected || !address) return null
 
