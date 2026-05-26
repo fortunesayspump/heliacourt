@@ -85,6 +85,8 @@ Design a compact evidence strategy for a prediction-market hearing.
 Core principle:
 - Most prediction markets are unresolved future-event questions. Do not plan as if the court merely verifies whether the event already happened.
 - Plan for forecasting: reference class/base rate, current catalysts, current blockers, time remaining, source directness, and what would update the probability.
+- For event pages with multiple contracts, candidates, dates, thresholds, or outcomes, plan around the specific filed contract and compare sibling outcomes for calibration pressure.
+- "No direct evidence that it happened yet" is status context, not a final No, unless the deadline passed, the market/source resolved, or current non-occurrence satisfies the rule.
 - For markets with public odds, include the market witness or quant witness unless the question has no plausible market context; an API miss is not proof that no market exists.
 - Include a quantitative/scenario issue whenever the question has a deadline, countable pathway, known catalyst, or market price.
 - Keep the hearing lean. Choose only witnesses that materially reduce uncertainty.
@@ -114,6 +116,8 @@ Reasoning policy:
 - If direct source text is missing or source quality is disputed, choose call-witness with web-scraper-witness or skepsis-source-quality-witness.
 - If timing/window/deadline is unclear, choose call-witness with chronos-timeline-witness.
 - If counsel or witnesses are looping on "no confirmation yet" for an unresolved future event, ask for a scenario branch and probability bridge instead of more confirmation searching.
+- If a multi-outcome event is being flattened into one generic Yes/No, ask Pythia or counsel to name the filed contract, sibling outcomes, and why probability should land on this outcome.
+- If a witness treats non-occurrence as decisive while time remains, ask counsel to test catalysts, loopholes, sequence, incentives, and deadline fit.
 - If public market context seems missing or contradicted by search snippets, call pythia-prediction-witness or numeros-quant-witness to separate API failure from real market absence.
 - If visual/social/market/onchain/sports/weather evidence is needed, choose the matching specialist.
 - Do not call a duplicate witness unless the new request is materially different.

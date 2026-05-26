@@ -121,11 +121,14 @@ function isSameTopicRecall(request: string, priorArtifacts: CourtArtifact[]) {
 function topicShape(value: string) {
   const text = value.toLowerCase()
   const topics = [
-    ['direct-status', /\b(us case|confirmed case|testing report|reported case|direct evidence|resolution)\b/],
-    ['importation-bridge', /\b(importation|traveler|travel|contact|exposure|screening|flight|germany|missionary)\b/],
-    ['timing-window', /\b(42 days|deadline|incubation|reporting lag|window|june 30)\b/],
-    ['market-quant', /\b(23%|market|odds|liquidity|volume|base rate|tail risk|range)\b/],
-    ['source-quality', /\b(source|scrape|official|cdc|who|reuters|local alert|han|bulletin)\b/],
+    ['direct-status', /\b(confirmed|direct evidence|resolution source|official source|has happened|already happened|status)\b/],
+    ['future-pathway', /\b(catalyst|mechanism|pathway|loophole|incentive|sequence|could still|will happen|before the deadline|what would make)\b/],
+    ['multi-outcome', /\b(sibling outcome|sibling contract|multi[- ]outcome|multiple contracts|candidate|threshold|event page|filed contract|filed outcome)\b/],
+    ['sports-status', /\b(sports data|score|final score|game status|match status|roster|squad|injury|fifa|nba|mlb|tennis|atp|wta|ipl)\b/],
+    ['tool-failure', /\b(tool failed|returned empty|api returned empty|timed out|blocked|cannot fetch|could not scrape|no current data|no live data)\b/],
+    ['timing-window', /\b(deadline|reporting lag|window|days?|hours?|expired|time remaining|horizon)\b/],
+    ['market-quant', /\b(market|odds|liquidity|volume|spread|depth|base rate|tail risk|range|probability)\b/],
+    ['source-quality', /\b(source|scrape|official|credible|freshness|directness|reuters|fifa|aaa|eia|imf|portwatch|kalshi|polymarket|manifold)\b/],
   ] as const
 
   return topics.find(([, pattern]) => pattern.test(text))?.[0] ?? ''
@@ -178,6 +181,8 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           'respond to the live conversation',
           'use the evidence and memory you were given',
           'ask another agent when their tools or role would help',
+          'for unresolved will-markets, test catalysts and pathways before treating non-occurrence as decisive',
+          'for multi-outcome events, name the filed contract and sibling outcomes that matter',
           'say uncertainty plainly',
         ],
         avoid: [
@@ -185,6 +190,8 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           'raw source snippets',
           'inventing missing facts or numbers',
           'rehashing the whole record',
+          'asking the same witness for the same failed tool result',
+          'using no-confirmation-yet as final No while time remains',
         ],
         progressionHint: hearingMemory.progressionState.neededMove,
         neededMove: hearingMemory.progressionState.neededMove,
@@ -261,7 +268,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
         toolCapabilities: entry.toolCapabilities,
       })),
       handoffHint: {
-        rule: 'If your tools cannot answer the live question, set requestedAgentId/request for the best matching witness instead of guessing.',
+        rule: 'If your tools cannot answer the live question, set requestedAgentId/request for the best matching witness instead of guessing. If that witness/tool already failed on the same point, change strategy: ask for a catalyst/pathway, source alternative, sibling outcome comparison, confidence cap, or move to counsel clash.',
         examplesByCapability: [
           { need: 'fresh public facts or headlines', agentId: 'hermes-news-witness' },
           { need: 'exact source page content or cited URL text', agentId: 'web-scraper-witness' },

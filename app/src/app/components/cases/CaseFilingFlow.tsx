@@ -121,6 +121,7 @@ export function CaseFilingFlow({
     () => findRelatedCases(question, predictionMarketLink, existingCases),
     [existingCases, predictionMarketLink, question],
   )
+  const horizonWarning = useMemo(() => getHorizonWarning(horizon, marketPreview), [horizon, marketPreview])
   const composedContext = [
     parentCase ? `Linked parent case: ${parentCase.id}` : '',
     parentCase && filingKind !== 'original' ? `Filing kind: ${formatFilingKind(filingKind)}` : '',
@@ -182,8 +183,11 @@ export function CaseFilingFlow({
           context: nextContext,
           horizon: nextHorizon,
         })
+        const timingWarning = getHorizonWarning(nextHorizon ?? '', payload)
         setAutofillStatus(
-          nextQuestion || nextContext || nextHorizon
+          timingWarning
+            ? { tone: 'bad', text: timingWarning }
+            : nextQuestion || nextContext || nextHorizon
             ? { tone: 'good', text: payload.multipleContracts ? 'Market event bundle filled from the pasted link.' : 'Market details filled from the pasted link.' }
             : { tone: 'muted', text: 'Market linked. Add any missing details before filing.' },
         )
@@ -351,6 +355,7 @@ export function CaseFilingFlow({
               onChange={(event) => setSourceLinks(event.target.value)}
             />
             {autofillStatus ? <p className={`autofill-status ${autofillStatus.tone}`}>{autofillStatus.text}</p> : null}
+            {horizonWarning && autofillStatus?.text !== horizonWarning ? <p className="autofill-status bad">{horizonWarning}</p> : null}
             <label htmlFor="question">Question</label>
             <input id="question" placeholder="Paste the market question exactly as it appears." value={question} onChange={(event) => setQuestion(event.target.value)} />
             <label htmlFor="case-context">Case context</label>
@@ -568,6 +573,22 @@ function formatMarketHorizon(value?: string) {
     minute: '2-digit',
     timeZoneName: 'short',
   }).format(date)
+}
+
+function getHorizonWarning(horizon: string | undefined, preview?: LinkPreview) {
+  if (preview?.multipleContracts) {
+    return 'This link is an event bundle with multiple contracts/outcomes. Helia will preserve them for agent debate, but verify the filed outcome before funding.'
+  }
+
+  if (!horizon?.trim()) return undefined
+  const parsed = Date.parse(horizon)
+  if (Number.isNaN(parsed)) return undefined
+
+  const timeLeft = parsed - Date.now()
+  const oneDay = 24 * 60 * 60 * 1000
+  if (timeLeft < 0) return 'This market horizon appears to be in the past. Agents will treat it as resolution-mode unless you are intentionally filing a post-resolution case.'
+  if (timeLeft < oneDay) return 'This market resolves very soon. Make sure you want a near-deadline hearing before funding.'
+  return undefined
 }
 
 function isSupportedPredictionMarketLink(link: string) {

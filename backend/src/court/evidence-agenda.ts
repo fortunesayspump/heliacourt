@@ -26,8 +26,10 @@ export function buildEvidenceAgenda(marketCase: MarketCase): EvidenceAgenda {
   const lower = text.toLowerCase()
   const requiredFacts = dedupeAgendaItems([
     resolutionRuleItem(marketCase),
+    eventOutcomeStructureItem(),
     deadlineItem(),
     directResolutionStatusItem(),
+    futurePathwayItem(),
     marketContextItem(),
     quantBridgeItem(),
     ...domainAgendaItems(lower, genres),
@@ -81,6 +83,16 @@ function resolutionRuleItem(marketCase: MarketCase): EvidenceAgendaItem {
   }
 }
 
+function eventOutcomeStructureItem(): EvidenceAgendaItem {
+  return {
+    id: 'event-outcome-structure',
+    label: 'Binary contract vs multi-outcome event structure',
+    whyItMatters: 'Event pages can contain many contracts, candidates, dates, thresholds, or Yes/No pairs; the court must forecast the filed outcome while using sibling outcomes for calibration.',
+    preferredCapabilities: ['prediction_market_data', 'web_page_scrape'],
+    preferredWitnesses: ['pythia-prediction-witness', 'web-scraper-witness', 'skepsis-source-quality-witness'],
+  }
+}
+
 function deadlineItem(): EvidenceAgendaItem {
   return {
     id: 'deadline-window',
@@ -88,6 +100,16 @@ function deadlineItem(): EvidenceAgendaItem {
     whyItMatters: 'A future-event forecast depends on whether a plausible mechanism can complete before the deadline.',
     preferredCapabilities: ['calendar_data', 'web_news_search', 'web_page_scrape'],
     preferredWitnesses: ['chronos-timeline-witness'],
+  }
+}
+
+function futurePathwayItem(): EvidenceAgendaItem {
+  return {
+    id: 'future-pathway-catalysts',
+    label: 'Future pathway, catalysts, loopholes, and blockers',
+    whyItMatters: 'For unresolved will-markets, the forecast turns on what could still happen before the deadline, not only whether the event has happened already.',
+    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'calendar_data', 'prediction_market_data'],
+    preferredWitnesses: ['hermes-news-witness', 'chronos-timeline-witness', 'sophia-research-witness', 'numeros-quant-witness'],
   }
 }
 
@@ -197,6 +219,8 @@ function domainAgendaItems(text: string, genres: string[]): EvidenceAgendaItem[]
 function buildSourcePlan(text: string, genres: string[]) {
   const plan = [
     'Start with direct/official resolution sources if named in the case context.',
+    'For unresolved will-markets, use direct status only as the anchor; then search for catalysts, loopholes, blockers, and mechanisms that could still complete before the deadline.',
+    'For multi-outcome event pages, identify the filed contract/outcome and inspect sibling contracts/outcomes for calibration pressure.',
     'Search broad news for fresh catalysts and blockers, then scrape the best pages before relying on snippets.',
     'If pages are JS-heavy, blocked, image-based, or social, escalate to screenshot/visual analysis.',
     'Treat prediction-market odds as calibration context and verify liquidity/search misses.',
@@ -214,6 +238,7 @@ function buildSourcePlan(text: string, genres: string[]) {
 function buildUncertaintyMap(text: string, genres: string[]) {
   const map = [
     'Is there direct evidence matching the exact resolution wording?',
+    'Is the filed item a single binary market or one contract inside a broader event with sibling outcomes?',
     'What is the strongest Yes mechanism and what would break it?',
     'What is the strongest No blocker and what evidence would overcome it?',
     'Does the timeline allow the mechanism before the deadline?',

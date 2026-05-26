@@ -9,6 +9,11 @@ import type { CaseResult, HearingJob } from './cases.types.js'
 export async function summarizeCaseDetail(
   job: HearingJob,
   result: CaseResult | undefined,
+  options: {
+    transcriptLimit?: number
+    artifactLimit?: number
+    includeArtifacts?: boolean
+  } = {},
 ) {
   const resultMarketCase = (result as { marketCase?: MarketCase } | undefined)?.marketCase
   const marketCase = resultMarketCase ?? job.marketCase
@@ -29,10 +34,21 @@ export async function summarizeCaseDetail(
       ? { ...settlement, receipts: settlementReceipts }
       : result?.onchainSettlement
 
+  const transcript = Array.isArray(result?.transcript) ? result.transcript : []
+  const artifacts = Array.isArray(result?.artifacts) ? result.artifacts : []
+  const transcriptLimit = normalizeLimit(options.transcriptLimit)
+  const artifactLimit = normalizeLimit(options.artifactLimit)
+
   return {
     case: summarizeCase(job, extraReceipts),
-    transcript: Array.isArray(result?.transcript) ? result.transcript : [],
-    artifacts: Array.isArray(result?.artifacts) ? result.artifacts : [],
+    transcript: transcriptLimit === undefined ? transcript : transcript.slice(-transcriptLimit),
+    artifacts: options.includeArtifacts === false
+      ? []
+      : artifactLimit === undefined ? artifacts : artifacts.slice(-artifactLimit),
+    counts: {
+      transcript: transcript.length,
+      artifacts: artifacts.length,
+    },
     recordHash: result?.recordHash,
     partial: Boolean(result?.partial),
     onchainSettlement,
@@ -267,6 +283,12 @@ export async function getCaseRecordedReceipts(caseId: string, exposePayerWallet 
 
 function isSettlementObject(value: unknown): value is { status?: string; receipts?: unknown[] } {
   return Boolean(value && typeof value === 'object')
+}
+
+function normalizeLimit(value: number | undefined) {
+  if (value === undefined) return undefined
+  if (!Number.isFinite(value) || value < 0) return undefined
+  return Math.floor(value)
 }
 
 function redactPayerReceipt(receipt: unknown, exposePayerWallet: boolean) {

@@ -58,7 +58,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
   const issueList = issues.map((issue, index) => `${index + 1}. ${issue}`).join(' ')
   const courtClock = describeCourtClock(buildCourtClock(marketCase))
   const predictionStandard =
-    'This is a prediction-market hearing. Witnesses supply facts and limits. Counsel argues the forecast bridge. Archon weighs Yes, No, leaning Yes, leaning No, or no-edge.'
+    'This is a prediction-market hearing. Witnesses supply facts and limits. Counsel argues the forecast bridge. Archon weighs Yes, No, leaning Yes, leaning No, or no-edge. For unresolved "will" markets, do not stop at whether the event has already happened; test catalysts, loopholes, mechanisms, blockers, timing, and update triggers. For event pages with multiple contracts/outcomes, evaluate the filed outcome and compare sibling outcomes instead of flattening the event into one generic Yes/No.'
   const linkInstruction = marketCase.links?.length
     ? ` Reference links for source extraction: ${marketCase.links.join(' ')}.`
     : ''
@@ -74,7 +74,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       agentId: 'court-clerk',
       phase: 'docket',
       stage: 'Docket call',
-      request: `Call the case in plain English: question, deadline/window, resolution context, and what the court must prove or forecast.${contextInstruction}`,
+      request: `Call the case in plain English: question, deadline/window, resolution context, whether this is a binary contract or multi-outcome event, the specific filed outcome/contract, and what the court must prove or forecast.${contextInstruction}`,
     },
     {
       agentId: 'head-judge',
@@ -88,14 +88,14 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'opening',
       stage: 'Opening statement: affirmative',
       request:
-        `Give a short Yes opening. No witness has testified yet. Say what pathway you want to test, what data would matter most, and which witness you may need. Issues: ${issueList}.${contextInstruction}`,
+        `Give a short Yes opening. No witness has testified yet. For unresolved markets, state the catalyst/mechanism that could still make the event happen before the deadline, not just whether it already happened. If this is a multi-outcome event, say why this filed outcome could beat sibling outcomes. Say what data would matter most and which witness you may need. Issues: ${issueList}.${contextInstruction}`,
     },
     {
       agentId: 'bear-counsel',
       phase: 'opening',
       stage: 'Opening statement: negative',
       request:
-        `Give a short No opening. No witness has testified yet. Say what blocker or missing bridge you want to test hardest, and what data would change your mind. Issues: ${issueList}.${contextInstruction}`,
+        `Give a short No opening. No witness has testified yet. Attack the catalyst/mechanism, deadline fit, incentives, or sibling outcomes that steal probability; do not merely say the event has not happened yet unless the deadline has passed. Say what data would change your mind. Issues: ${issueList}.${contextInstruction}`,
     },
   ]
 
@@ -197,7 +197,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'admission',
       stage: 'Evidence admitted',
       request:
-        `File the admitted record only: Yes drivers, No blockers, unresolved gaps, and low-weight material. Issues: ${issueList}.`,
+        `File the admitted record only: direct status, Yes catalysts/pathways, No blockers, sibling outcome pressure if any, unresolved gaps, and low-weight material. Issues: ${issueList}.`,
     },
     {
       agentId: 'bull-counsel',
@@ -225,7 +225,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'calibration',
       stage: 'Calibration conference',
       request:
-        `Calibrate the record before verdict: base case, strongest Yes pathway, strongest No blocker, probability range, confidence cap, and biggest update trigger. Issues: ${issueList}.`,
+        `Calibrate the record before verdict: base case, strongest Yes pathway, strongest No blocker, sibling outcome pressure if any, probability range, confidence cap, and biggest update trigger. Issues: ${issueList}.`,
     },
   )
 
@@ -255,7 +255,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'verdict',
       stage: 'Verdict',
       request:
-        `Issue the probabilistic verdict. Pick Yes, No, leaning Yes, leaning No, or no-edge. Give a probability range, key driver, key blocker, confidence cap, and what would change your mind. Issues: ${issueList}.`,
+        `Issue the probabilistic verdict. Name the filed outcome/contract if this came from a multi-outcome event. Pick Yes, No, leaning Yes, leaning No, or no-edge. Give a probability range, key catalyst/driver, key blocker, sibling outcome pressure if relevant, confidence cap, and what would change your mind. Issues: ${issueList}.`,
     },
     {
       agentId: 'settlement-clerk',

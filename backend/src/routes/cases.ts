@@ -30,6 +30,12 @@ export async function caseRoutes(app: FastifyInstance) {
 
   app.get('/cases/:caseId', async (request, reply) => {
     const { caseId } = request.params as { caseId: string }
+    const query = request.query as {
+      transcriptLimit?: string
+      artifactLimit?: string
+      includeArtifacts?: string
+      lite?: string
+    }
     const job = await findCaseJob(caseId)
 
     if (!job) {
@@ -40,7 +46,11 @@ export async function caseRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: 'case not found' })
     }
 
-    return await summarizeCaseDetail(job, getCaseResult(job))
+    return await summarizeCaseDetail(job, getCaseResult(job), {
+      transcriptLimit: parseDetailLimit(query.transcriptLimit ?? (query.lite === '1' ? '12' : undefined)),
+      artifactLimit: parseDetailLimit(query.artifactLimit ?? (query.lite === '1' ? '0' : undefined)),
+      includeArtifacts: query.includeArtifacts === 'false' || query.lite === '1' ? false : undefined,
+    })
   })
 
   app.delete('/cases/:caseId', async (request, reply) => {
@@ -105,7 +115,18 @@ export async function caseRoutes(app: FastifyInstance) {
     })
     if (!authorized.ok) return reply.status(401).send({ error: authorized.error })
 
-    return await summarizeCaseDetail(job, getCaseResult(job))
+    const query = request.query as {
+      transcriptLimit?: string
+      artifactLimit?: string
+      includeArtifacts?: string
+      lite?: string
+    }
+
+    return await summarizeCaseDetail(job, getCaseResult(job), {
+      transcriptLimit: parseDetailLimit(query.transcriptLimit ?? (query.lite === '1' ? '12' : undefined)),
+      artifactLimit: parseDetailLimit(query.artifactLimit ?? (query.lite === '1' ? '0' : undefined)),
+      includeArtifacts: query.includeArtifacts === 'false' || query.lite === '1' ? false : undefined,
+    })
   })
 
   app.post('/cases/:caseId/follow-challenge', async (request, reply) => {
@@ -412,4 +433,11 @@ export async function caseRoutes(app: FastifyInstance) {
       job,
     })
   })
+}
+
+function parseDetailLimit(value: string | undefined) {
+  if (!value) return undefined
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined
+  return Math.min(Math.floor(parsed), 500)
 }
