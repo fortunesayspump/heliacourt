@@ -2,6 +2,7 @@ import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { fetchJson } from '../http'
 import { getCaseSearchQuery, getPossibleCountryCode } from '../text'
 import * as cheerio from 'cheerio'
+import { getNewsEvidence } from './news'
 
 type NagerHoliday = {
   date?: string
@@ -21,15 +22,17 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
   const deadlineEvidence = getDeadlineEvidence(calendarText)
   const fomcEvidence = await getFomcCalendarEvidence(calendarText, fetchedAt)
   const marketDeadlineEvidence = await getMarketDeadlineEvidence(calendarText, fetchedAt)
+  const discoveredDateEvidence = await getDiscoveredDateEvidence(marketCase, instruction, calendarText, fetchedAt)
 
   if (!countryCode) {
-    const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, marketDeadlineEvidence]
+    const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, marketDeadlineEvidence, discoveredDateEvidence]
     return {
       capability: 'calendar_data',
       provider: [
         deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
         fomcEvidence.observations.length ? 'federal-reserve' : undefined,
         marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
+        discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
         'nager-date',
       ].filter(Boolean).join('+'),
       query,
@@ -51,7 +54,13 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
 
     return {
       capability: 'calendar_data',
-      provider: 'nager-date',
+      provider: [
+        deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
+        fomcEvidence.observations.length ? 'federal-reserve' : undefined,
+        marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
+        discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
+        'nager-date',
+      ].filter(Boolean).join('+'),
       query,
       fetchedAt,
       status: upcoming.length ? 'ok' : 'empty',
@@ -60,13 +69,15 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
             ...deadlineEvidence.observations,
             ...fomcEvidence.observations,
             ...marketDeadlineEvidence.observations,
+            ...discoveredDateEvidence.observations,
             ...upcoming.map((holiday) => `${holiday.countryCode ?? countryCode}: ${holiday.name ?? holiday.localName ?? 'public holiday'} on ${holiday.date}.`),
           ]
-        : [...deadlineEvidence.observations, ...fomcEvidence.observations, ...marketDeadlineEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
+        : [...deadlineEvidence.observations, ...fomcEvidence.observations, ...marketDeadlineEvidence.observations, ...discoveredDateEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
       sources: [
         ...deadlineEvidence.sources,
         ...fomcEvidence.sources,
         ...marketDeadlineEvidence.sources,
+        ...discoveredDateEvidence.sources,
         ...upcoming.map((holiday) => ({
           title: holiday.name ?? holiday.localName ?? `${countryCode} public holiday`,
           url: `https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`,
@@ -87,6 +98,137 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
       error: error instanceof Error ? error.message : 'Calendar tool failed',
     }
   }
+}
+
+async function getDiscoveredDateEvidence(marketCase: MarketCase, instruction: string, text: string, fetchedAt: string): Promise<Pick<ToolEvidence, 'observations' | 'sources'>> {
+  if (!needsDiscoveredDateEvidence(text)) return { observations: [], sources: [] }
+
+  const suppliedUnknownUrls = extractUrls(text)
+    .filter((url) => !/\b(polymarket\.com|kalshi\.com|manifold\.markets|federalreserve\.gov|date\.nager\.at)\b/i.test(url))
+    .slice(0, 3)
+
+  const suppliedResults = await Promise.allSettled(suppliedUnknownUrls.map((url) => extractDatesFromUnknownPage(url, text, fetchedAt)))
+  const suppliedSources = suppliedResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+
+  let discoveryError: string | undefined
+  const discovery = await getNewsEvidence({
+    ...marketCase,
+    question: `${marketCase.question} official schedule deadline calendar date close time`,
+    context: [
+      marketCase.context,
+      'Calendar/date-source discovery: find official or high-authority sources for schedules, deadlines, event dates, close times, updates, and resolution timing.',
+    ].filter(Boolean).join(' '),
+  }, instruction).catch((error) => {
+    discoveryError = error instanceof Error ? error.message : 'unknown error'
+    return undefined
+  })
+  const discoveredSearchSources = (discovery?.sources ?? [])
+    .filter((source) => source.url || source.observedAt || source.title)
+    .slice(0, 8)
+  const discoverySources = discoveredSearchSources.flatMap((source) => sourceToDateSources(source, text, fetchedAt))
+  const discoveryPageResults = await Promise.allSettled(
+    discoveredSearchSources
+      .filter((source) => source.url)
+      .slice(0, 3)
+      .map((source) => extractDatesFromUnknownPage(source.url as string, text, fetchedAt)),
+  )
+  const discoveryPageSources = discoveryPageResults.flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+
+  const sources = dedupeSources([...suppliedSources, ...discoverySources, ...discoveryPageSources]).slice(0, 10)
+  const observations = sources.map((source) => {
+    const date = source.observedAt ? new Date(source.observedAt) : undefined
+    const days = date && Number.isFinite(date.getTime())
+      ? Math.ceil((startOfDay(date).getTime() - startOfDay(new Date()).getTime()) / 86_400_000)
+      : undefined
+    return [
+      `Discovered date source: ${source.title}`,
+      source.url,
+      source.observedAt ? `date ${source.observedAt}` : undefined,
+      typeof days === 'number' ? `(${days >= 0 ? `${days} day(s) away` : `${Math.abs(days)} day(s) ago`})` : undefined,
+      source.value,
+    ].filter(Boolean).join(' ')
+  })
+  if (!observations.length && discoveryError) observations.push(`Date-source discovery search failed: ${discoveryError}.`)
+  if (!observations.length && discovery && !discoveredSearchSources.length) observations.push('Date-source discovery search ran but returned no schedule/deadline/date source candidates.')
+
+  return { observations, sources }
+}
+
+function needsDiscoveredDateEvidence(text: string) {
+  return /\b(schedule|calendar|deadline|date|meeting|event date|close time|end date|expiry|expires|window|before|after|by|through|until|launch|release|decision|minutes|filing|hearing|conference|tournament|earnings|settlement)\b/i.test(text)
+}
+
+async function extractDatesFromUnknownPage(url: string, caseText: string, fetchedAt: string): Promise<ToolEvidence['sources']> {
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        accept: 'text/html,application/xhtml+xml,text/plain,*/*;q=0.8',
+        'user-agent': process.env.HELIA_HTTP_USER_AGENT ?? 'HeliaCourt/0.1',
+      },
+    })
+    if (!response.ok) return []
+    const contentType = response.headers.get('content-type') ?? ''
+    const raw = await response.text()
+    const finalUrl = response.url || url
+    const text = /html/i.test(contentType) ? htmlDateText(raw, finalUrl) : normalizeText(raw).slice(0, 4_000)
+    const dateHints = extractDateHints(text).slice(0, 5)
+    const pageTitle = /html/i.test(contentType) ? getHtmlTitle(raw, finalUrl) : finalUrl
+    const metaDate = /html/i.test(contentType) ? getHtmlDate(raw) : undefined
+
+    return [
+      ...(metaDate ? [{
+        title: `Page date metadata: ${pageTitle}`,
+        url: finalUrl,
+        observedAt: metaDate,
+        value: 'Date metadata from supplied unknown-domain page',
+      }] : []),
+      ...dateHints.map((date) => ({
+        title: `Date mentioned on ${pageTitle}`,
+        url: finalUrl,
+        observedAt: date.toISOString().slice(0, 10),
+        value: 'Date parsed from supplied unknown-domain page text',
+      })),
+    ]
+  } catch {
+    return []
+  }
+}
+
+function sourceToDateSources(source: ToolEvidence['sources'][number], caseText: string, fetchedAt: string): ToolEvidence['sources'] {
+  const parsedDates = extractDateHints(`${source.title} ${source.value ?? ''}`).slice(0, 2)
+  const observedAt = normalizeObservedAt(source.observedAt)
+  const base = source.url ? new URL(source.url).hostname.replace(/^www\./i, '') : 'search source'
+  const items: ToolEvidence['sources'] = []
+
+  if (observedAt) {
+    items.push({
+      title: `Search-discovered dated source: ${source.title}`,
+      url: source.url,
+      observedAt,
+      value: `Observed/publication date from ${base}; inspect exact page before treating as event deadline.`,
+    })
+  }
+
+  for (const date of parsedDates) {
+    items.push({
+      title: `Search-discovered date mention: ${source.title}`,
+      url: source.url,
+      observedAt: date.toISOString().slice(0, 10),
+      value: `Date parsed from search title/snippet metadata from ${base}; inspect exact page before treating as event deadline.`,
+    })
+  }
+
+  if (!items.length && source.url && /\b(schedule|calendar|deadline|fixture|meeting|event|date|close|expiry|expires|timeline|official)\b/i.test(`${source.title} ${source.url}`)) {
+    items.push({
+      title: `Search-discovered schedule/date source candidate: ${source.title}`,
+      url: source.url,
+      value: `Candidate date source from ${base}; exact page extraction should confirm dates before testimony.`,
+    })
+  }
+
+  return items
 }
 
 async function getMarketDeadlineEvidence(text: string, fetchedAt: string): Promise<Pick<ToolEvidence, 'observations' | 'sources'>> {
@@ -470,4 +612,57 @@ function isJsonRecord(value: unknown): value is JsonRecord {
 
 function asString(value: unknown) {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined
+}
+
+function normalizeObservedAt(value?: string) {
+  if (!value) return undefined
+  const parsed = Date.parse(value)
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : undefined
+}
+
+function htmlDateText(html: string, url: string) {
+  const $ = cheerio.load(html)
+  $('script, style, noscript, svg').remove()
+  const dateishAttrs = [
+    $('meta[property="article:published_time"]').attr('content'),
+    $('meta[property="article:modified_time"]').attr('content'),
+    $('meta[name="date"]').attr('content'),
+    $('meta[name="pubdate"]').attr('content'),
+    $('time[datetime]').map((_, element) => $(element).attr('datetime')).get().join(' '),
+  ].filter(Boolean).join(' ')
+  const likelyBlocks = $('title,h1,h2,h3,time,[class*="date" i],[class*="time" i],[class*="schedule" i],[class*="calendar" i],[class*="deadline" i],[class*="event" i],[class*="meeting" i],p,li')
+    .map((_, element) => $(element).text())
+    .get()
+    .join(' ')
+
+  return normalizeText(`${url} ${dateishAttrs} ${likelyBlocks}`).slice(0, 12_000)
+}
+
+function getHtmlTitle(html: string, url: string) {
+  const $ = cheerio.load(html)
+  return normalizeText($('meta[property="og:title"]').attr('content') ?? $('title').first().text() ?? url) || url
+}
+
+function getHtmlDate(html: string) {
+  const $ = cheerio.load(html)
+  const value = $('meta[property="article:published_time"]').attr('content')
+    ?? $('meta[property="article:modified_time"]').attr('content')
+    ?? $('meta[name="date"]').attr('content')
+    ?? $('meta[name="pubdate"]').attr('content')
+    ?? $('time[datetime]').first().attr('datetime')
+  return normalizeObservedAt(value)
+}
+
+function dedupeSources(sources: ToolEvidence['sources']) {
+  const seen = new Set<string>()
+  const output: ToolEvidence['sources'] = []
+
+  for (const source of sources) {
+    const key = `${source.title}:${source.url ?? ''}:${source.observedAt ?? ''}:${source.value ?? ''}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    output.push(source)
+  }
+
+  return output
 }
