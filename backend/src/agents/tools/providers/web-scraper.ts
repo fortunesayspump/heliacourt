@@ -12,6 +12,10 @@ const maxCrawlDepth = readPositiveIntegerEnv('HELIA_SCRAPER_MAX_CRAWL_DEPTH', 2)
 const minUsefulTextLength = readPositiveIntegerEnv('HELIA_SCRAPER_MIN_TEXT_LENGTH', 900)
 const followSuppliedLinks = process.env.HELIA_SCRAPER_FOLLOW_SUPPLIED_LINKS === 'true'
 const maxObservationLength = 1_500
+const staticFetchTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_STATIC_TIMEOUT_MS', 8_000)
+const browserNavigationTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_BROWSER_TIMEOUT_MS', 12_000)
+const browserIdleTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_BROWSER_IDLE_TIMEOUT_MS', 2_000)
+const firecrawlTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_FIRECRAWL_TIMEOUT_MS', 12_000)
 const scraperUserAgent = process.env.HELIA_SCRAPER_USER_AGENT
   ?? process.env.HELIA_HTTP_USER_AGENT
   ?? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
@@ -109,6 +113,11 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
     const target = queue.shift()
     if (!target || visited.has(target.url)) continue
     visited.add(target.url)
+
+    if (isGenericLandingPageUrl(target.url, target.title)) {
+      errors.push(`${target.url}: skipped generic news landing page; scrape article-level URLs, official source pages, or use the search-result snippets instead.`)
+      continue
+    }
 
     const result = await extractPage(target.url, terms)
 
@@ -210,8 +219,8 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
     provider: getProviderLabel(),
     query,
     fetchedAt,
-    status: observations.length ? 'ok' : 'error',
-    observations,
+    status: observations.length ? 'ok' : errors.length ? 'skipped' : 'error',
+    observations: observations.length ? observations : errors.slice(0, 4),
     sources,
     error: observations.length ? undefined : errors.join('; ') || 'No pages could be scraped.',
   }
@@ -243,10 +252,10 @@ async function extractPage(url: string, terms: string[]): Promise<{ ok: true; pa
   if (firecrawlResult.ok && isEmptySocialShell(firecrawlResult.page)) return { ok: false, error: `${url}: Firecrawl social page returned an empty challenge/shell page.` }
   if (firecrawlResult.ok && isUsefulExtraction(firecrawlResult.page, terms)) return firecrawlResult
 
-  if (endpointResult.ok) return endpointResult
-  if (staticResult.ok && !isAccessDeniedPage(staticResult.page) && !isEmptySocialShell(staticResult.page)) return staticResult
-  if (browserResult.ok && !isAccessDeniedPage(browserResult.page) && !isEmptySocialShell(browserResult.page)) return browserResult
-  if (firecrawlResult.ok && !isAccessDeniedPage(firecrawlResult.page) && !isEmptySocialShell(firecrawlResult.page)) return firecrawlResult
+  if (endpointResult.ok && !isNearlyEmptyExtraction(endpointResult.page)) return endpointResult
+  if (staticResult.ok && !isAccessDeniedPage(staticResult.page) && !isEmptySocialShell(staticResult.page) && !isNearlyEmptyExtraction(staticResult.page)) return staticResult
+  if (browserResult.ok && !isAccessDeniedPage(browserResult.page) && !isEmptySocialShell(browserResult.page) && !isNearlyEmptyExtraction(browserResult.page)) return browserResult
+  if (firecrawlResult.ok && !isAccessDeniedPage(firecrawlResult.page) && !isEmptySocialShell(firecrawlResult.page) && !isNearlyEmptyExtraction(firecrawlResult.page)) return firecrawlResult
 
   return { ok: false, error: [resultError(endpointResult), resultError(staticResult), resultError(browserResult), resultError(firecrawlResult)].filter(Boolean).join('; ') }
 }
@@ -339,7 +348,13 @@ function isTextFileUrl(parsed: URL) {
 }
 
 function resultError(result: { ok: true; page: ExtractedPage } | { ok: false; error: string }) {
-  return result.ok ? undefined : result.error
+  if (!result.ok) return result.error
+  if (isNearlyEmptyExtraction(result.page)) return `${result.page.url}: ${result.page.mode} returned no useful readable text.`
+  return undefined
+}
+
+function isNearlyEmptyExtraction(page: ExtractedPage) {
+  return normalizeWhitespace(page.text).length < 40
 }
 
 function isTerminalPublicEndpointError(error: string) {
@@ -537,6 +552,7 @@ async function extractStaticPage(url: string): Promise<{ ok: true; page: Extract
   try {
     const response = await fetch(url, {
       redirect: 'follow',
+      signal: AbortSignal.timeout(staticFetchTimeoutMs),
       headers: {
         accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
         'accept-language': 'en-US,en;q=0.9',
@@ -627,7 +643,8 @@ async function extractBrowserRenderedPage(url: string): Promise<{ ok: true; page
         'upgrade-insecure-requests': '1',
       },
     })
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 20_000 })
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: browserNavigationTimeoutMs })
+    await page.waitForLoadState('networkidle', { timeout: browserIdleTimeoutMs }).catch(() => undefined)
     const title = await page.title()
     const html = await page.content()
     const text = normalizeWhitespace(await page.locator('body').innerText({ timeout: 5_000 }).catch(() => htmlToText(html)))
@@ -663,6 +680,7 @@ async function extractFirecrawlPage(url: string): Promise<{ ok: true; page: Extr
   try {
     const response = await fetch(firecrawlApiUrl, {
       method: 'POST',
+      signal: AbortSignal.timeout(firecrawlTimeoutMs),
       headers: {
         authorization: `Bearer ${process.env.FIRECRAWL_API_KEY}`,
         'content-type': 'application/json',
@@ -774,6 +792,7 @@ async function discoverScrapeSources(marketCase: MarketCase) {
 
   return (newsEvidence?.sources ?? [])
     .filter((source) => source.url && isScrapableUrl(source.url))
+    .filter((source) => !isGenericLandingPageUrl(source.url, source.title))
     .filter((source) => scoreScrapeSource(source, caseText) > 0)
     .sort((left, right) => scoreScrapeSource(right, caseText) - scoreScrapeSource(left, caseText))
     .slice(0, maxPages)
@@ -793,6 +812,7 @@ async function discoverBlockedPageRecoveryTargets(blockedUrl: string, marketCase
 
   return (evidence?.sources ?? [])
     .filter((source) => source.url && isScrapableUrl(source.url) && getHostname(source.url) === host)
+    .filter((source) => !isGenericLandingPageUrl(source.url, source.title))
     .filter((source) => scoreScrapeSource(source, caseText) > 0)
     .slice(0, 6)
     .map((source) => ({
@@ -861,10 +881,35 @@ function scoreScrapeSource(source: ToolEvidence['sources'][number], caseText: st
 
   if (/\b(transcript|captions?|subtitles?|quote|remarks|interview)\b/i.test(haystack)) score += 12
   if (/\b(official|video|audio|watch|youtube|vimeo|whitehouse|archive|factbase|rev|c-span|fox)\b/i.test(haystack)) score += 10
+  if (source.url && isGenericLandingPageUrl(source.url, source.title)) score -= 24
   if (/\b(polymarket|kalshi|predictmarketcap|startuphub|analytics|price|odds|volume)\b/i.test(haystack)) score -= 12
   if (hasAmbiguousShortTermWithoutContext(haystack, caseText)) score -= 18
 
   return score
+}
+
+function isGenericLandingPageUrl(url?: string, title = '') {
+  if (!url) return false
+
+  try {
+    const parsed = new URL(url)
+    const host = parsed.hostname.replace(/^www\./i, '').toLowerCase()
+    const path = parsed.pathname.replace(/\/+$/g, '').toLowerCase()
+    const haystack = `${host} ${path} ${title}`.toLowerCase()
+
+    if (!/(reuters\.com|apnews\.com|bbc\.com|bbc\.co\.uk|cnn\.com|cnbc\.com|bloomberg\.com|ft\.com|nytimes\.com|wsj\.com|scmp\.com)$/.test(host)) {
+      return false
+    }
+
+    if (!path || path === '/') return true
+    if (/^\/(world|us|business|markets|technology|politics|news|latest|breakingviews|legal|sports|china|asia|europe|middle-east)$/.test(path)) return true
+    if (/^\/(world|business|markets|technology|politics|news|legal|sports)\/(us|china|asia|europe|middle-east|africa|americas|global-markets|aerospace-defense|energy|healthcare-pharmaceuticals|media-telecom)$/.test(path)) return true
+    if (/\b(homepage|latest news|breaking news|headlines|top stories|news page)\b/i.test(haystack)) return true
+
+    return false
+  } catch {
+    return false
+  }
 }
 
 function hasAmbiguousShortTermWithoutContext(haystack: string, caseText: string) {
