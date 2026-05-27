@@ -120,7 +120,9 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       return intents
     }
     case 'hermes-news-witness':
-      return [{ capability: 'web_news_search', reason: 'Hermes needs current source flow and reference context, then must filter irrelevant or stale hits before testimony.' }]
+      return /\b(deep|research|branch|investigate|find data|reference class|source gap|catalyst|mechanism|timeout|blocked|hidden|more context|follow|link)\b/i.test(text)
+        ? [{ capability: 'research_session', reason: 'Hermes needs a branch-search-read session to follow leads, inspect selected sources, and preserve source trails instead of stopping at headline search.' }]
+        : [{ capability: 'web_news_search', reason: 'Hermes needs current source flow and reference context, then must filter irrelevant or stale hits before testimony.' }]
     case 'social-count-witness':
       return [{ capability: 'social_activity_data', reason: 'Thales needs an audited account handle, counting window, and social activity provider/archive evidence for exact post-count testimony.' }]
     case 'argos-onchain-witness':
@@ -145,6 +147,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
     }
     case 'skepsis-source-quality-witness':
       return [
+        { capability: 'research_session', reason: 'Skepsis needs connected source trails and read results when source quality depends on recovered or sibling evidence.' },
         { capability: 'web_news_search', reason: 'Skepsis needs source flow to grade authority, freshness, directness, and conflicts.' },
         { capability: 'web_page_scrape', reason: 'Skepsis needs exact page extraction to verify what cited or discovered sources actually prove.' },
       ]
@@ -156,8 +159,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       ]
     case 'sophia-research-witness':
       return [
-        { capability: 'web_news_search', reason: 'Sophia needs broad source discovery and fresh context before synthesizing research.' },
-        { capability: 'web_page_scrape', reason: 'Sophia needs exact page content so broad research stays tied to sources.' },
+        { capability: 'research_session', reason: 'Sophia needs a multi-branch research session: plan subquestions, search, read selected sources, preserve raw evidence, and connect leads before synthesizing.' },
       ]
     case 'numeros-quant-witness': {
       const intents: ToolIntent[] = [{ capability: 'prediction_market_data', reason: 'Numeros needs market-implied probabilities, liquidity, and nearby prediction-market structure.' }]
@@ -205,6 +207,9 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
   }
   if (agentId !== 'hermes-news-witness' && !has('web_news_search') && (isEventOrOperational || isCrypto || isMarketOrPrice)) {
     intents.push({ capability: 'web_news_search', reason: 'Supporting context: current search/news flow can confirm whether the primary testimony is missing obvious fresh catalysts or source-quality issues.' })
+  }
+  if (agentId !== 'sophia-research-witness' && !has('research_session') && /\b(deep|research|branch|investigate|find data|reference class|source gap|catalyst|mechanism|timeout|blocked|hidden|more context|follow|link|no data|unconfirmed)\b/i.test(text)) {
+    intents.push({ capability: 'research_session', reason: 'Supporting context: unresolved gaps or named leads need branch-search-read research with source trails, not another shallow one-shot search.' })
   }
   if (agentId !== 'pythia-prediction-witness' && !has('prediction_market_data') && (isCrypto || marketCase.type === 'prediction-market' || /\b(polymarket|kalshi|manifold|prediction market|odds|price target|reach|above|below|close)\b/i.test(text))) {
     intents.push({ capability: 'prediction_market_data', reason: 'Supporting context: prediction-market and price-distance evidence can help compare factual testimony against market-implied expectations.' })

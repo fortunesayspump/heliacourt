@@ -18,6 +18,7 @@ export type AgentToolCapability =
   | 'prediction_market_data'
   | 'market_data'
   | 'web_news_search'
+  | 'research_session'
   | 'onchain_data'
   | 'weather_data'
   | 'sports_data'

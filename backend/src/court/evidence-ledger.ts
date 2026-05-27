@@ -112,6 +112,7 @@ function classifySourceType(evidence: ToolEvidence, source?: ToolEvidenceSource)
   if (evidence.capability === 'prediction_market_data') return 'market'
   if (evidence.capability === 'market_data') return 'market'
   if (evidence.capability === 'web_news_search') return isOfficialSource(source) ? 'official' : 'news'
+  if (evidence.capability === 'research_session') return isOfficialSource(source) ? 'official' : source?.url ? 'scrape' : 'dataset'
   if (evidence.capability === 'web_page_scrape') return isOfficialSource(source) ? 'official' : 'scrape'
   if (evidence.capability === 'visual_page_analysis') return 'visual'
   if (evidence.capability === 'social_activity_data') return 'social'
@@ -166,6 +167,7 @@ function classifyReliability(evidence: ToolEvidence, source?: ToolEvidenceSource
   if (isOfficialSource(source)) return 'high'
   if (evidence.capability === 'prediction_market_data' || evidence.capability === 'market_data') return 'medium'
   if (evidence.capability === 'web_news_search') return 'medium'
+  if (evidence.capability === 'research_session') return isOfficialSource(source) ? 'high' : 'medium'
   if (evidence.status === 'ok') return 'medium'
 
   return 'unknown'
@@ -178,6 +180,7 @@ function buildEvidenceLimitations(evidence: ToolEvidence) {
   if (evidence.error) limitations.push(evidence.error)
   if (evidence.capability === 'prediction_market_data') limitations.push('Market odds are calibration/context, not proof of resolution.')
   if (evidence.capability === 'web_news_search') limitations.push('Search snippets need source verification before being treated as direct proof.')
+  if (evidence.capability === 'research_session') limitations.push('Research sessions combine search, reader, and structured context; source-level claims still need directness/source-quality grading.')
   if (evidence.capability === 'visual_page_analysis') limitations.push('Visual reads capture visible state at inspection time only.')
 
   return limitations.slice(0, 4)

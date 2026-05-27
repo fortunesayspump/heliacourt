@@ -79,7 +79,7 @@ function resolutionRuleItem(marketCase: MarketCase): EvidenceAgendaItem {
     whyItMatters: marketCase.context
       ? 'Every factual claim must match the supplied resolution rule, not just the headline.'
       : 'The court cannot score evidence until it knows what exactly counts.',
-    preferredCapabilities: ['web_page_scrape', 'web_news_search'],
+    preferredCapabilities: ['web_page_scrape', 'web_news_search', 'research_session'],
     preferredWitnesses: ['skepsis-source-quality-witness', 'web-scraper-witness'],
   }
 }
@@ -99,7 +99,7 @@ function deadlineItem(): EvidenceAgendaItem {
     id: 'deadline-window',
     label: 'Deadline, time remaining, reporting lag, and event window',
     whyItMatters: 'A future-event forecast depends on whether a plausible mechanism can complete before the deadline.',
-    preferredCapabilities: ['calendar_data', 'web_news_search', 'web_page_scrape'],
+    preferredCapabilities: ['calendar_data', 'web_news_search', 'web_page_scrape', 'research_session'],
     preferredWitnesses: ['chronos-timeline-witness'],
   }
 }
@@ -109,7 +109,7 @@ function futurePathwayItem(): EvidenceAgendaItem {
     id: 'future-pathway-catalysts',
     label: 'Future pathway, catalysts, loopholes, and blockers',
     whyItMatters: 'For unresolved will-markets, the forecast turns on what could still happen before the deadline, not only whether the event has happened already.',
-    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'calendar_data', 'prediction_market_data'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'calendar_data', 'prediction_market_data'],
     preferredWitnesses: ['hermes-news-witness', 'chronos-timeline-witness', 'sophia-research-witness', 'numeros-quant-witness'],
   }
 }
@@ -119,7 +119,7 @@ function branchAndLinkItem(): EvidenceAgendaItem {
     id: 'branch-link-research',
     label: 'Research branches, discovered leads, and linked evidence chain',
     whyItMatters: 'A strong hearing should not leave facts isolated; it should follow material leads, connect sources to mechanism/timing/market structure, and explain which branch updates the forecast.',
-    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'visual_page_analysis', 'calendar_data', 'prediction_market_data'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'visual_page_analysis', 'calendar_data', 'prediction_market_data'],
     preferredWitnesses: ['hermes-news-witness', 'web-scraper-witness', 'sophia-research-witness', 'skepsis-source-quality-witness', 'numeros-quant-witness'],
   }
 }
@@ -129,7 +129,7 @@ function directResolutionStatusItem(): EvidenceAgendaItem {
     id: 'direct-resolution-status',
     label: 'Direct status from official or primary resolution sources',
     whyItMatters: 'Direct evidence settles past/resolved cases and anchors unresolved cases without overreading background news.',
-    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'visual_page_analysis'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'visual_page_analysis'],
     preferredWitnesses: ['hermes-news-witness', 'web-scraper-witness', 'skepsis-source-quality-witness'],
   }
 }
@@ -149,7 +149,7 @@ function quantBridgeItem(): EvidenceAgendaItem {
     id: 'scenario-probability-bridge',
     label: 'Scenario tree or probability bridge from facts to forecast',
     whyItMatters: 'The court needs a mechanism, blocker, and rough range rather than a pile of source summaries.',
-    preferredCapabilities: ['prediction_market_data', 'market_data', 'web_news_search'],
+    preferredCapabilities: ['prediction_market_data', 'market_data', 'web_news_search', 'research_session'],
     preferredWitnesses: ['numeros-quant-witness', 'sophia-research-witness'],
   }
 }
@@ -159,7 +159,7 @@ function sourceQualityItem(): EvidenceAgendaItem {
     id: 'source-quality',
     label: 'Source authority, freshness, directness, and missing-source limits',
     whyItMatters: 'A good forecast distinguishes official/direct evidence from fresh but indirect reporting.',
-    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'visual_page_analysis'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'visual_page_analysis'],
     preferredWitnesses: ['skepsis-source-quality-witness', 'web-scraper-witness'],
   }
 }
