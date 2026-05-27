@@ -24,29 +24,32 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
   const electionCalendarEvidence = await getElectionCalendarEvidence(calendarText, countryCode, fetchedAt)
   const marketDeadlineEvidence = await getMarketDeadlineEvidence(calendarText, fetchedAt)
   const discoveredDateEvidence = await getDiscoveredDateEvidence(marketCase, instruction, calendarText, fetchedAt)
+  const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, electionCalendarEvidence, marketDeadlineEvidence, discoveredDateEvidence]
+  const providerParts = [
+    deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
+    fomcEvidence.observations.length ? 'federal-reserve' : undefined,
+    electionCalendarEvidence.observations.length ? 'official-election-calendar' : undefined,
+    marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
+    discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
+    'nager-date',
+  ].filter(Boolean).join('+')
+  const priorObservations = nonHolidayEvidence.flatMap((evidence) => evidence.observations)
+  const priorSources = nonHolidayEvidence.flatMap((evidence) => evidence.sources)
 
   if (!countryCode) {
-    const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, electionCalendarEvidence, marketDeadlineEvidence, discoveredDateEvidence]
     return {
       capability: 'calendar_data',
-      provider: [
-        deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
-        fomcEvidence.observations.length ? 'federal-reserve' : undefined,
-        electionCalendarEvidence.observations.length ? 'official-election-calendar' : undefined,
-        marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
-        discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
-        'nager-date',
-      ].filter(Boolean).join('+'),
+      provider: providerParts,
       query,
       fetchedAt,
-      status: nonHolidayEvidence.some((evidence) => evidence.observations.length) ? 'ok' : 'skipped',
-      observations: nonHolidayEvidence.some((evidence) => evidence.observations.length)
+      status: priorObservations.length ? 'ok' : 'skipped',
+      observations: priorObservations.length
         ? [
-            ...nonHolidayEvidence.flatMap((evidence) => evidence.observations),
+            ...priorObservations,
             'No supported country or location was found, so public-holiday calendar reads were skipped.',
           ]
         : ['No supported country or location was found, so public-holiday calendar reads were skipped.'],
-      sources: nonHolidayEvidence.flatMap((evidence) => evidence.sources),
+      sources: priorSources,
     }
   }
 
@@ -56,33 +59,18 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
 
     return {
       capability: 'calendar_data',
-      provider: [
-        deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
-        fomcEvidence.observations.length ? 'federal-reserve' : undefined,
-        electionCalendarEvidence.observations.length ? 'official-election-calendar' : undefined,
-        marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
-        discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
-        'nager-date',
-      ].filter(Boolean).join('+'),
+      provider: providerParts,
       query,
       fetchedAt,
-      status: upcoming.length ? 'ok' : 'empty',
+      status: upcoming.length || priorObservations.length ? 'ok' : 'empty',
       observations: upcoming.length
         ? [
-            ...deadlineEvidence.observations,
-            ...fomcEvidence.observations,
-            ...electionCalendarEvidence.observations,
-            ...marketDeadlineEvidence.observations,
-            ...discoveredDateEvidence.observations,
+            ...priorObservations,
             ...upcoming.map((holiday) => `${holiday.countryCode ?? countryCode}: ${holiday.name ?? holiday.localName ?? 'public holiday'} on ${holiday.date}.`),
           ]
-        : [...deadlineEvidence.observations, ...fomcEvidence.observations, ...electionCalendarEvidence.observations, ...marketDeadlineEvidence.observations, ...discoveredDateEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
+        : [...priorObservations, `No upcoming public holidays returned for ${countryCode}.`],
       sources: [
-        ...deadlineEvidence.sources,
-        ...fomcEvidence.sources,
-        ...electionCalendarEvidence.sources,
-        ...marketDeadlineEvidence.sources,
-        ...discoveredDateEvidence.sources,
+        ...priorSources,
         ...upcoming.map((holiday) => ({
           title: holiday.name ?? holiday.localName ?? `${countryCode} public holiday`,
           url: `https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`,
@@ -92,15 +80,18 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
       ],
     }
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Calendar tool failed'
     return {
       capability: 'calendar_data',
-      provider: 'nager-date',
+      provider: providerParts,
       query,
       fetchedAt,
-      status: 'error',
-      observations: [],
-      sources: [],
-      error: error instanceof Error ? error.message : 'Calendar tool failed',
+      status: priorObservations.length ? 'ok' : 'error',
+      observations: priorObservations.length
+        ? [...priorObservations, `Public-holiday calendar read failed for ${countryCode}: ${message}.`]
+        : [],
+      sources: priorSources,
+      error: priorObservations.length ? undefined : message,
     }
   }
 }

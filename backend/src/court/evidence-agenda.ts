@@ -89,7 +89,7 @@ function eventOutcomeStructureItem(): EvidenceAgendaItem {
     id: 'event-outcome-structure',
     label: 'Binary contract vs multi-outcome event structure',
     whyItMatters: 'Event pages can contain many contracts, candidates, dates, thresholds, or Yes/No pairs; the court must forecast the filed outcome while using sibling outcomes for calibration.',
-    preferredCapabilities: ['prediction_market_data', 'web_page_scrape'],
+    preferredCapabilities: ['market_structure_session', 'prediction_market_data', 'web_page_scrape'],
     preferredWitnesses: ['pythia-prediction-witness', 'web-scraper-witness', 'skepsis-source-quality-witness'],
   }
 }
@@ -99,7 +99,7 @@ function deadlineItem(): EvidenceAgendaItem {
     id: 'deadline-window',
     label: 'Deadline, time remaining, reporting lag, and event window',
     whyItMatters: 'A future-event forecast depends on whether a plausible mechanism can complete before the deadline.',
-    preferredCapabilities: ['calendar_data', 'web_news_search', 'web_page_scrape', 'research_session'],
+    preferredCapabilities: ['calendar_resolution_session', 'calendar_data', 'web_news_search', 'web_page_scrape', 'research_session'],
     preferredWitnesses: ['chronos-timeline-witness'],
   }
 }
@@ -109,7 +109,7 @@ function futurePathwayItem(): EvidenceAgendaItem {
     id: 'future-pathway-catalysts',
     label: 'Future pathway, catalysts, loopholes, and blockers',
     whyItMatters: 'For unresolved will-markets, the forecast turns on what could still happen before the deadline, not only whether the event has happened already.',
-    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'calendar_data', 'prediction_market_data'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'calendar_resolution_session', 'calendar_data', 'market_structure_session', 'prediction_market_data'],
     preferredWitnesses: ['hermes-news-witness', 'chronos-timeline-witness', 'sophia-research-witness', 'numeros-quant-witness'],
   }
 }
@@ -119,7 +119,7 @@ function branchAndLinkItem(): EvidenceAgendaItem {
     id: 'branch-link-research',
     label: 'Research branches, discovered leads, and linked evidence chain',
     whyItMatters: 'A strong hearing should not leave facts isolated; it should follow material leads, connect sources to mechanism/timing/market structure, and explain which branch updates the forecast.',
-    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'visual_page_analysis', 'calendar_data', 'prediction_market_data'],
+    preferredCapabilities: ['research_session', 'web_news_search', 'web_page_scrape', 'visual_page_analysis', 'calendar_resolution_session', 'calendar_data', 'market_structure_session', 'prediction_market_data'],
     preferredWitnesses: ['hermes-news-witness', 'web-scraper-witness', 'sophia-research-witness', 'skepsis-source-quality-witness', 'numeros-quant-witness'],
   }
 }
@@ -139,7 +139,7 @@ function marketContextItem(): EvidenceAgendaItem {
     id: 'market-context',
     label: 'Prediction-market odds, volume, liquidity, and API/search misses',
     whyItMatters: 'Market odds are calibration context, not proof; liquidity and search misses decide how much weight to give them.',
-    preferredCapabilities: ['prediction_market_data', 'market_data'],
+    preferredCapabilities: ['market_structure_session', 'prediction_market_data', 'market_data'],
     preferredWitnesses: ['pythia-prediction-witness', 'numeros-quant-witness'],
   }
 }
@@ -149,7 +149,7 @@ function quantBridgeItem(): EvidenceAgendaItem {
     id: 'scenario-probability-bridge',
     label: 'Scenario tree or probability bridge from facts to forecast',
     whyItMatters: 'The court needs a mechanism, blocker, and rough range rather than a pile of source summaries.',
-    preferredCapabilities: ['prediction_market_data', 'market_data', 'web_news_search', 'research_session'],
+    preferredCapabilities: ['market_structure_session', 'prediction_market_data', 'market_data', 'web_news_search', 'research_session'],
     preferredWitnesses: ['numeros-quant-witness', 'sophia-research-witness'],
   }
 }

@@ -113,7 +113,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
     case 'visual-evidence-witness':
       return [{ capability: 'visual_page_analysis', reason: 'Eikon needs to inspect supplied images or screenshots for visible text, charts, timestamps, logos, and visual-only evidence.' }]
     case 'pythia-prediction-witness': {
-      const intents: ToolIntent[] = [{ capability: 'prediction_market_data', reason: 'Pythia needs market odds, crypto prices, liquidity, and target-distance context for prediction-market testimony.' }]
+      const intents: ToolIntent[] = [{ capability: 'market_structure_session', reason: 'Pythia needs exact filed-market recovery, event/child/sibling classification, liquidity, spread/depth, freshness, and proxy warnings before market testimony.' }]
       if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5}|btc|bitcoin|eth|ethereum|sol|solana|crypto|price target)\b/i.test(marketCase.question)) {
         intents.push({ capability: 'market_data', reason: 'The question mentions tradfi/crypto price context, so quote, trend, volatility, and target-distance data may support the market read.' })
       }
@@ -138,7 +138,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
         intents.push({ capability: 'sports_data', reason: 'The question looks sports-specific, so event and odds data may be relevant.' })
       }
       if (/\b(holiday|calendar|business day|deadline|horizon|expiry|expires|by|before|after|date|schedule|meeting|minutes|calendar|port|flight|shipment|logistics|market open|market close|close time|end date)\b/i.test(text)) {
-        intents.push({ capability: 'calendar_data', reason: 'The question may depend on public holidays, market/business days, official schedules, market close/end dates, or operational-calendar context.' })
+        intents.push({ capability: 'calendar_resolution_session', reason: 'The question needs anchored dates/deadlines from official calendars, market APIs, and discovered schedule sources, not generic timing guesses.' })
       }
       if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5})\b/.test(marketCase.question)) {
         intents.push({ capability: 'market_data', reason: 'The question includes stock/equity context that may need quote data.' })
@@ -153,16 +153,16 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       ]
     case 'chronos-timeline-witness':
       return [
+        { capability: 'calendar_resolution_session', reason: 'Chronos needs an anchored date-resolution session before saying dates are unconfirmed or relying on typical schedules.' },
         { capability: 'web_news_search', reason: 'Chronos needs source timestamps and event timing from search/news results.' },
         { capability: 'web_page_scrape', reason: 'Chronos needs exact page dates, publication timing, and dated source passages.' },
-        { capability: 'calendar_data', reason: 'Chronos uses calendar data when deadlines, horizons, market days, or public holidays matter.' },
       ]
     case 'sophia-research-witness':
       return [
         { capability: 'research_session', reason: 'Sophia needs a multi-branch research session: plan subquestions, search, read selected sources, preserve raw evidence, and connect leads before synthesizing.' },
       ]
     case 'numeros-quant-witness': {
-      const intents: ToolIntent[] = [{ capability: 'prediction_market_data', reason: 'Numeros needs market-implied probabilities, liquidity, and nearby prediction-market structure.' }]
+      const intents: ToolIntent[] = [{ capability: 'market_structure_session', reason: 'Numeros needs market-implied probabilities plus exact-vs-sibling/proxy structure, liquidity, depth, and freshness before quant calibration.' }]
       if (/\b(price|reach|above|below|close|ath|all time high|stock|equity|shares|\$[A-Z]{1,5}\b|btc|bitcoin|eth|ethereum|sol|solana|volatility|funding|expiry)\b/i.test(text)) {
         intents.push({ capability: 'market_data', reason: 'Numeros needs quote/price context for distance, volatility, and numerical constraints.' })
       }
@@ -212,7 +212,7 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
     intents.push({ capability: 'research_session', reason: 'Supporting context: unresolved gaps or named leads need branch-search-read research with source trails, not another shallow one-shot search.' })
   }
   if (agentId !== 'pythia-prediction-witness' && !has('prediction_market_data') && (isCrypto || marketCase.type === 'prediction-market' || /\b(polymarket|kalshi|manifold|prediction market|odds|price target|reach|above|below|close)\b/i.test(text))) {
-    intents.push({ capability: 'prediction_market_data', reason: 'Supporting context: prediction-market and price-distance evidence can help compare factual testimony against market-implied expectations.' })
+    intents.push({ capability: 'market_structure_session', reason: 'Supporting context: prediction-market evidence needs exact market recovery, event/child/sibling classification, liquidity, freshness, and proxy warnings.' })
   }
   if (!has('market_data') && (isStock || isCrypto)) {
     intents.push({ capability: 'market_data', reason: 'Supporting context: quote, trend, realized volatility, and drawdown data can anchor numerical claims about current market movement.' })
@@ -224,7 +224,7 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
     intents.push({ capability: 'onchain_data', reason: 'Supporting context: address or transfer language requires address-level public RPC checks before anyone argues flow.' })
   }
   if (!has('calendar_data') && isTimeSensitive) {
-    intents.push({ capability: 'calendar_data', reason: 'Supporting context: deadlines, days remaining, business days, holidays, market close/end times, and official calendars can limit or explain the event horizon.' })
+    intents.push({ capability: 'calendar_resolution_session', reason: 'Supporting context: deadlines and schedules need official/API/date-source resolution before witnesses rely on timing assumptions.' })
   }
   if (agentId !== 'web-scraper-witness' && !has('web_page_scrape') && (asksForExactSources || isEventOrOperational)) {
     intents.push({ capability: 'web_page_scrape', reason: 'Supporting context: exact page extraction can verify what cited or search-discovered sources actually say.' })

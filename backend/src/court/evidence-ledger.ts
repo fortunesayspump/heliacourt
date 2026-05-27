@@ -110,6 +110,7 @@ function stringifySourceField(value: unknown) {
 
 function classifySourceType(evidence: ToolEvidence, source?: ToolEvidenceSource): EvidenceItem['sourceType'] {
   if (evidence.capability === 'prediction_market_data') return 'market'
+  if (evidence.capability === 'market_structure_session') return 'market'
   if (evidence.capability === 'market_data') return 'market'
   if (evidence.capability === 'web_news_search') return isOfficialSource(source) ? 'official' : 'news'
   if (evidence.capability === 'research_session') return isOfficialSource(source) ? 'official' : source?.url ? 'scrape' : 'dataset'
@@ -119,7 +120,7 @@ function classifySourceType(evidence: ToolEvidence, source?: ToolEvidenceSource)
   if (evidence.capability === 'onchain_data') return 'onchain'
   if (evidence.capability === 'risk_analysis') return 'risk'
   if (evidence.capability === 'settlement_accounting') return 'settlement'
-  if (evidence.capability === 'weather_data' || evidence.capability === 'sports_data' || evidence.capability === 'calendar_data') return 'dataset'
+  if (evidence.capability === 'weather_data' || evidence.capability === 'sports_data' || evidence.capability === 'calendar_data' || evidence.capability === 'calendar_resolution_session') return 'dataset'
 
   return 'unknown'
 }
@@ -140,6 +141,7 @@ function classifyDirectness(marketCase: MarketCase, evidence: ToolEvidence, text
   if (/\b(no match|missing|timed out|skipped|could not|failed|unavailable|blocked)\b/.test(lower)) return 'missing'
   if (/\b(background|supporting only|context|nearby|broader market)\b/.test(lower)) return 'background'
   if (evidence.capability === 'prediction_market_data' || evidence.capability === 'market_data') return 'background'
+  if (evidence.capability === 'market_structure_session') return 'background'
 
   const hasDirectResolutionLanguage = /\b(primary resolution|resolution source|resolves?|resolve to|confirmed|laboratory-confirmed|officially reported|inside|territory|by the specified date|said the listed term|took the field|declassified)\b/.test(lower)
   const fit = resolutionFit(marketCase, text)
@@ -166,6 +168,7 @@ function classifyReliability(evidence: ToolEvidence, source?: ToolEvidenceSource
   if (evidence.status === 'error' || evidence.status === 'skipped') return 'low'
   if (isOfficialSource(source)) return 'high'
   if (evidence.capability === 'prediction_market_data' || evidence.capability === 'market_data') return 'medium'
+  if (evidence.capability === 'market_structure_session' || evidence.capability === 'calendar_resolution_session') return isOfficialSource(source) ? 'high' : 'medium'
   if (evidence.capability === 'web_news_search') return 'medium'
   if (evidence.capability === 'research_session') return isOfficialSource(source) ? 'high' : 'medium'
   if (evidence.status === 'ok') return 'medium'
@@ -179,6 +182,8 @@ function buildEvidenceLimitations(evidence: ToolEvidence) {
   if (evidence.relevance && evidence.relevance !== 'primary') limitations.push(`Planner relevance is ${evidence.relevance}.`)
   if (evidence.error) limitations.push(evidence.error)
   if (evidence.capability === 'prediction_market_data') limitations.push('Market odds are calibration/context, not proof of resolution.')
+  if (evidence.capability === 'market_structure_session') limitations.push('Market-structure sessions classify exact vs sibling/proxy markets; odds still calibrate rather than prove outcome resolution.')
+  if (evidence.capability === 'calendar_resolution_session') limitations.push('Calendar-resolution sessions anchor dates when possible; compare event date, market close, and reporting lag before forecasting.')
   if (evidence.capability === 'web_news_search') limitations.push('Search snippets need source verification before being treated as direct proof.')
   if (evidence.capability === 'research_session') limitations.push('Research sessions combine search, reader, and structured context; source-level claims still need directness/source-quality grading.')
   if (evidence.capability === 'visual_page_analysis') limitations.push('Visual reads capture visible state at inspection time only.')

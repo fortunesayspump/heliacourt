@@ -121,6 +121,7 @@ export type ToolEvidenceSource = {
 export type ToolEvidence = {
   capability:
     | 'prediction_market_data'
+    | 'market_structure_session'
     | 'market_data'
     | 'web_news_search'
     | 'research_session'
@@ -128,6 +129,7 @@ export type ToolEvidence = {
     | 'weather_data'
     | 'sports_data'
     | 'calendar_data'
+    | 'calendar_resolution_session'
     | 'web_page_scrape'
     | 'visual_page_analysis'
     | 'social_activity_data'

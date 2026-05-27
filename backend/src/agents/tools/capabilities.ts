@@ -1,6 +1,8 @@
 import type { MarketCase, ToolEvidence } from '../../court/types'
 import { getCalendarEvidence } from './providers/calendar'
+import { getCalendarResolutionSessionEvidence } from './providers/calendar-resolution-session'
 import { getMarketDataEvidence } from './providers/market-data'
+import { getMarketStructureSessionEvidence } from './providers/market-structure-session'
 import { getNewsEvidence } from './providers/news'
 import { getOnchainEvidence } from './providers/onchain'
 import { getPredictionMarketEvidence } from './providers/prediction-market'
@@ -20,6 +22,7 @@ export type ToolCapabilityDescriptor = {
 export function executableCapabilities() {
   return [
     { capability: 'prediction_market_data', description: 'Polymarket/Kalshi/Manifold odds, liquidity, order-book/depth/activity, market existence, and crypto target context.' },
+    { capability: 'market_structure_session', description: 'Market identity and microstructure workflow: recover exact filed market, distinguish event vs child vs sibling/proxy, rank outcomes, and preserve odds/liquidity/depth/freshness evidence.' },
     { capability: 'market_data', description: 'Crypto/equity/commodity quote, price distance, 7d/30d trend, realized volatility, drawdown, and volume context.' },
     { capability: 'web_news_search', description: 'Fresh web/news/source discovery, headline flow, source coverage, authority mix, and freshness checks.' },
     { capability: 'research_session', description: 'Multi-step investigator workflow: plan subquestions, search, read/scrape selected sources, preserve raw evidence, and return connected leads/catalysts/blockers.' },
@@ -30,6 +33,7 @@ export function executableCapabilities() {
     { capability: 'weather_data', description: 'Weather conditions, 72h precipitation, 7d daily forecast, and threshold risk flags by extracted location.' },
     { capability: 'sports_data', description: 'Sports events, teams, schedules, rosters, odds, and result context.' },
     { capability: 'calendar_data', description: 'Holidays, business days, parsed deadlines, market close/end times, official meeting schedules such as FOMC calendars, and operational calendar context.' },
+    { capability: 'calendar_resolution_session', description: 'Date-resolution workflow: official calendars, market deadlines, discovered schedule sources, page reads, date authority grading, and unresolved timing gaps.' },
     { capability: 'settlement_accounting', description: 'Case funding, escrow, pending final settlement, payout/protocol fee distinction, and receipt caveats.' },
   ] satisfies ToolCapabilityDescriptor[]
 }
@@ -41,6 +45,8 @@ export function getToolTimeoutMs(capability: ToolEvidence['capability']) {
   if (capability === 'visual_page_analysis') return Number(process.env.HELIA_VISUAL_TOOL_TIMEOUT_MS ?? 35_000)
   if (capability === 'web_page_scrape') return Number(process.env.HELIA_SCRAPE_TOOL_TIMEOUT_MS ?? 75_000)
   if (capability === 'research_session') return Number(process.env.HELIA_RESEARCH_TOOL_TIMEOUT_MS ?? 110_000)
+  if (capability === 'market_structure_session') return Number(process.env.HELIA_MARKET_STRUCTURE_TOOL_TIMEOUT_MS ?? 95_000)
+  if (capability === 'calendar_resolution_session') return Number(process.env.HELIA_CALENDAR_RESOLUTION_TOOL_TIMEOUT_MS ?? 95_000)
   if (capability === 'web_news_search') return Number(process.env.HELIA_SEARCH_TOOL_TIMEOUT_MS ?? 20_000)
   if (capability === 'social_activity_data') return Number(process.env.HELIA_SOCIAL_TOOL_TIMEOUT_MS ?? 25_000)
 
@@ -51,6 +57,8 @@ export function runToolIntent(capability: ToolEvidence['capability'], marketCase
   switch (capability) {
     case 'prediction_market_data':
       return getPredictionMarketEvidence(marketCase)
+    case 'market_structure_session':
+      return getMarketStructureSessionEvidence(marketCase, instruction)
     case 'market_data':
       return getMarketDataEvidence(marketCase, instruction)
     case 'web_news_search':
@@ -65,6 +73,8 @@ export function runToolIntent(capability: ToolEvidence['capability'], marketCase
       return getSportsEvidence(marketCase, instruction)
     case 'calendar_data':
       return getCalendarEvidence(marketCase, instruction)
+    case 'calendar_resolution_session':
+      return getCalendarResolutionSessionEvidence(marketCase, instruction)
     case 'settlement_accounting':
       return Promise.resolve(getSettlementAccountingEvidence(marketCase))
     case 'web_page_scrape':
