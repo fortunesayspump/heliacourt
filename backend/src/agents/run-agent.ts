@@ -3,7 +3,7 @@ import { summarizeEvidenceLedger } from '../court/evidence-ledger'
 import { buildHearingMemory } from '../court/hearing-memory'
 import { summarizeEvidenceAgenda } from '../court/evidence-agenda'
 import { argumentSimilarity, finalizeArtifact, summarizeArgumentQuality } from './artifact-finalization'
-import { generateCourtJson } from './model'
+import { generateCourtJson, generateRawJson, type CourtModelResult } from './model'
 import { getAgentPrompt } from './prompts'
 import { agentRegistry } from './registry'
 
@@ -35,15 +35,25 @@ export async function runPromptedAgent({
     throw new Error(`${agentId} cannot speak without the model: ${reason}`)
   }
 
-  const result = await generateCourtJson({
+  const initialResult = await generateCourtJson({
     agent,
     system: `${prompt.system}\n\n${prompt.outputContract}`,
     user: buildAgentUserPrompt(prompt.task, context, agentId),
   })
 
-  if (!result.ok) {
-    throw new Error(`${agentId} model call failed: ${result.reason}`)
+  if (!initialResult.ok) {
+    throw new Error(`${agentId} model call failed: ${initialResult.reason}`)
   }
+
+  const result = await maybeReflectAndReviseAgentResult({
+    agent,
+    agentId,
+    context,
+    promptTask: prompt.task,
+    system: `${prompt.system}\n\n${prompt.outputContract}`,
+    user: buildAgentUserPrompt(prompt.task, context, agentId),
+    result: initialResult,
+  })
 
   const inferredRequest = inferSpokenHandoff(result.content.message, result.content.request, agentId)
   const candidateRequestedAgentId = result.content.requestedAgentId && agentRegistry.some((entry) => entry.id === result.content.requestedAgentId)
@@ -74,6 +84,128 @@ export async function runPromptedAgent({
       runMode: agent.runMode,
     }), context)
 }
+
+type ReflectionCritique = {
+  pass?: boolean
+  issues?: string[]
+  revisionInstruction?: string
+}
+
+async function maybeReflectAndReviseAgentResult({
+  agent,
+  agentId,
+  context,
+  promptTask,
+  system,
+  user,
+  result,
+}: {
+  agent: ReturnType<typeof getRegistryEntry>
+  agentId: string
+  context: AgentContext
+  promptTask: string
+  system: string
+  user: string
+  result: Extract<CourtModelResult, { ok: true }>
+}) {
+  if (process.env.HELIA_ENABLE_AGENT_REFLECTION === 'false') return result
+  if (context.courtPhase === 'settlement') return result
+  if (agent.runMode === 'deterministic') return result
+  if (isObviouslyAdequateResult(result.content)) return result
+
+  const critique = await generateRawJson<ReflectionCritique>({
+    model: process.env.HELIA_REFLECTION_MODEL ?? process.env.HELIA_DEFAULT_MODEL ?? process.env.OPENROUTER_MODEL,
+    temperature: Number(process.env.HELIA_REFLECTION_TEMPERATURE ?? 0.05),
+    system: agentReflectionSystemPrompt,
+    user: JSON.stringify({
+      agent: {
+        id: agentId,
+        name: agent.name,
+        seat: agent.seat,
+        description: agent.description,
+      },
+      promptTask,
+      courtPhase: context.courtPhase,
+      courtInstruction: context.courtInstruction,
+      marketCase: context.marketCase,
+      toolEvidence: (context.toolEvidence ?? []).slice(0, 8).map((evidence) => ({
+        capability: evidence.capability,
+        provider: evidence.provider,
+        status: evidence.status,
+        relevance: evidence.relevance,
+        observations: evidence.observations.slice(0, 8),
+        sources: evidence.sources.slice(0, 8),
+        error: evidence.error,
+      })),
+      recentRecord: context.artifacts.slice(-6).map((artifact) => ({
+        agentId: artifact.agentId,
+        summary: artifact.summary,
+        risks: artifact.risks?.slice(0, 3),
+        requestedAgentId: artifact.requestedAgentId,
+        request: artifact.request,
+      })),
+      draft: result.content,
+      rubric: [
+        'Does the draft use available tool/API/source evidence before saying data is missing?',
+        'Does it avoid treating unresolved future markets as resolved non-events?',
+        'Does it name specific missing evidence and route the right witness/tool when needed?',
+        'Does it distinguish market price from proof and use liquidity/freshness/depth when present?',
+        'For election/date/data markets, does it anchor official calendar/source data and concrete metrics?',
+        'Does it move the hearing forward instead of looping or asking the user for URLs/data the court can search for?',
+      ],
+      outputShape: {
+        pass: true,
+        issues: ['only if revision is needed'],
+        revisionInstruction: 'specific instruction for the same agent to fix the draft in one retry',
+      },
+    }, null, 2),
+  })
+
+  if (!critique.ok || critique.content.pass !== false) return result
+
+  const revisionInstruction = [
+    'Reflection critique: your previous draft was too shallow or missed available evidence.',
+    ...(critique.content.issues ?? []).slice(0, 5).map((issue) => `Issue: ${issue}`),
+    critique.content.revisionInstruction ? `Revise now: ${critique.content.revisionInstruction}` : undefined,
+    'Return the same JSON shape. Keep the public message concise, but repair the reasoning, evidence use, handoff, proxy/range, or uncertainty cap.',
+  ].filter(Boolean).join('\n')
+
+  const revised = await generateCourtJson({
+    agent,
+    system,
+    user: `${user}\n\n${revisionInstruction}`,
+  })
+
+  return revised.ok ? revised : result
+}
+
+function isObviouslyAdequateResult(content: Extract<CourtModelResult, { ok: true }>['content']) {
+  const text = `${content.message ?? ''} ${(content.claims ?? []).join(' ')} ${(content.risks ?? []).join(' ')} ${content.request ?? ''}`.toLowerCase()
+  const hasConcreteEvidenceUse = /\b(evidence|source|api|market|odds|liquidity|volume|spread|calendar|deadline|official|poll|polling|score|price|date|range|\d+(?:\.\d+)?\s?%)\b/i.test(text)
+  const hasForwardMove = Boolean(content.requestedAgentId && content.request)
+    || Boolean(content.argumentNodes?.some((node) => node.warrant && node.claim))
+    || Boolean(content.leadBranches?.some((branch) => branch.lead && branch.forecastLink))
+  const claimsGapWithoutRepair = /\b(no data|no evidence|unknown|unconfirmed|cannot confirm|missing|gap|timed out)\b/i.test(text)
+    && !/\b(proxy|range|checked|source|request|route|ask|would update|confidence cap|near(?:est)?|reference class|searched)\b/i.test(text)
+
+  return hasConcreteEvidenceUse && hasForwardMove && !claimsGapWithoutRepair
+}
+
+const agentReflectionSystemPrompt = `
+You are Helia Court's reflection critic. You do not write the final testimony.
+Judge whether the draft should be revised before it reaches the transcript.
+
+Fail the draft only when revision would materially improve truth-seeking:
+- it ignores useful tool/source/API evidence already present
+- it says data/date/market is missing when a supplied source, API, sibling market, or tool result already answers it
+- it treats a future unresolved market as a simple "not happened yet" No
+- it loops on failed generic search instead of changing strategy, routing a specialist, or constructing a defensible proxy/range
+- it overweights market odds without liquidity/freshness/depth/source context
+- it asks the user for URLs/data the court can discover itself
+
+Pass concise drafts that are limited but honest, cite/use available evidence, and make a concrete next move.
+Return strict JSON only.
+`
 
 function routeRequestedAgent(agentId: string | undefined, request: string | undefined) {
   if (!agentId || !request) return { agentId, request }
