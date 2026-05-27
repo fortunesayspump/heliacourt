@@ -143,6 +143,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
   }
 
   async function pushRequestedHandoff(artifact: CourtArtifact, parentStep: (typeof procedure)[number], nextStep?: (typeof procedure)[number]) {
+    if (isRecordReadyForVerdict(artifacts)) return undefined
     if (parentStep.phase === 'docket' || parentStep.phase === 'judge-framing' || parentStep.phase === 'opening') return undefined
     if (!artifact.requestedAgentId || !artifact.request || dynamicHandoffs >= maxDynamicHandoffs) return undefined
     if (artifact.requestedAgentId === parentStep.agentId) return undefined
@@ -262,6 +263,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
   }
 
   for (const [index, step] of procedure.entries()) {
+    if (isRecordReadyForVerdict(artifacts) && step.phase !== 'verdict' && step.phase !== 'settlement') continue
     await pushPreVerdictRescue(step)
     if (shouldSkipRedundantPlannedStep(step, procedure[index + 1], transcript)) continue
     const direction = buildMagistrateDirectionTurn(marketCase, step, transcript)
@@ -281,6 +283,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
   async function pushPreVerdictRescue(step: CourtProcedureStep) {
     if (!['closing', 'risk-instruction', 'calibration', 'verdict'].includes(step.phase)) return
     if (dynamicHandoffs >= maxDynamicHandoffs) return
+    if (isRecordReadyForVerdict(artifacts)) return
 
     const rescue = planPreVerdictRescue(step, artifacts)
     if (!rescue) return
@@ -343,7 +346,7 @@ function scoreReusableSource(source: { capability: string; title: string; url: s
   if (source.capability === 'web_page_scrape') score += 5
   if (source.capability === 'prediction_market_data') score += 2
   if (!/polymarket\.com|kalshi\.com|manifold\.markets/i.test(host)) score += 5
-  if (/\b(reuters|apnews|state\.gov|defense|gov|fifa|uefa|official|xinhua|pla|mnd|congress|sec|cftc)\b/i.test(`${host} ${source.title}`)) score += 4
+  if (/\b(reuters|apnews|state\.gov|defense|gov|fifa|uefa|official|xinhua|mnd|congress|sec|cftc)\b/i.test(`${host} ${source.title}`)) score += 4
   if (source.observedAt && !Number.isNaN(Date.parse(source.observedAt))) score += 1
   return score
 }
@@ -519,6 +522,7 @@ function shouldLetCounselClashFirst(artifact: CourtArtifact, nextStep?: CourtPro
 
 function shouldContinueTruthSeeking(artifact: CourtArtifact, step: CourtProcedureStep) {
   if (step.phase === 'opening' || step.phase === 'closing' || step.phase === 'verdict' || step.phase === 'settlement') return false
+  if (isTerminalArtifact(artifact)) return false
   if (artifact.agentId === 'head-judge' || artifact.agentId === 'settlement-clerk') return false
   if (artifact.requestedAgentId && artifact.request && !isDuplicativeHandoff(artifact.requestedAgentId, artifact.request, [])) return true
   if (artifact.argumentQuality?.some((warning) => warning.severity === 'high' && warning.issue !== 'low-novelty')) return true
@@ -537,6 +541,19 @@ function shouldContinueTruthSeeking(artifact: CourtArtifact, step: CourtProcedur
   const asksForMore = /\b(need|needs|missing|unclear|unresolved|cannot prove|cannot determine|would need|requires|gap|not enough)\b/i.test(text)
 
   return hasHighSignal || hasOpenGap || asksForMore
+}
+
+function isRecordReadyForVerdict(artifacts: CourtArtifact[]) {
+  const recent = artifacts.slice(-8)
+  if (recent.some((artifact) => artifact.type === 'verdict' || artifact.agentId === 'head-judge' && isTerminalArtifact(artifact))) return true
+
+  const text = recent.map((artifact) => `${artifact.agentId} ${artifact.summary} ${artifact.transcriptMessage ?? ''}`).join(' ')
+  return /\b(both counsel (?:have )?(?:rested|conceded)|both sides (?:rest|concede|have conceded)|record is exhausted|I will now issue the verdict|ready to issue the verdict|no further evidence to admit)\b/i.test(text)
+}
+
+function isTerminalArtifact(artifact: CourtArtifact) {
+  const text = `${artifact.summary} ${artifact.transcriptMessage ?? ''}`.replace(/\s+/g, ' ')
+  return /\b(I rest|I concede|both counsel (?:have )?(?:rested|conceded)|both sides (?:rest|concede|have conceded)|record is exhausted|I will now issue the verdict|ready to issue the verdict|no further evidence or argument|no further evidence to admit)\b/i.test(text)
 }
 
 function planAdaptiveFollowUp(

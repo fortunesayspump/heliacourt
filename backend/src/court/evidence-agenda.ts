@@ -30,6 +30,7 @@ export function buildEvidenceAgenda(marketCase: MarketCase): EvidenceAgenda {
     deadlineItem(),
     directResolutionStatusItem(),
     futurePathwayItem(),
+    branchAndLinkItem(),
     marketContextItem(),
     quantBridgeItem(),
     ...domainAgendaItems(lower, genres),
@@ -110,6 +111,16 @@ function futurePathwayItem(): EvidenceAgendaItem {
     whyItMatters: 'For unresolved will-markets, the forecast turns on what could still happen before the deadline, not only whether the event has happened already.',
     preferredCapabilities: ['web_news_search', 'web_page_scrape', 'calendar_data', 'prediction_market_data'],
     preferredWitnesses: ['hermes-news-witness', 'chronos-timeline-witness', 'sophia-research-witness', 'numeros-quant-witness'],
+  }
+}
+
+function branchAndLinkItem(): EvidenceAgendaItem {
+  return {
+    id: 'branch-link-research',
+    label: 'Research branches, discovered leads, and linked evidence chain',
+    whyItMatters: 'A strong hearing should not leave facts isolated; it should follow material leads, connect sources to mechanism/timing/market structure, and explain which branch updates the forecast.',
+    preferredCapabilities: ['web_news_search', 'web_page_scrape', 'visual_page_analysis', 'calendar_data', 'prediction_market_data'],
+    preferredWitnesses: ['hermes-news-witness', 'web-scraper-witness', 'sophia-research-witness', 'skepsis-source-quality-witness', 'numeros-quant-witness'],
   }
 }
 
@@ -220,6 +231,7 @@ function buildSourcePlan(text: string, genres: string[]) {
   const plan = [
     'Start with direct/official resolution sources if named in the case context.',
     'For unresolved will-markets, use direct status only as the anchor; then search for catalysts, loopholes, blockers, and mechanisms that could still complete before the deadline.',
+    'Branch from each material lead: define unclear terms, search related actors/events/data, inspect discovered URLs, compare source trails, and link the branch back to the forecast mechanism.',
     'For multi-outcome event pages, identify the filed contract/outcome and inspect sibling contracts/outcomes for calibration pressure.',
     'Search broad news for fresh catalysts and blockers, then scrape the best pages before relying on snippets.',
     'If pages are JS-heavy, blocked, image-based, or social, escalate to screenshot/visual analysis.',
@@ -243,6 +255,7 @@ function buildUncertaintyMap(text: string, genres: string[]) {
     'What is the strongest No blocker and what evidence would overcome it?',
     'Does the timeline allow the mechanism before the deadline?',
     'What does the market price add beyond the factual record?',
+    'Which discovered lead branches are confirmed, contradicted, still open, or irrelevant to the final probability bridge?',
   ]
 
   if (genres.includes('health') || /\b(outbreak|case|virus|ebola)\b/i.test(text)) {

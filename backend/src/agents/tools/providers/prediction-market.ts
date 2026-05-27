@@ -198,6 +198,7 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const relevantMarkets = markets
       .filter((market) => directPolymarketKeys.has(getPolymarketKey(market) ?? '') || (market.question && hasMarketRelevance(searchTerms, getPolymarketMarketText(market), requiredTerms)))
       .filter((market) => !isPlaceholderMarketText(getPolymarketMarketText(market)))
+      .filter((market) => directPolymarketKeys.has(getPolymarketKey(market) ?? '') || !isUnrelatedConditionalMarket(getPolymarketMarketText(market), marketCase.question))
       .slice(0, directPolymarketKeys.size ? 12 : 5)
 
     const directPolymarketBooks = new Map<string, string>()
@@ -1338,10 +1339,18 @@ function isUsefulBroaderHorizon(closeTime: number | undefined, shortHorizonHours
 
 function isUnrelatedConditionalMarket(marketQuestion = '', caseQuestion: string) {
   const normalizedMarket = normalizeSearchText(marketQuestion)
-  const normalizedCase = normalizeSearchText(caseQuestion)
-  const unrelatedTerms = ['spacex', 'gta', 'ipo', 'rihanna', 'album', 'christ', 'trump', 'taiwan']
+  const conditional = /\b(if|when|before|after|conditional|depends|given|provided|assuming)\b/.test(normalizedMarket)
+  if (!conditional) return false
 
-  return unrelatedTerms.some((term) => normalizedMarket.includes(term) && !normalizedCase.includes(term))
+  const caseTerms = new Set(getSearchTerms(caseQuestion).map(normalizeSearchText))
+  const marketTerms = getSearchTerms(marketQuestion)
+    .map(normalizeSearchText)
+    .filter((term) => term.length > 2)
+  const genericTerms = new Set(['will', 'resolve', 'yes', 'market', 'question', 'before', 'after', 'when', 'if', 'end', 'year'])
+  const extraTerms = marketTerms.filter((term) => !caseTerms.has(term) && !genericTerms.has(term))
+  const sharedTerms = marketTerms.filter((term) => caseTerms.has(term))
+
+  return sharedTerms.length >= 2 && extraTerms.length >= 1
 }
 
 function getProviderMarketScore(market: PolymarketMarket, cryptoIds: string[], usdTarget?: number) {

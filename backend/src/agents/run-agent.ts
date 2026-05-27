@@ -66,6 +66,7 @@ export async function runPromptedAgent({
       argumentNodes: shouldKeepArgumentNodes(agent.seat, context)
         ? result.content.argumentNodes?.length ? result.content.argumentNodes : undefined
         : undefined,
+      leadBranches: result.content.leadBranches?.length ? result.content.leadBranches : undefined,
     }, {
       promptVersion: prompt.version,
       modelProvider: result.provider,
@@ -250,6 +251,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           confidence: artifact.confidence,
           testimony: artifact.testimony,
           argumentNodes: artifact.argumentNodes?.slice(0, 2),
+          leadBranches: artifact.leadBranches?.slice(0, 3),
           argumentQuality: summarizeArgumentQuality(artifact.argumentQuality, 2),
         })),
       },
@@ -266,6 +268,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
         evidenceScores: artifact.evidenceScores?.slice(0, 6),
         testimony: artifact.testimony,
         argumentNodes: artifact.argumentNodes?.slice(0, 2),
+        leadBranches: artifact.leadBranches?.slice(0, 3),
         argumentQuality: summarizeArgumentQuality(artifact.argumentQuality, 3),
         notes: artifact.notes?.map((note) => compactText(note, 220)).slice(0, 3),
       })),

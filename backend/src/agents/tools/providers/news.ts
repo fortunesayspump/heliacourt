@@ -620,10 +620,10 @@ function sortSearchItems(items: SearchItem[], marketCase: MarketCase) {
   const caseText = `${marketCase.question} ${marketCase.context ?? ''}`
   const terms = getSearchTerms(caseText)
 
-  return [...items].sort((left, right) => scoreSearchItem(right, terms) - scoreSearchItem(left, terms))
+  return [...items].sort((left, right) => scoreSearchItem(right, terms, caseText) - scoreSearchItem(left, terms, caseText))
 }
 
-function scoreSearchItem(item: SearchItem, terms: string[]) {
+function scoreSearchItem(item: SearchItem, terms: string[], caseText: string) {
   const haystack = `${item.title} ${item.snippet ?? ''} ${item.url ?? ''} ${item.source ?? ''}`.toLowerCase()
   const termHits = terms.filter((term) => term.length > 2 && haystack.includes(term.toLowerCase())).length
   let score = termHits
@@ -634,6 +634,7 @@ function scoreSearchItem(item: SearchItem, terms: string[]) {
   if (/\b(reuters|apnews|associated press|bbc|bloomberg|cnbc|financial times|espn)\b/i.test(haystack)) score += 4
   if (/\b(polymarket|kalshi|predictmarketcap|startuphub|analytics|price|odds|volume|chance)\b/i.test(haystack)) score -= 12
   if (/\b(youtube\.com|youtu\.be|app store|google play|login|sign up|homepage)\b/i.test(haystack) && !/\b(interview|remarks|speech|statement|press conference|official channel)\b/i.test(haystack)) score -= 18
+  if (hasAmbiguousShortTermWithoutContext(haystack, caseText)) score -= 18
 
   return score
 }
@@ -721,6 +722,7 @@ Do not hardcode domain-specific facts. Derive generic evidence needs:
 - timing/deadline/reporting lag
 - catalysts that would make Yes plausible
 - blockers or disconfirming evidence that would make No plausible
+- ambiguous acronyms, symbols, nicknames, or domain terms that must be understood in context before deeper research
 
 Return strict JSON:
 {
@@ -809,10 +811,61 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
       ]
     : []
 
-  return [...new Set([base, ...exactEntityQueries, ...liveQueries, ...transcriptQueries, ...catalystQueries, genreQuery, officialQuery, resolutionQuery, timingQuery, credibilityQuery])]
+  return [...new Set([
+    ...getAmbiguityStudyQueries(liveText),
+    base,
+    ...exactEntityQueries,
+    ...liveQueries,
+    ...transcriptQueries,
+    ...catalystQueries,
+    genreQuery,
+    officialQuery,
+    resolutionQuery,
+    timingQuery,
+    credibilityQuery,
+  ])]
     .map((item) => getCaseSearchQuery(item))
     .filter(Boolean)
     .slice(0, 14)
+}
+
+function getAmbiguityStudyQueries(text: string) {
+  const context = getSearchTerms(text)
+    .filter((term) => term.length > 3)
+    .slice(0, 8)
+    .join(' ')
+
+  return getAmbiguousShortTerms(text).flatMap((term) => [
+    `"${term}" meaning ${context}`,
+    `"${term}" acronym ${context}`,
+  ]).slice(0, 6)
+}
+
+function hasAmbiguousShortTermWithoutContext(haystack: string, caseText: string) {
+  const shortTerms = getAmbiguousShortTerms(caseText).map((term) => term.toLowerCase())
+  if (!shortTerms.some((term) => new RegExp(`\\b${escapeRegex(term)}\\b`, 'i').test(haystack))) return false
+
+  const contextTerms = getSearchTerms(caseText)
+    .filter((term) => term.length > 3 && !shortTerms.includes(term.toLowerCase()))
+    .slice(0, 10)
+
+  if (!contextTerms.length) return false
+  return contextTerms.filter((term) => haystack.includes(term.toLowerCase())).length === 0
+}
+
+function getAmbiguousShortTerms(text: string) {
+  const commonShortWords = new Set(['yes', 'no', 'end', 'top', 'new', 'old', 'win', 'won', 'vs', 'by'])
+  const matches = [...text.matchAll(/\b[A-Za-z][A-Za-z0-9]{1,4}\b/g)]
+    .map((match) => match[0])
+    .filter((term) => /[A-Z]/.test(term) || term === term.toUpperCase())
+    .map((term) => term.replace(/[^A-Za-z0-9]/g, ''))
+    .filter((term) => term.length >= 2 && term.length <= 5 && !commonShortWords.has(term.toLowerCase()))
+
+  return [...new Set(matches)].slice(0, 4)
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function getCatalystQueries({

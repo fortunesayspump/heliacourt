@@ -58,6 +58,7 @@ export type CourtArtifact = {
   evidenceItems?: EvidenceItem[]
   testimony?: TestimonyFinding
   argumentNodes?: ArgumentNode[]
+  leadBranches?: LeadBranch[]
   argumentQuality?: ArgumentQualityWarning[]
   evidenceScores?: EvidenceScore[]
 }
@@ -179,6 +180,13 @@ export type ArgumentNode = {
   warrant: string
   attacks: string[]
   confidence: number
+}
+
+export type LeadBranch = {
+  lead: string
+  status: 'confirmed' | 'contradicted' | 'open' | 'irrelevant'
+  sourceTrail: string[]
+  forecastLink: string
 }
 
 export type ArgumentQualityWarning = {

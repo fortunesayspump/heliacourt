@@ -291,7 +291,8 @@ function getMarketScopeInstruction(marketCase: MarketCase) {
 
   return [
     ' Market-scope instruction:',
-    'if the supplied link is an event page and no child market/outcome was selected, this is an event-wide hearing.',
+    'if the supplied link resolves to an event page and child markets/outcomes are present, this is an event-wide hearing.',
+    'If the link returns 404 or direct market data cannot resolve it, treat the filed market as missing/invalid and use nearby markets only as low-weight proxies.',
     'Counsel must compare/rank the listed outcomes and sibling pressure instead of declaring the case defective or silently choosing a proxy candidate/team.',
     'Only call it ambiguous if the question itself asks for one specific child outcome but the link/metadata cannot identify which child was filed.',
   ].join(' ')

@@ -768,8 +768,36 @@ function scoreScrapeSource(source: ToolEvidence['sources'][number], caseText: st
   if (/\b(transcript|captions?|subtitles?|quote|remarks|interview)\b/i.test(haystack)) score += 12
   if (/\b(official|video|audio|watch|youtube|vimeo|whitehouse|archive|factbase|rev|c-span|fox)\b/i.test(haystack)) score += 10
   if (/\b(polymarket|kalshi|predictmarketcap|startuphub|analytics|price|odds|volume)\b/i.test(haystack)) score -= 12
+  if (hasAmbiguousShortTermWithoutContext(haystack, caseText)) score -= 18
 
   return score
+}
+
+function hasAmbiguousShortTermWithoutContext(haystack: string, caseText: string) {
+  const shortTerms = getAmbiguousShortTerms(caseText).map((term) => term.toLowerCase())
+  if (!shortTerms.some((term) => new RegExp(`\\b${escapeRegex(term)}\\b`, 'i').test(haystack))) return false
+
+  const contextTerms = getSearchTerms(caseText)
+    .filter((term) => term.length > 3 && !shortTerms.includes(term.toLowerCase()))
+    .slice(0, 10)
+
+  if (!contextTerms.length) return false
+  return contextTerms.filter((term) => haystack.includes(term.toLowerCase())).length === 0
+}
+
+function getAmbiguousShortTerms(text: string) {
+  const commonShortWords = new Set(['yes', 'no', 'end', 'top', 'new', 'old', 'win', 'won', 'vs', 'by'])
+  const matches = [...text.matchAll(/\b[A-Za-z][A-Za-z0-9]{1,4}\b/g)]
+    .map((match) => match[0])
+    .filter((term) => /[A-Z]/.test(term) || term === term.toUpperCase())
+    .map((term) => term.replace(/[^A-Za-z0-9]/g, ''))
+    .filter((term) => term.length >= 2 && term.length <= 5 && !commonShortWords.has(term.toLowerCase()))
+
+  return [...new Set(matches)].slice(0, 4)
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 function isScrapableUrl(url: string) {

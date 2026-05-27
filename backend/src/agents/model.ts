@@ -1,5 +1,5 @@
 import type { AgentRegistryEntry } from './types'
-import type { ArgumentNode, TestimonyFinding } from '../court/types'
+import type { ArgumentNode, LeadBranch, TestimonyFinding } from '../court/types'
 import '../config/env'
 
 type ChatMessage = {
@@ -44,6 +44,12 @@ export type CourtModelJson = {
     warrant?: string
     attacks?: string[]
     confidence?: number
+  }>
+  leadBranches?: Array<{
+    lead?: string
+    status?: string
+    sourceTrail?: string[]
+    forecastLink?: string
   }>
 }
 
@@ -287,9 +293,10 @@ function parseRawJson<T>(content: string): T {
   }
 }
 
-type NormalizedCourtModelJson = Omit<CourtModelJson, 'argumentNodes' | 'testimony'> & {
+type NormalizedCourtModelJson = Omit<CourtModelJson, 'argumentNodes' | 'leadBranches' | 'testimony'> & {
   testimony?: TestimonyFinding
   argumentNodes?: ArgumentNode[]
+  leadBranches?: LeadBranch[]
 }
 
 function normalizeCourtJson(value: CourtModelJson): NormalizedCourtModelJson {
@@ -303,6 +310,7 @@ function normalizeCourtJson(value: CourtModelJson): NormalizedCourtModelJson {
     request: typeof value.request === 'string' ? cleanModelText(value.request, 500) : undefined,
     testimony: normalizeTestimony(value.testimony),
     argumentNodes: normalizeArgumentNodes(value.argumentNodes),
+    leadBranches: normalizeLeadBranches(value.leadBranches),
   }
 }
 
@@ -348,6 +356,30 @@ function normalizeArgumentNodes(value: CourtModelJson['argumentNodes']): Argumen
     })
     .filter((node): node is NonNullable<typeof node> => Boolean(node))
     .slice(0, 4)
+}
+
+function normalizeLeadBranches(value: CourtModelJson['leadBranches']): LeadBranch[] | undefined {
+  if (!Array.isArray(value)) return undefined
+
+  return value
+    .map((branch) => {
+      const lead = typeof branch.lead === 'string' ? cleanModelText(branch.lead, 220) : ''
+      const status: LeadBranch['status'] =
+        branch.status === 'confirmed' || branch.status === 'contradicted' || branch.status === 'irrelevant'
+          ? branch.status
+          : 'open'
+      const forecastLink = typeof branch.forecastLink === 'string' ? cleanModelText(branch.forecastLink, 260) : ''
+      if (!lead || !forecastLink) return undefined
+
+      return {
+        lead,
+        status,
+        sourceTrail: cleanModelList(branch.sourceTrail ?? [], 5, 180),
+        forecastLink,
+      }
+    })
+    .filter((branch): branch is NonNullable<typeof branch> => Boolean(branch))
+    .slice(0, 5)
 }
 
 function clamp(value: number, min: number, max: number) {

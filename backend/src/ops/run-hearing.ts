@@ -143,6 +143,7 @@ function summarizeArtifactForLog(artifact: CourtArtifact) {
     runMode: artifact.runMode,
     testimony: artifact.testimony,
     argumentNodes: artifact.argumentNodes,
+    leadBranches: artifact.leadBranches,
     argumentQuality: artifact.argumentQuality,
     evidenceItems: artifact.evidenceItems?.slice(0, 8),
     evidenceScores: artifact.evidenceScores,

@@ -39,6 +39,7 @@ export function buildClaimMap(context: AgentContext): ClaimMap {
     ...buildAgendaClaims(context),
     ...buildEvidenceClaims(ledger),
     ...buildArgumentClaims(artifacts, ledger),
+    ...buildLeadBranchClaims(artifacts),
     ...buildGapClaims(artifacts),
   ]
   const compacted = dedupeClaims(claims)
@@ -166,6 +167,27 @@ function buildArgumentClaims(artifacts: CourtArtifact[], ledger: EvidenceItem[])
         lastAgentId: artifact.agentId,
       }
     }),
+  )
+}
+
+function buildLeadBranchClaims(artifacts: CourtArtifact[]): ForecastClaim[] {
+  return artifacts.flatMap((artifact) =>
+    (artifact.leadBranches ?? []).map((branch, index) => ({
+      id: `claim-branch-${artifact.agentId}-${index}-${hashText(branch.lead)}`,
+      type: branch.status === 'contradicted' ? 'no-blocker' as const : branch.status === 'confirmed' ? 'yes-pathway' as const : 'quant-bridge' as const,
+      side: 'neutral' as const,
+      status: branch.status === 'confirmed'
+        ? 'supported' as const
+        : branch.status === 'contradicted'
+          ? 'contested' as const
+          : branch.status === 'irrelevant'
+            ? 'struck' as const
+            : 'open' as const,
+      text: compact(`Lead branch: ${branch.lead}. Link: ${branch.forecastLink}`, 280),
+      evidenceIds: branch.sourceTrail.filter((item) => /^evidence-/.test(item)),
+      pressure: branch.status === 'open' ? 0.7 : branch.status === 'irrelevant' ? 0.22 : 0.58,
+      lastAgentId: artifact.agentId,
+    })),
   )
 }
 

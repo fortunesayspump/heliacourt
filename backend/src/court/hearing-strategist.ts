@@ -85,6 +85,7 @@ Design a compact evidence strategy for a prediction-market hearing.
 Core principle:
 - Most prediction markets are unresolved future-event questions. Do not plan as if the court merely verifies whether the event already happened.
 - Plan for forecasting: reference class/base rate, current catalysts, current blockers, time remaining, source directness, and what would update the probability.
+- Plan for investigative depth: when the question contains ambiguous terms, hidden data, blocked pages, charts, or weak source coverage, include a discovery step, a source-inspection step, and a synthesis/quant/source-quality step instead of one shallow search.
 - For event pages with multiple contracts, candidates, dates, thresholds, or outcomes, plan around the specific filed contract and compare sibling outcomes for calibration pressure.
 - "No direct evidence that it happened yet" is status context, not a final No, unless the deadline passed, the market/source resolved, or current non-occurrence satisfies the rule.
 - For markets with public odds, include the market witness or quant witness unless the question has no plausible market context; an API miss is not proof that no market exists.
@@ -111,6 +112,8 @@ Reasoning policy:
 - Do not skip scheduled phases or move straight to closing/verdict.
 - Prefer truth-seeking inside the current procedural moment.
 - If the last turn is enough, choose proceed.
+- If the last turn says a term, data source, chart, table, market structure, or mechanism is unclear, do not accept the gap immediately. Prefer a focused discovery, scrape/visual inspection, structured-data check, source-quality review, or quant proxy step.
+- If a witness found generic or off-context sources, redirect with a narrower context query or a different witness/tool instead of letting counsel argue from junk.
 - When a high-signal catalyst or blocker appears, do not let the court glide past it. Prefer an Archon drill-down unless the transcript already answered exact event, source directness, timing/window fit, mechanism/failure mode, reference class/base rate, and probability movement.
 - If a probability bridge is weak, choose ask-judge or ask-counsel.
 - If direct source text is missing or source quality is disputed, choose call-witness with web-scraper-witness or skepsis-source-quality-witness.
@@ -169,6 +172,7 @@ function buildStrategistPayload({
       risks: lastArtifact.risks?.slice(0, 4),
       testimony: lastArtifact.testimony,
       argumentNodes: lastArtifact.argumentNodes?.slice(0, 3),
+      leadBranches: lastArtifact.leadBranches?.slice(0, 5),
       argumentQuality: lastArtifact.argumentQuality?.slice(0, 6),
       evidenceScores: lastArtifact.evidenceScores?.slice(0, 8),
       evidenceItems: lastArtifact.evidenceItems?.slice(0, 8).map((item) => ({
