@@ -37,7 +37,7 @@ export function getToolTimeoutMs(capability: ToolEvidence['capability']) {
   if (Number.isFinite(configured) && configured > 0) return configured
 
   if (capability === 'visual_page_analysis') return Number(process.env.HELIA_VISUAL_TOOL_TIMEOUT_MS ?? 35_000)
-  if (capability === 'web_page_scrape') return Number(process.env.HELIA_SCRAPE_TOOL_TIMEOUT_MS ?? 25_000)
+  if (capability === 'web_page_scrape') return Number(process.env.HELIA_SCRAPE_TOOL_TIMEOUT_MS ?? 75_000)
   if (capability === 'web_news_search') return Number(process.env.HELIA_SEARCH_TOOL_TIMEOUT_MS ?? 20_000)
   if (capability === 'social_activity_data') return Number(process.env.HELIA_SOCIAL_TOOL_TIMEOUT_MS ?? 25_000)
 

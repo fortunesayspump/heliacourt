@@ -19,6 +19,7 @@ export type TrajectoryEvaluation = {
 
 const terminalPattern = /\b(record is exhausted|both sides? (?:rest|concede|have conceded)|ready to issue the verdict|I will now issue the verdict|move to verdict|cannot proceed substantively|no further evidence)\b/i
 const missingDataPattern = /\b(no data|zero polling|lacks? data|cannot confirm|unconfirmed|not found|missing|gap remains|timed out|generic homepage|dead end|no content retrieved|no specific articles|empty results|no direct polling|no candidate names)\b/i
+const namedSourceFailurePattern = /\b(?:CNBC|BI|Business Insider|Reuters|Bloomberg|Financial Times|FT|WSJ|AP|BBC|NYT|New York Times|official|PDF|rules PDF|source page|filed link|market page)[^.]{0,140}\b(?:timed out|timeout|unscraped|cannot confirm|no text|no content retrieved|blocked)\b/i
 
 export function evaluateHearingTrajectory(params: {
   marketCase: MarketCase
@@ -107,6 +108,20 @@ export function evaluateHearingTrajectory(params: {
       ]),
       suggestedAgentId: 'web-scraper-witness',
       suggestedRequest: 'Do not retry the same timed-out page again. Change retrieval strategy: use the direct PDF/file extractor if it is a file, static endpoint before browser, archive/cache, source API, text-only mirrors, search snippets, or a narrower official page. Report exactly which fallback worked or why each fallback failed.',
+    })
+  }
+
+  if (needsNamedSourceRecovery(recentText, toolEvidence, parentStep)) {
+    add({
+      id: 'named-source-recovery-before-verdict',
+      severity: 'critical',
+      summary: 'A named high-value source failed extraction and the hearing is treating that as an unresolved gap.',
+      evidence: compactEvidence([
+        recentText.match(namedSourceFailurePattern)?.[0],
+        ...matchingEvidence(toolEvidence, /\b(CNBC|BI|Business Insider|Reuters|Bloomberg|Financial Times|FT|WSJ|AP|BBC|NYT|official|PDF|source page|filed link|market page).{0,180}(timed out|timeout|blocked|no content|unscraped)\b/i),
+      ]),
+      suggestedAgentId: 'sophia-research-witness',
+      suggestedRequest: 'Recover named source evidence before closure: use search snippets, same-story syndication, archive/cache, official/company page, source API, PDF/file extraction, or a visual screenshot. If full text remains unavailable, preserve source title/date/snippet and route Skepsis to grade whether snippet-level evidence is enough. Do not close merely because a named source timed out.',
     })
   }
 
@@ -224,6 +239,19 @@ function isPrematureClosure(recentText: string, parentStep?: CourtProcedureStep,
   const unresolvedGap = missingDataPattern.test(recentText)
 
   return Boolean((closurePhase || closureText) && unresolvedGap)
+}
+
+function needsNamedSourceRecovery(recentText: string, toolEvidence: ToolEvidence[], parentStep?: CourtProcedureStep) {
+  const closurePhase = parentStep && ['closing', 'risk-instruction', 'calibration', 'verdict'].includes(parentStep.phase)
+  const namedFailure = namedSourceFailurePattern.test(recentText)
+    || toolEvidence.some((evidence) => namedSourceFailurePattern.test(`${evidence.error ?? ''} ${evidence.observations.join(' ')} ${evidence.sources.map((source) => `${source.title} ${source.url ?? ''} ${source.value ?? ''}`).join(' ')}`))
+  const hasFallback = toolEvidence.some((evidence) =>
+    evidence.capability === 'web_page_scrape'
+    && evidence.status === 'ok'
+    && /\b(search-snippet-fallback|source metadata|fallback search result|visual_page_analysis|screenshot)\b/i.test(`${evidence.observations.join(' ')} ${evidence.sources.map((source) => source.value ?? '').join(' ')}`),
+  )
+
+  return Boolean(namedFailure && (closurePhase || terminalPattern.test(recentText)) && !hasFallback)
 }
 
 function hasAcronymContextDrift(caseText: string, toolEvidence: ToolEvidence[], recentText: string) {

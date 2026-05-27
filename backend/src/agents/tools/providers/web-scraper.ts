@@ -16,6 +16,8 @@ const staticFetchTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_STATIC_TIMEOU
 const browserNavigationTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_BROWSER_TIMEOUT_MS', 12_000)
 const browserIdleTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_BROWSER_IDLE_TIMEOUT_MS', 2_000)
 const firecrawlTimeoutMs = readPositiveIntegerEnv('HELIA_SCRAPER_FIRECRAWL_TIMEOUT_MS', 12_000)
+const scraperRuntimeBudgetMs = readPositiveIntegerEnv('HELIA_SCRAPER_RUNTIME_BUDGET_MS', 68_000)
+const scraperStopBufferMs = readPositiveIntegerEnv('HELIA_SCRAPER_STOP_BUFFER_MS', 4_000)
 const scraperUserAgent = process.env.HELIA_SCRAPER_USER_AGENT
   ?? process.env.HELIA_HTTP_USER_AGENT
   ?? 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36'
@@ -102,6 +104,7 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
   }
 
   const terms = getSearchTerms(`${marketCase.question} ${marketCase.context ?? ''} ${suppliedLinkText}`)
+  const deadlineMs = Date.now() + scraperRuntimeBudgetMs
   const queue = [...initialTargets]
   const visited = new Set<string>()
   const visitedFinalUrls = new Set<string>()
@@ -110,6 +113,11 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
   const errors: string[] = []
 
   while (queue.length && visited.size < maxPages) {
+    if (timeRemaining(deadlineMs) <= scraperStopBufferMs) {
+      errors.push(`scrape budget nearly exhausted with ${queue.length} target(s) left; returning partial evidence instead of timing out.`)
+      break
+    }
+
     const target = queue.shift()
     if (!target || visited.has(target.url)) continue
     visited.add(target.url)
@@ -119,11 +127,17 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
       continue
     }
 
-    const result = await extractPage(target.url, terms)
+    const result = await extractPage(target.url, terms, deadlineMs)
 
     if (!result.ok) {
       errors.push(result.error)
-      if (isBlockedAccessError(result.error)) {
+      const metadataFallback = await extractSearchSnippetFallback(target, marketCase, terms)
+      if (metadataFallback) {
+        observations.push(metadataFallback.observation)
+        sources.push(metadataFallback.source)
+      }
+
+      if (isRecoverableExtractionError(result.error)) {
         const recoveryTargets = await discoverBlockedPageRecoveryTargets(target.url, marketCase)
         for (const recoveryTarget of recoveryTargets) {
           if (visited.size + queue.length >= maxPages) queue.pop()
@@ -220,35 +234,48 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
     query,
     fetchedAt,
     status: observations.length ? 'ok' : errors.length ? 'skipped' : 'error',
-    observations: observations.length ? observations : errors.slice(0, 4),
+    observations: observations.length
+      ? [
+          ...observations,
+          ...errors.slice(0, 3).map((error) => `Extraction limit: ${error}`),
+        ].slice(0, 8)
+      : errors.slice(0, 6),
     sources,
     error: observations.length ? undefined : errors.join('; ') || 'No pages could be scraped.',
   }
 }
 
-async function extractPage(url: string, terms: string[]): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
+async function extractPage(url: string, terms: string[], deadlineMs = Date.now() + scraperRuntimeBudgetMs): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
   const fileLike = isFileExtractionUrl(url)
+  if (timeRemaining(deadlineMs) <= scraperStopBufferMs) return { ok: false, error: `${url}: skipped extraction because scrape budget was nearly exhausted.` }
   const fileResult = await extractFilePage(url)
   if (fileResult.ok) return fileResult
   if (fileLike) return fileResult
 
+  if (timeRemaining(deadlineMs) <= scraperStopBufferMs) return { ok: false, error: `${url}: skipped public endpoint because scrape budget was nearly exhausted.` }
   const endpointResult = await extractPublicEndpointPage(url)
   if (endpointResult.ok && isUsefulExtraction(endpointResult.page, terms)) return endpointResult
   if (endpointResult.ok && isEndpointFriendlyHost(url)) return endpointResult
   if (!endpointResult.ok && isTerminalPublicEndpointError(endpointResult.error)) return endpointResult
 
+  if (timeRemaining(deadlineMs) <= scraperStopBufferMs) return bestAvailablePageOrError(url, [endpointResult], 'static scrape')
   const staticResult = await extractStaticPage(url)
   if (staticResult.ok && isAccessDeniedPage(staticResult.page)) return { ok: false, error: `${url}: blocked access page returned by ${staticResult.page.finalUrl}` }
+  if (staticResult.ok && isNotFoundPage(staticResult.page)) return { ok: false, error: `${url}: not-found page returned by ${staticResult.page.finalUrl}` }
   if (staticResult.ok && isEmptySocialShell(staticResult.page)) return { ok: false, error: `${url}: social page returned an empty challenge/shell page.` }
   if (staticResult.ok && isUsefulExtraction(staticResult.page, terms)) return staticResult
 
+  if (timeRemaining(deadlineMs) <= Math.max(scraperStopBufferMs, browserNavigationTimeoutMs + 2_000)) return bestAvailablePageOrError(url, [endpointResult, staticResult], 'browser render')
   const browserResult = await extractBrowserRenderedPage(url)
   if (browserResult.ok && isAccessDeniedPage(browserResult.page)) return { ok: false, error: `${url}: blocked access page returned by ${browserResult.page.finalUrl}` }
+  if (browserResult.ok && isNotFoundPage(browserResult.page)) return { ok: false, error: `${url}: not-found page returned by ${browserResult.page.finalUrl}` }
   if (browserResult.ok && isEmptySocialShell(browserResult.page)) return { ok: false, error: `${url}: rendered social page returned an empty challenge/shell page.` }
   if (browserResult.ok && isUsefulExtraction(browserResult.page, terms)) return browserResult
 
+  if (timeRemaining(deadlineMs) <= Math.max(scraperStopBufferMs, firecrawlTimeoutMs + 2_000)) return bestAvailablePageOrError(url, [endpointResult, staticResult, browserResult], 'Firecrawl')
   const firecrawlResult = await extractFirecrawlPage(url)
   if (firecrawlResult.ok && isAccessDeniedPage(firecrawlResult.page)) return { ok: false, error: `${url}: blocked access page returned by ${firecrawlResult.page.finalUrl}` }
+  if (firecrawlResult.ok && isNotFoundPage(firecrawlResult.page)) return { ok: false, error: `${url}: not-found page returned by ${firecrawlResult.page.finalUrl}` }
   if (firecrawlResult.ok && isEmptySocialShell(firecrawlResult.page)) return { ok: false, error: `${url}: Firecrawl social page returned an empty challenge/shell page.` }
   if (firecrawlResult.ok && isUsefulExtraction(firecrawlResult.page, terms)) return firecrawlResult
 
@@ -258,6 +285,22 @@ async function extractPage(url: string, terms: string[]): Promise<{ ok: true; pa
   if (firecrawlResult.ok && !isAccessDeniedPage(firecrawlResult.page) && !isEmptySocialShell(firecrawlResult.page) && !isNearlyEmptyExtraction(firecrawlResult.page)) return firecrawlResult
 
   return { ok: false, error: [resultError(endpointResult), resultError(staticResult), resultError(browserResult), resultError(firecrawlResult)].filter(Boolean).join('; ') }
+}
+
+function bestAvailablePageOrError(
+  url: string,
+  results: Array<{ ok: true; page: ExtractedPage } | { ok: false; error: string }>,
+  skippedStep: string,
+): { ok: true; page: ExtractedPage } | { ok: false; error: string } {
+  const page = results
+    .filter((result): result is { ok: true; page: ExtractedPage } => result.ok && !isNearlyEmptyExtraction(result.page))
+    .sort((left, right) => right.page.text.length - left.page.text.length)[0]?.page
+
+  if (page) return { ok: true, page }
+  return {
+    ok: false,
+    error: `${url}: skipped ${skippedStep} because scrape budget was nearly exhausted; ${results.map(resultError).filter(Boolean).join('; ')}`,
+  }
 }
 
 async function extractFilePage(url: string): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
@@ -825,6 +868,84 @@ async function discoverBlockedPageRecoveryTargets(blockedUrl: string, marketCase
     }))
 }
 
+async function extractSearchSnippetFallback(target: ScrapeTarget, marketCase: MarketCase, terms: string[]) {
+  const fallbackText = normalizeWhitespace(`${target.title ?? ''} ${target.discoveryLabel ?? ''}`)
+  if (hasMeaningfulTargetMetadata(target) && (fallbackText.length >= 80 || hasTermHit(fallbackText, terms))) {
+    const sourceTrail = formatSourceTrail(target)
+    const hash = createHash('sha256').update(fallbackText).digest('hex').slice(0, 16)
+    return {
+      observation: truncateObservation([
+        `Fallback source metadata for ${target.url}.`,
+        `Source trail: ${sourceTrail}.`,
+        `Search/discovery snippet: ${fallbackText}.`,
+        'Does not prove: this is search-result metadata, not full page text; use only as a fallback pointer when extraction is blocked or slow.',
+        `Content hash: ${hash}.`,
+      ].join(' ')),
+      source: {
+        title: target.title || target.url,
+        url: target.url,
+        observedAt: new Date().toISOString(),
+        value: JSON.stringify({
+          mode: 'search-snippet-fallback',
+          sourceQuality: classifySourceQuality(target.url),
+          contentHash: hash,
+          sourceTrail,
+          discoverySource: target.source,
+          discoveredFrom: target.discoveredFrom,
+          discoveryLabel: target.discoveryLabel,
+          crawlDepth: target.depth,
+          extract: compactText(fallbackText, 500),
+        }),
+      } satisfies ToolEvidence['sources'][number],
+    }
+  }
+
+  const host = getHostname(target.url)
+  if (!host) return undefined
+
+  const caseText = `${marketCase.question} ${marketCase.context ?? ''}`
+  const searchQuery = `${caseText} site:${host}`
+  const evidence = await getNewsEvidence({
+    ...marketCase,
+    question: searchQuery,
+    context: `${marketCase.context ?? ''} Snippet fallback for slow or blocked scrape target ${target.url}.`,
+  }).catch(() => undefined)
+  const source = (evidence?.sources ?? [])
+    .filter((item) => item.url && getHostname(item.url) === host)
+    .find((item) => hasTermHit(`${item.title} ${item.value ?? ''}`, terms))
+
+  if (!source?.url) return undefined
+  const text = normalizeWhitespace(`${source.title} ${source.value ?? ''}`)
+  const sourceTrail = `search snippet fallback for ${target.url}`
+  const hash = createHash('sha256').update(text).digest('hex').slice(0, 16)
+
+  return {
+    observation: truncateObservation([
+      `Fallback search result for slow/blocked page ${target.url}.`,
+      `Matched ${source.title} at ${source.url}.`,
+      `Search metadata: ${text}.`,
+      'Does not prove: this is not full article text; it preserves source identity and snippet-level claim while deeper extraction is unavailable.',
+      `Content hash: ${hash}.`,
+    ].join(' ')),
+    source: {
+      title: source.title,
+      url: source.url,
+      observedAt: source.observedAt ?? new Date().toISOString(),
+      value: JSON.stringify({
+        mode: 'search-snippet-fallback',
+        sourceQuality: classifySourceQuality(source.url),
+        contentHash: hash,
+        sourceTrail,
+        discoverySource: 'search',
+        discoveredFrom: target.url,
+        discoveryLabel: source.value,
+        crawlDepth: target.depth,
+        extract: compactText(text, 500),
+      }),
+    } satisfies ToolEvidence['sources'][number],
+  }
+}
+
 function expandUrlVariants(url: string) {
   if (isEndpointFriendlyHost(url)) return []
   const variants = new Set<string>()
@@ -1000,7 +1121,7 @@ function extractOutboundSourceUrls(page: ExtractedPage, terms: string[]): Outbou
   }
 
   return candidates
-    .filter((candidate) => candidate.score >= 5 && hasStrongTermHit(candidate.label, terms))
+    .filter((candidate) => candidate.score >= 7 && hasStrongTermHit(candidate.label, terms))
     .sort((left, right) => right.score - left.score)
     .filter((candidate, index, values) => values.findIndex((value) => value.url === candidate.url) === index)
     .slice(0, 8)
@@ -1039,7 +1160,7 @@ function scoreOutboundSource(value: string, terms: string[], sourceHost?: string
 
   const targetHost = extractFirstUrl(value)
   if (sourceHost && targetHost && sourceHost === getHostname(targetHost)) score += 2
-  if (/\b(transcript|analysis|source|official|video|audio|archive|captions?|subtitles?|factbase|rev|news|press|release|releases|library|documents?|uap|ufo|report)\b/i.test(value)) score += 8
+  if (/\b(transcript|analysis|source|official|video|audio|archive|captions?|subtitles?|factbase|rev|press|release|releases|library|documents?|uap|ufo|report)\b/i.test(value)) score += 8
   if (/\b(aaro|dod|defense|whitehouse|archives|foia|reading room|documents?)\b/i.test(value)) score += 8
   if (/^\s*.{1,2}\s*https?:/i.test(value)) score -= 5
   if (/\b(login|signup|share|privacy|terms|advertise|mailto|javascript|flow\/login)\b/i.test(value)) score -= 10
@@ -1073,6 +1194,9 @@ function hasStrongTermHit(value: string, terms: string[]) {
     'timeframe',
     'question',
     'context',
+    'news',
+    'business',
+    'insider',
   ])
 
   return terms.some((term) => {
@@ -1119,20 +1243,29 @@ function stripNonContentMarkup(html: string) {
 
 function extractCheerioMetadata(html: string, url: string) {
   const $ = cheerio.load(html)
+  const jsonLd = extractJsonLdMetadata($)
   const title = normalizeWhitespace($('meta[property="og:title"]').attr('content') ?? $('title').first().text() ?? '')
   const description = normalizeWhitespace(
     $('meta[name="description"]').attr('content') ?? $('meta[property="og:description"]').attr('content') ?? '',
   )
   const author = normalizeWhitespace(
-    $('meta[name="author"]').attr('content') ?? $('meta[property="article:author"]').attr('content') ?? $('[rel="author"]').first().text() ?? '',
+    $('meta[name="author"]').attr('content')
+      ?? $('meta[property="article:author"]').attr('content')
+      ?? $('[rel="author"]').first().text()
+      ?? jsonLd.author
+      ?? '',
   )
   const publishedAt = normalizeWhitespace(
     $('meta[property="article:published_time"]').attr('content')
       ?? $('meta[name="date"]').attr('content')
+      ?? $('meta[name="pubdate"]').attr('content')
+      ?? $('meta[name="parsely-pub-date"]').attr('content')
+      ?? $('meta[property="article:modified_time"]').attr('content')
       ?? $('time[datetime]').first().attr('datetime')
+      ?? jsonLd.publishedAt
       ?? '',
   )
-  const siteName = normalizeWhitespace($('meta[property="og:site_name"]').attr('content') ?? new URL(url).hostname)
+  const siteName = normalizeWhitespace($('meta[property="og:site_name"]').attr('content') ?? jsonLd.siteName ?? new URL(url).hostname)
 
   $('script, style, noscript, svg').remove()
   const articleText = normalizeWhitespace($('article').first().text())
@@ -1147,6 +1280,59 @@ function extractCheerioMetadata(html: string, url: string) {
     siteName,
     text: articleText || mainText || bodyText,
   }
+}
+
+function extractJsonLdMetadata($: cheerio.CheerioAPI) {
+  const metadata: { author?: string; publishedAt?: string; siteName?: string } = {}
+
+  for (const element of $('script[type="application/ld+json"]').toArray()) {
+    const raw = $(element).contents().text()
+    if (!raw.trim()) continue
+    const parsed = safeJsonParse(raw)
+    const candidates = flattenJsonLd(parsed)
+
+    for (const item of candidates) {
+      const type = Array.isArray(item['@type']) ? item['@type'].join(' ') : String(item['@type'] ?? '')
+      if (!/\b(article|newsarticle|blogposting|report|webpage|creativework)\b/i.test(type)) continue
+      metadata.publishedAt ??= stringValue(item.datePublished) ?? stringValue(item.dateModified)
+      metadata.author ??= authorValue(item.author)
+      metadata.siteName ??= stringValue(item.publisher && typeof item.publisher === 'object' ? (item.publisher as Record<string, unknown>).name : undefined)
+    }
+  }
+
+  return metadata
+}
+
+function flattenJsonLd(value: unknown): Array<Record<string, unknown>> {
+  if (!value) return []
+  if (Array.isArray(value)) return value.flatMap(flattenJsonLd)
+  if (typeof value !== 'object') return []
+  const object = value as Record<string, unknown>
+  const graph = object['@graph']
+  return [object, ...(Array.isArray(graph) ? graph.flatMap(flattenJsonLd) : [])]
+}
+
+function safeJsonParse(value: string) {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return undefined
+  }
+}
+
+function stringValue(value: unknown) {
+  return typeof value === 'string' && value.trim() ? normalizeWhitespace(value) : undefined
+}
+
+function authorValue(value: unknown): string | undefined {
+  if (!value) return undefined
+  if (typeof value === 'string') return normalizeWhitespace(value)
+  if (Array.isArray(value)) return value.map(authorValue).filter(Boolean).join(', ') || undefined
+  if (typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    return stringValue(object.name) ?? stringValue(object.url)
+  }
+  return undefined
 }
 
 function isUsefulExtraction(page: ExtractedPage, terms: string[]) {
@@ -1166,6 +1352,15 @@ function isAccessDeniedPage(page: ExtractedPage) {
     || /\bforbidden\b/.test(text) && page.text.length < 1_200
 }
 
+function isNotFoundPage(page: ExtractedPage) {
+  const text = normalizeWhitespace(`${page.title} ${page.description ?? ''} ${page.text}`).toLowerCase()
+  const statusSaysNotFound = page.statusCode === 404 || page.statusCode === 410
+  const titleSaysNotFound = /\b(404|not found|page not found|article not found|content unavailable)\b/.test(text.slice(0, 900))
+  const mostlyBoilerplate = page.text.length < 1_500 || /\bterms of service privacy policy advertise careers sitemap\b/.test(text)
+
+  return statusSaysNotFound || (titleSaysNotFound && mostlyBoilerplate)
+}
+
 function isEmptySocialShell(page: ExtractedPage) {
   const host = getHostname(page.finalUrl || page.url)
   if (!host || !/^(x\.com|twitter\.com|instagram\.com|tiktok\.com|youtube\.com|youtu\.be)$/.test(host)) return false
@@ -1178,6 +1373,19 @@ function isEmptySocialShell(page: ExtractedPage) {
 
 function isBlockedAccessError(error: string) {
   return /blocked access|access denied|HTTP 403|forbidden|akamai|edgesuite/i.test(error)
+}
+
+function isRecoverableExtractionError(error: string) {
+  return isBlockedAccessError(error)
+    || /timed out|timeout|budget|network|fetch failed|econnreset|gateway|HTTP 429|captcha|bot|challenge|no useful readable text|not-found page|HTTP 404/i.test(error)
+}
+
+function hasMeaningfulTargetMetadata(target: ScrapeTarget) {
+  const title = normalizeWhitespace(target.title ?? '')
+  const label = normalizeWhitespace(target.discoveryLabel ?? '')
+  if (label && !/^url variant\b/i.test(label)) return true
+  if (!title || title === target.url) return false
+  return !/^https?:\/\//i.test(title)
 }
 
 function hasTermHit(text: string, terms: string[]) {
@@ -1279,7 +1487,7 @@ function classifySourceQuality(url: string, siteName = '') {
   if (/(fifa\.com|thefa\.com|cbf\.com\.br|nba\.com|nfl\.com|mlb\.com|nhl\.com|sec\.gov|federalreserve\.gov|bls\.gov|bea\.gov|cftc\.gov|eia\.gov)/i.test(host)) {
     return 'primary'
   }
-  if (/(reuters|apnews|associated press|bbc|espn|the athletic|sky sports|guardian|financial times|bloomberg|cnbc)/i.test(`${host} ${site}`)) {
+  if (/(reuters|apnews|associated press|bbc|espn|the athletic|sky sports|guardian|financial times|bloomberg|cnbc|businessinsider|business insider|theconversation|the conversation)/i.test(`${host} ${site}`)) {
     return 'credible-media'
   }
   if (/(wikipedia|wikidata|crossref|github)/i.test(`${host} ${site}`)) {
@@ -1356,6 +1564,10 @@ function normalizeWhitespace(value = '') {
 function readPositiveIntegerEnv(name: string, fallback: number) {
   const value = Number.parseInt(process.env[name] ?? '', 10)
   return Number.isFinite(value) && value > 0 ? value : fallback
+}
+
+function timeRemaining(deadlineMs: number) {
+  return deadlineMs - Date.now()
 }
 
 type InstagramWebProfileResponse = {
