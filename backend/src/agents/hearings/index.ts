@@ -6,7 +6,7 @@ import { runHeliaiaConfiguredHearing } from '../../court/heliaia-ai.js'
 import type { CourtArtifact, MarketCase } from '../../court/types.js'
 import { isDatabaseConfigured } from '../../db/client.js'
 import { notifyCaseCompleted } from '../../integrations/telegram.js'
-import { claimDatabaseJob, findReusableDatabaseJob, getDatabaseJob, listDatabaseJobs, recoverStaleDatabaseJobs, saveDatabaseJob } from './persistence.js'
+import { claimDatabaseJob, deleteUnfundedDatabaseJob, findReusableDatabaseJob, getDatabaseJob, listDatabaseJobs, recoverStaleDatabaseJobs, saveDatabaseJob } from './persistence.js'
 import { dedupeCaseJobs, serializeJob, type HearingJob, type LiveHearingResult } from './types.js'
 
 export type { HearingJob } from './types.js'
@@ -82,6 +82,36 @@ export async function getHearingJob(jobId: string) {
 
   const job = jobs.get(jobId)
   return job ? serializeJob(job) : undefined
+}
+
+export async function deleteUnfundedHearingJob(jobIdOrCaseId: string) {
+  if (isDatabaseConfigured) {
+    return deleteUnfundedDatabaseJob(jobIdOrCaseId)
+  }
+
+  if (redis) {
+    await connectRedis()
+    const keys = await redis.keys(`${env.HELIA_REDIS_PREFIX}:hearing:job:*`).catch(() => [])
+    for (const key of keys) {
+      const raw = await redis.get(key).catch(() => null)
+      if (!raw) continue
+      const job = JSON.parse(raw) as HearingJob
+      if (job.id !== jobIdOrCaseId && job.caseId !== jobIdOrCaseId) continue
+      if (job.marketCase.onchain || job.marketCase.filer) return { deleted: false as const, reason: 'funded-or-owned' as const, job }
+      await redis.del(key)
+      await redis.lrem(queueKey, 0, job.id).catch(() => 0)
+      return { deleted: true as const, job }
+    }
+    return { deleted: false as const, reason: 'not-found' as const }
+  }
+
+  const job = jobs.get(jobIdOrCaseId) ?? [...jobs.values()].find((item) => item.caseId === jobIdOrCaseId)
+  if (!job) return { deleted: false as const, reason: 'not-found' as const }
+  if (job.marketCase.onchain || job.marketCase.filer) return { deleted: false as const, reason: 'funded-or-owned' as const, job }
+  jobs.delete(job.id)
+  const index = queue.indexOf(job.id)
+  if (index >= 0) queue.splice(index, 1)
+  return { deleted: true as const, job }
 }
 
 export async function listHearingJobs() {

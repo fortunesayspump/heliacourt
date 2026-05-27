@@ -1,4 +1,4 @@
-import { and, desc, eq, lt } from 'drizzle-orm'
+import { and, desc, eq, lt, or } from 'drizzle-orm'
 import { env } from '../../config/env.js'
 import type { CourtArtifact, MarketCase, ToolEvidence } from '../../court/types.js'
 import { db } from '../../db/client.js'
@@ -38,6 +38,27 @@ export async function getDatabaseJob(jobId: string) {
     .limit(1)
 
   return row ? rowToJob(row) : undefined
+}
+
+export async function deleteUnfundedDatabaseJob(jobIdOrCaseId: string) {
+  const [row] = await db!
+    .select()
+    .from(hearingJobs)
+    .where(or(eq(hearingJobs.id, jobIdOrCaseId), eq(hearingJobs.caseId, jobIdOrCaseId)))
+    .limit(1)
+
+  if (!row) return { deleted: false as const, reason: 'not-found' as const }
+
+  const job = rowToJob(row)
+  if (job.marketCase.onchain || job.marketCase.filer) {
+    return { deleted: false as const, reason: 'funded-or-owned' as const, job }
+  }
+
+  await db!
+    .delete(cases)
+    .where(eq(cases.id, row.caseId))
+
+  return { deleted: true as const, job }
 }
 
 export async function listDatabaseJobs() {

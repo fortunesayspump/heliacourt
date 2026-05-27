@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearings/index.js'
+import { deleteUnfundedHearingJob, enqueueHearingJob, getHearingJob, HearingBusyError, runHearingNow } from '../agents/hearings/index.js'
 import { getAgentRegistryWithOnchainProfiles } from '../agents/registry.js'
 import type { CaseType, MarketCase } from '../court/types.js'
 import { getReputationMeta } from '../shared/reputation-meta.js'
@@ -79,6 +79,23 @@ export async function agentRoutes(app: FastifyInstance) {
     })
   })
 
+  app.delete('/agents/hearing/jobs/:jobId', async (request, reply) => {
+    const params = z.object({ jobId: z.string().min(1) }).safeParse(request.params)
+    if (!params.success) return reply.status(400).send({ error: 'jobId is required' })
+
+    const result = await deleteUnfundedHearingJob(params.data.jobId)
+    if (!result.deleted) {
+      if (result.reason === 'not-found') return reply.status(404).send({ error: 'hearing job not found' })
+      return reply.status(409).send({ error: 'funded or wallet-owned cases must be cancelled through the normal case flow' })
+    }
+
+    return {
+      deleted: true,
+      jobId: result.job.id,
+      caseId: result.job.caseId,
+    }
+  })
+
   app.get('/agents/hearing/jobs/:jobId', async (request, reply) => {
     const params = z.object({ jobId: z.string().min(1) }).safeParse(request.params)
     if (!params.success) return reply.status(400).send({ error: 'jobId is required' })
@@ -126,6 +143,7 @@ function parseHearingRequest(body: unknown): { ok: true; marketCase: MarketCase 
       imageUrl: data.imageUrl,
       type: (data.type ?? 'prediction-market') as CaseType,
       filer: data.filer,
+      visibility: data.filer ? 'public' : 'unlisted',
       createdAt: new Date().toISOString(),
     },
   }
