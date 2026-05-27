@@ -1,6 +1,7 @@
 import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { fetchJson } from '../http'
 import { getCaseSearchQuery, getPossibleCountryCode } from '../text'
+import * as cheerio from 'cheerio'
 
 type NagerHoliday = {
   date?: string
@@ -16,21 +17,27 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
   const fetchedAt = new Date().toISOString()
   const countryCode = getPossibleCountryCode(calendarText)
   const deadlineEvidence = getDeadlineEvidence(calendarText)
+  const fomcEvidence = await getFomcCalendarEvidence(calendarText, fetchedAt)
 
   if (!countryCode) {
     return {
       capability: 'calendar_data',
-      provider: deadlineEvidence.observations.length ? 'deadline-parser' : 'nager-date',
+      provider: [
+        deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
+        fomcEvidence.observations.length ? 'federal-reserve' : undefined,
+        'nager-date',
+      ].filter(Boolean).join('+'),
       query,
       fetchedAt,
-      status: deadlineEvidence.observations.length ? 'ok' : 'skipped',
-      observations: deadlineEvidence.observations.length
+      status: deadlineEvidence.observations.length || fomcEvidence.observations.length ? 'ok' : 'skipped',
+      observations: deadlineEvidence.observations.length || fomcEvidence.observations.length
         ? [
             ...deadlineEvidence.observations,
+            ...fomcEvidence.observations,
             'No supported country or location was found, so public-holiday calendar reads were skipped.',
           ]
         : ['No supported country or location was found, so public-holiday calendar reads were skipped.'],
-      sources: deadlineEvidence.sources,
+      sources: [...deadlineEvidence.sources, ...fomcEvidence.sources],
     }
   }
 
@@ -47,11 +54,13 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
       observations: upcoming.length
         ? [
             ...deadlineEvidence.observations,
+            ...fomcEvidence.observations,
             ...upcoming.map((holiday) => `${holiday.countryCode ?? countryCode}: ${holiday.name ?? holiday.localName ?? 'public holiday'} on ${holiday.date}.`),
           ]
-        : [...deadlineEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
+        : [...deadlineEvidence.observations, ...fomcEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
       sources: [
         ...deadlineEvidence.sources,
+        ...fomcEvidence.sources,
         ...upcoming.map((holiday) => ({
           title: holiday.name ?? holiday.localName ?? `${countryCode} public holiday`,
           url: `https://date.nager.at/api/v3/NextPublicHolidays/${countryCode}`,
@@ -72,6 +81,112 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
       error: error instanceof Error ? error.message : 'Calendar tool failed',
     }
   }
+}
+
+async function getFomcCalendarEvidence(text: string, fetchedAt: string): Promise<Pick<ToolEvidence, 'observations' | 'sources'>> {
+  if (!/\b(fed|federal reserve|fomc|rate decision|interest rates?|monetary policy|dot plot|summary of economic projections|sep)\b/i.test(text)) {
+    return { observations: [], sources: [] }
+  }
+
+  const yearHints = extractYearHints(text)
+  const currentYear = new Date().getUTCFullYear()
+  const years = yearHints.length ? yearHints : [currentYear]
+  const url = 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm'
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        accept: 'text/html,application/xhtml+xml',
+        'user-agent': process.env.HELIA_HTTP_USER_AGENT ?? 'HeliaCourt/0.1',
+      },
+      signal: AbortSignal.timeout(8_000),
+    })
+    if (!response.ok) return { observations: [`Federal Reserve FOMC calendar fetch returned HTTP ${response.status}.`], sources: [] }
+
+    const html = await response.text()
+    const $ = cheerio.load(html)
+    const meetings = years.flatMap((year) => extractFomcMeetingsForYear($, year))
+    if (!meetings.length) {
+      return {
+        observations: [`Federal Reserve FOMC calendar was fetched, but no meeting rows were parsed for ${years.join(', ')}.`],
+        sources: [{ title: 'Federal Reserve FOMC meeting calendars', url, observedAt: fetchedAt, value: years.join(', ') }],
+      }
+    }
+
+    const today = startOfDay(new Date())
+    const upcoming = meetings.filter((meeting) => meeting.endDate >= today)
+    const selected = upcoming.length ? upcoming : meetings.slice(-3)
+    const observation = [
+      `Federal Reserve FOMC calendar for ${years.join(', ')}:`,
+      selected.map((meeting) => `${meeting.month} ${meeting.dateLabel}${meeting.hasSep ? ' (SEP/projections)' : ''}`).join('; '),
+      upcoming.length ? `${upcoming.length} upcoming/remaining meeting(s) in parsed year(s).` : 'No upcoming meeting remains in parsed year(s); showing latest parsed meetings.',
+    ].join(' ')
+
+    return {
+      observations: [observation],
+      sources: selected.map((meeting) => ({
+        title: `FOMC meeting ${meeting.month} ${meeting.dateLabel}, ${meeting.year}`,
+        url,
+        observedAt: meeting.isoEnd,
+        value: JSON.stringify({
+          year: meeting.year,
+          month: meeting.month,
+          date: meeting.dateLabel,
+          hasSummaryOfEconomicProjections: meeting.hasSep,
+          officialSource: 'Federal Reserve FOMC meeting calendars',
+        }),
+      })),
+    }
+  } catch (error) {
+    return {
+      observations: [`Federal Reserve FOMC calendar fetch failed: ${error instanceof Error ? error.message : 'unknown error'}.`],
+      sources: [],
+    }
+  }
+}
+
+function extractFomcMeetingsForYear($: cheerio.CheerioAPI, year: number) {
+  const anchor = $(`a:contains("${year} FOMC Meetings")`).filter((_, element) => $(element).text().trim() === `${year} FOMC Meetings`).first()
+  const panel = anchor.closest('.panel')
+  const rows = panel.find('.fomc-meeting').toArray()
+
+  return rows.flatMap((row) => {
+    const month = normalizeText($(row).find('.fomc-meeting__month').first().text())
+    const dateLabel = normalizeText($(row).find('.fomc-meeting__date').first().text())
+    const parsed = parseFomcDate(year, month, dateLabel)
+    if (!month || !dateLabel || !parsed) return []
+
+    return [{
+      year,
+      month,
+      dateLabel,
+      startDate: parsed.start,
+      endDate: parsed.end,
+      isoEnd: parsed.end.toISOString().slice(0, 10),
+      hasSep: dateLabel.includes('*') || /Projection Materials|Summary of Economic Projections/i.test($(row).text()),
+    }]
+  })
+}
+
+function parseFomcDate(year: number, monthName: string, dateLabel: string) {
+  const month = monthIndex(monthName)
+  if (month < 0) return undefined
+  const parts = dateLabel.replace('*', '').match(/\d{1,2}/g)?.map(Number) ?? []
+  if (!parts.length) return undefined
+  const startDay = parts[0]
+  const endDay = parts[1] ?? parts[0]
+  return {
+    start: new Date(Date.UTC(year, month, startDay)),
+    end: new Date(Date.UTC(year, month, endDay)),
+  }
+}
+
+function extractYearHints(text: string) {
+  return [...new Set((text.match(/\b20\d{2}\b/g) ?? []).map(Number).filter((year) => year >= 2021 && year <= 2028))].slice(0, 3)
+}
+
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, ' ').trim()
 }
 
 function getDeadlineEvidence(text: string): Pick<ToolEvidence, 'observations' | 'sources'> {
