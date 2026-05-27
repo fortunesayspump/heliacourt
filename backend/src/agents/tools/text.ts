@@ -31,6 +31,8 @@ const countryAliases: Record<string, string> = {
   india: 'IN',
   mumbai: 'IN',
   delhi: 'IN',
+  brazil: 'BR',
+  brasil: 'BR',
   china: 'CN',
   shanghai: 'CN',
   hongkong: 'HK',

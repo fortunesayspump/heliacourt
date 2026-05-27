@@ -21,16 +21,18 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
   const countryCode = getPossibleCountryCode(calendarText)
   const deadlineEvidence = getDeadlineEvidence(calendarText)
   const fomcEvidence = await getFomcCalendarEvidence(calendarText, fetchedAt)
+  const electionCalendarEvidence = await getElectionCalendarEvidence(calendarText, countryCode, fetchedAt)
   const marketDeadlineEvidence = await getMarketDeadlineEvidence(calendarText, fetchedAt)
   const discoveredDateEvidence = await getDiscoveredDateEvidence(marketCase, instruction, calendarText, fetchedAt)
 
   if (!countryCode) {
-    const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, marketDeadlineEvidence, discoveredDateEvidence]
+    const nonHolidayEvidence = [deadlineEvidence, fomcEvidence, electionCalendarEvidence, marketDeadlineEvidence, discoveredDateEvidence]
     return {
       capability: 'calendar_data',
       provider: [
         deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
         fomcEvidence.observations.length ? 'federal-reserve' : undefined,
+        electionCalendarEvidence.observations.length ? 'official-election-calendar' : undefined,
         marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
         discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
         'nager-date',
@@ -57,6 +59,7 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
       provider: [
         deadlineEvidence.observations.length ? 'deadline-parser' : undefined,
         fomcEvidence.observations.length ? 'federal-reserve' : undefined,
+        electionCalendarEvidence.observations.length ? 'official-election-calendar' : undefined,
         marketDeadlineEvidence.observations.length ? 'market-deadline-api' : undefined,
         discoveredDateEvidence.observations.length ? 'date-source-discovery' : undefined,
         'nager-date',
@@ -68,14 +71,16 @@ export async function getCalendarEvidence(marketCase: MarketCase, instruction = 
         ? [
             ...deadlineEvidence.observations,
             ...fomcEvidence.observations,
+            ...electionCalendarEvidence.observations,
             ...marketDeadlineEvidence.observations,
             ...discoveredDateEvidence.observations,
             ...upcoming.map((holiday) => `${holiday.countryCode ?? countryCode}: ${holiday.name ?? holiday.localName ?? 'public holiday'} on ${holiday.date}.`),
           ]
-        : [...deadlineEvidence.observations, ...fomcEvidence.observations, ...marketDeadlineEvidence.observations, ...discoveredDateEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
+        : [...deadlineEvidence.observations, ...fomcEvidence.observations, ...electionCalendarEvidence.observations, ...marketDeadlineEvidence.observations, ...discoveredDateEvidence.observations, `No upcoming public holidays returned for ${countryCode}.`],
       sources: [
         ...deadlineEvidence.sources,
         ...fomcEvidence.sources,
+        ...electionCalendarEvidence.sources,
         ...marketDeadlineEvidence.sources,
         ...discoveredDateEvidence.sources,
         ...upcoming.map((holiday) => ({
@@ -253,6 +258,87 @@ async function getMarketDeadlineEvidence(text: string, fetchedAt: string): Promi
   return {
     observations,
     sources: entries,
+  }
+}
+
+async function getElectionCalendarEvidence(text: string, countryCode: string | undefined, fetchedAt: string): Promise<Pick<ToolEvidence, 'observations' | 'sources'>> {
+  if (!/\b(election|elections|electoral|first round|runoff|presidential|president|candidate|ballot|elei[cç][aã]o|elei[cç][oõ]es|turno|presidente)\b/i.test(text)) {
+    return { observations: [], sources: [] }
+  }
+  if (countryCode !== 'BR' && !/\b(Brazil|Brasil|Brazilian|Brasileir[ao]s?|TSE|Tribunal Superior Eleitoral)\b/i.test(text)) {
+    return { observations: [], sources: [] }
+  }
+
+  const urls = [
+    'https://www.tse.jus.br/legislacao/compilada/res/2026/resolucao-no-23-751-de-26-de-fevereiro-de-2026',
+    'https://www.tse.jus.br/legislacao/compilada/res/2026/resolucao-no-23-760-de-2-de-marco-de-2026',
+    'https://www.tse.jus.br/comunicacao/noticias/2026/Marco/eleicoes-2026-confira-as-principais-datas-do-calendario-eleitoral',
+  ]
+  const results = await Promise.allSettled(urls.map((url) => extractBrazilElectionDates(url, fetchedAt)))
+  const sources = dedupeSources(results.flatMap((result) => (result.status === 'fulfilled' ? result.value : [])))
+  if (!sources.length) {
+    return {
+      observations: ['Official Brazil election-calendar check ran against TSE sources, but no first-round/second-round dates were parsed.'],
+      sources: [],
+    }
+  }
+
+  return {
+    observations: sources.slice(0, 4).map((source) => {
+      const date = source.observedAt ? new Date(source.observedAt) : undefined
+      const days = date && Number.isFinite(date.getTime())
+        ? Math.ceil((startOfDay(date).getTime() - startOfDay(new Date()).getTime()) / 86_400_000)
+        : undefined
+      return [
+        `Official Brazil election calendar: ${source.title}`,
+        source.observedAt ? `date ${source.observedAt}` : undefined,
+        typeof days === 'number' ? `(${days >= 0 ? `${days} day(s) away` : `${Math.abs(days)} day(s) ago`})` : undefined,
+        source.value,
+      ].filter(Boolean).join(' ')
+    }),
+    sources,
+  }
+}
+
+async function extractBrazilElectionDates(url: string, fetchedAt: string): Promise<ToolEvidence['sources']> {
+  try {
+    const response = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8_000),
+      headers: {
+        accept: 'text/html,application/xhtml+xml,text/plain,*/*;q=0.8',
+        'user-agent': process.env.HELIA_HTTP_USER_AGENT ?? 'HeliaCourt/0.1',
+      },
+    })
+    if (!response.ok) return []
+    const raw = normalizeText(await response.text())
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\s+/g, ' ')
+    const finalUrl = response.url || url
+    const sources: ToolEvidence['sources'] = []
+
+    if (/(4 de outubro de 2026|4 de outubro|4º? de outubro).{0,260}(primeiro turno|1º turno|1o turno|dia das eleições|presidente da república|eleger ocupantes)|(?:primeiro turno|1º turno|1o turno|dia das eleições|presidente da república|eleger ocupantes).{0,260}(4 de outubro de 2026|4 de outubro|4º? de outubro)/i.test(raw)) {
+      sources.push({
+        title: 'TSE 2026 first-round election date',
+        url: finalUrl,
+        observedAt: '2026-10-04',
+        value: 'Parsed from Tribunal Superior Eleitoral source text mentioning 4 de outubro and 1º turno/dia das eleições.',
+      })
+    }
+    if (/(25 de outubro de 2026|25 de outubro|25º? de outubro).{0,180}(segundo turno|2º turno|2o turno)|(?:segundo turno|2º turno|2o turno).{0,180}(25 de outubro de 2026|25 de outubro|25º? de outubro)/i.test(raw)) {
+      sources.push({
+        title: 'TSE 2026 second-round election date',
+        url: finalUrl,
+        observedAt: '2026-10-25',
+        value: 'Parsed from Tribunal Superior Eleitoral source text mentioning 25 de outubro and 2º turno.',
+      })
+    }
+
+    return sources
+  } catch {
+    return []
   }
 }
 

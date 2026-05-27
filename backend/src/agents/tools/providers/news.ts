@@ -1,7 +1,7 @@
 import type { MarketCase, ToolEvidence } from '../../../court/types'
 import { generateRawJson, isCourtModelConfigured } from '../../model'
 import { fetchJson } from '../http'
-import { getCaseSearchQuery, getEntityCandidates, getMarketGenres, getSearchTerms } from '../text'
+import { getCaseSearchQuery, getEntityCandidates, getMarketGenres, getPossibleCountryCode, getSearchTerms } from '../text'
 import * as cheerio from 'cheerio'
 
 type SearchItem = {
@@ -182,7 +182,7 @@ function describeSourceKind(source?: string) {
 function summarizeSearchSourceCoverage(items: SearchItem[]) {
   if (!items.length) return undefined
   const domains = [...new Set(items.map((item) => getDomain(item.url)).filter(Boolean))]
-  const officialLike = items.filter((item) => /\b(gov|mil|int|fifa|uefa|nba|nfl|mlb|nhl|reuters|apnews|sec|cftc|fed|who|cdc|state\.gov|defense)\b/i.test(`${getDomain(item.url)} ${item.title}`))
+  const officialLike = items.filter((item) => /\b(gov|mil|int|fifa|uefa|nba|nfl|mlb|nhl|reuters|apnews|sec|cftc|fed|who|cdc|state\.gov|defense|tse\.jus\.br|tribunal superior eleitoral|datafolha|quaest|ipec|atlasintel|poderdata)\b/i.test(`${getDomain(item.url)} ${item.title}`))
   const datedItems = items
     .map((item) => ({ ...item, time: parseObservedTime(item.observedAt) }))
     .filter((item) => typeof item.time === 'number')
@@ -632,6 +632,7 @@ function scoreSearchItem(item: SearchItem, terms: string[], caseText: string) {
   if (/\b(official|video|audio|watch|vimeo|whitehouse|archive|factbase|rev|c-span|fox|fifa|sec\.gov|cdc\.gov|who\.int)\b/i.test(haystack)) score += 10
   if (/\b(latest|official|confirmed|reported|source|statement|filing|release|deadline|timeline|update|criteria|qualifying|resolution)\b/i.test(haystack)) score += 5
   if (/\b(reuters|apnews|associated press|bbc|bloomberg|cnbc|financial times|espn)\b/i.test(haystack)) score += 4
+  if (/\b(election|elections|elei[cç][aã]o|elei[cç][oõ]es|poll|polling|pesquisa|datafolha|quaest|ipec|atlasintel|poderdata|paran[aá] pesquisas|tse\.jus\.br|tribunal superior eleitoral)\b/i.test(haystack)) score += 8
   if (/\b(polymarket|kalshi|predictmarketcap|startuphub|analytics|price|odds|volume|chance)\b/i.test(haystack)) score -= 12
   if (/\b(youtube\.com|youtu\.be|app store|google play|login|sign up|homepage)\b/i.test(haystack) && !/\b(interview|remarks|speech|statement|press conference|official channel)\b/i.test(haystack)) score -= 18
   if (hasAmbiguousShortTermWithoutContext(haystack, caseText)) score -= 18
@@ -784,6 +785,7 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
     quotedTerms,
     instruction,
   })
+  const electionQueries = getElectionResearchQueries(liveText, base, entities || base, instruction)
   const exactEntityQueries = exactEntities
     ? [
         `${exactEntities} ${genres.join(' ')} latest credible reporting`,
@@ -817,6 +819,7 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
     ...exactEntityQueries,
     ...liveQueries,
     ...transcriptQueries,
+    ...electionQueries,
     ...catalystQueries,
     genreQuery,
     officialQuery,
@@ -827,6 +830,43 @@ function getFallbackNewsQueries(marketCase: MarketCase, instruction = '') {
     .map((item) => getCaseSearchQuery(item))
     .filter(Boolean)
     .slice(0, 14)
+}
+
+function getElectionResearchQueries(text: string, base: string, entities: string, instruction: string) {
+  if (!/\b(election|elections|electoral|primary|nomination|nominee|candidate|candidates|poll|polling|vote share|first round|runoff|valid votes|debate|ballot)\b/i.test(text)) {
+    return []
+  }
+
+  const queries = [
+    `${entities} official election calendar first round date electoral authority`,
+    `${entities} candidate list polling vote share first round latest`,
+    `${entities} polls candidates threshold credible source`,
+    `${base} official electoral results source candidates polling`,
+  ]
+
+  if (/\b(third[- ]?way|third party|independent|outsider|centrist|10%|10\.0%|valid votes)\b/i.test(text)) {
+    queries.push(
+      `${entities} third way candidates polling vote share latest`,
+      `${entities} candidate polling 10 percent first round threshold`,
+      `${entities} coalition endorsement ballot access polling`,
+    )
+  }
+
+  if (getPossibleCountryCode(text) === 'BR' || /\b(Brazil|Brasil|Brazilian|Brasileir[ao]s?|TSE|Tribunal Superior Eleitoral|Lula|Bolsonaro)\b/i.test(text)) {
+    queries.push(
+      'site:tse.jus.br eleições 2026 calendário eleitoral primeiro turno presidente',
+      'Tribunal Superior Eleitoral eleições 2026 primeiro turno 4 de outubro presidente',
+      'eleição presidencial 2026 pesquisa Datafolha Quaest Ipec AtlasIntel PoderData Paraná Pesquisas',
+      'pesquisa eleitoral presidente 2026 Ciro Gomes Simone Tebet Eduardo Leite Lula Bolsonaro',
+      'eleições 2026 terceira via pesquisa presidencial Ciro Gomes Simone Tebet Eduardo Leite',
+    )
+  }
+
+  if (instruction) {
+    queries.push(`${entities} ${instruction} election polling candidate official source`)
+  }
+
+  return queries
 }
 
 function getAmbiguityStudyQueries(text: string) {
@@ -953,6 +993,11 @@ function getExpandedNewsTerms(question: string) {
   if (/\b(sol|solana)\b/i.test(question)) {
     terms.add('sol')
     terms.add('solana')
+  }
+  if (/\b(Brazil|Brasil|Brazilian|Brasileir[ao]s?|elei[cç][aã]o|elei[cç][oõ]es|TSE|Tribunal Superior Eleitoral)\b/i.test(question)) {
+    for (const term of ['brazil', 'brasil', 'eleições', 'eleicao', 'tse', 'datafolha', 'quaest', 'ipec', 'poderdata', 'atlasintel', 'pesquisa']) {
+      terms.add(term)
+    }
   }
 
   return [...terms]
