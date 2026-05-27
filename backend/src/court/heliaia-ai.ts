@@ -27,6 +27,7 @@ import { buildEvidenceAgenda } from './evidence-agenda'
 import { applyProcedureHandoff, buildCourtProcedure, buildMagistrateDirectionTurn, getTurnKindForPhase } from './group-chat'
 import type { CourtProcedureStep } from './group-chat'
 import { planInitialHearing, planNextCourtMove } from './hearing-strategist'
+import { evaluateHearingTrajectory, recommendedTrajectoryMove } from './hearing-trajectory'
 import type { AgentContext, CourtArtifact, CourtTranscriptTurn, MarketCase } from './types'
 import { buildCourtTranscriptTurn } from './transcript'
 
@@ -288,7 +289,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
     if (dynamicHandoffs >= maxDynamicHandoffs) return
     if (isRecordReadyForVerdict(artifacts)) return
 
-    const rescue = planPreVerdictRescue(step, artifacts)
+    const rescue = planPreVerdictRescue(step, marketCase, artifacts, transcript)
     if (!rescue) return
     if (isDuplicativeHandoff(rescue.agentId, rescue.request, artifacts)) return
 
@@ -628,8 +629,18 @@ function planAdaptiveFollowUp(
 
 function planPreVerdictRescue(
   step: CourtProcedureStep,
+  marketCase: MarketCase,
   artifacts: CourtArtifact[],
+  transcript: CourtTranscriptTurn[],
 ): { agentId: string; request: string } | undefined {
+  const trajectoryMove = recommendedTrajectoryMove(evaluateHearingTrajectory({ marketCase, artifacts, transcript, parentStep: step }))
+  if (trajectoryMove && trajectoryMove.agentId !== step.agentId) {
+    return {
+      agentId: trajectoryMove.agentId,
+      request: trajectoryMove.request,
+    }
+  }
+
   const recent = artifacts.slice(-10)
   const text = recent
     .map((artifact) => `${artifact.agentId} ${artifact.summary} ${artifact.transcriptMessage ?? ''} ${(artifact.risks ?? []).join(' ')} ${artifact.request ?? ''}`)
