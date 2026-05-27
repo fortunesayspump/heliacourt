@@ -84,6 +84,11 @@ async function resolvePolymarketPreview(target: URL) {
     }
     const preview = findPreview(exactMarket ?? eventData, target)
     if (preview?.image || preview?.title) return preview
+
+    if (!marketSlug) {
+      const singleMarketPreview = findPreview(await fetchJson(`https://gamma-api.polymarket.com/markets?slug=${encodeURIComponent(eventSlug)}`), target)
+      if (singleMarketPreview?.image || singleMarketPreview?.title) return singleMarketPreview
+    }
   }
 
   const image = await readPageImage(target)

@@ -622,7 +622,11 @@ async function fetchPolymarketMarketsFromUrlParts(parts: PolymarketUrlParts): Pr
     .filter((record) => record !== eventRecord)
     .filter((record) => typeof record.question === 'string' || typeof record.outcomePrices === 'string' || Array.isArray(record.outcomePrices))
     .map((record) => record as PolymarketMarket)
-  return normalizePolymarketMarkets(eventMarkets, parts, eventRecord)
+  const normalizedEventMarkets = normalizePolymarketMarkets(eventMarkets, parts, eventRecord)
+  if (normalizedEventMarkets.length) return normalizedEventMarkets
+
+  const singleSlugMarket = await fetchJson<PolymarketMarket[]>(`https://gamma-api.polymarket.com/markets?slug=${encodeURIComponent(parts.eventSlug)}`).catch(() => [])
+  return normalizePolymarketMarkets(singleSlugMarket, { ...parts, eventSlug: undefined, marketSlug: parts.eventSlug })
 }
 
 function normalizePolymarketMarkets(markets: PolymarketMarket[] | undefined, parts: PolymarketUrlParts, eventRecord?: Record<string, unknown>) {
@@ -630,11 +634,19 @@ function normalizePolymarketMarkets(markets: PolymarketMarket[] | undefined, par
     .map((market) => ({
       ...market,
       eventSlug: parts.eventSlug,
-      sourceUrl: parts.marketSlug && market.slug ? `https://polymarket.com/event/${parts.eventSlug ?? market.eventSlug ?? market.slug}/${market.slug}` : parts.sourceUrl,
+      sourceUrl: buildPolymarketSourceUrl(market, parts),
       description: market.description ?? stringFromRecord(eventRecord, 'description') ?? stringFromRecord(eventRecord, 'eventDescription'),
     }))
     .filter((market) => market.question || market.slug)
     .filter((market) => !isPlaceholderMarketText(getPolymarketMarketText(market)))
+}
+
+function buildPolymarketSourceUrl(market: PolymarketMarket, parts: PolymarketUrlParts) {
+  if (!market.slug || !parts.marketSlug) return parts.sourceUrl
+  const eventSlug = parts.eventSlug ?? market.eventSlug
+  return eventSlug
+    ? `https://polymarket.com/event/${eventSlug}/${market.slug}`
+    : `https://polymarket.com/market/${market.slug}`
 }
 
 function getPolymarketKey(market: PolymarketMarket) {
