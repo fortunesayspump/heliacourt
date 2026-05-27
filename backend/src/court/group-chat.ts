@@ -59,6 +59,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
   const courtClock = describeCourtClock(buildCourtClock(marketCase))
   const predictionStandard =
     'This is a prediction-market hearing. Witnesses supply facts and limits. Counsel argues the forecast bridge. Archon weighs Yes, No, leaning Yes, leaning No, or no-edge. For unresolved "will" markets, do not stop at whether the event has already happened; test catalysts, loopholes, mechanisms, blockers, timing, and update triggers. For event pages with multiple contracts/outcomes, evaluate the filed outcome and compare sibling outcomes instead of flattening the event into one generic Yes/No.'
+  const marketScopeInstruction = getMarketScopeInstruction(marketCase)
   const linkInstruction = marketCase.links?.length
     ? ` Reference links for source extraction: ${marketCase.links.join(' ')}.`
     : ''
@@ -74,28 +75,28 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       agentId: 'court-clerk',
       phase: 'docket',
       stage: 'Docket call',
-      request: `Call the case in plain English: question, deadline/window, resolution context, whether this is a binary contract or multi-outcome event, the specific filed outcome/contract, and what the court must prove or forecast.${contextInstruction}`,
+      request: `Call the case in plain English: question, deadline/window, resolution context, whether this is a binary contract or multi-outcome event, the specific filed outcome/contract, and what the court must prove or forecast.${marketScopeInstruction}${contextInstruction}`,
     },
     {
       agentId: 'head-judge',
       phase: 'judge-framing',
       stage: 'Magistrate frames issue',
       request:
-        `Frame the hearing briefly. ${predictionStandard} Name the live issues: ${issueList}.${contextInstruction}${planInstruction} Do not decide merits yet.`,
+        `Frame the hearing briefly. ${predictionStandard}${marketScopeInstruction} Name the live issues: ${issueList}.${contextInstruction}${planInstruction} Do not decide merits yet.`,
     },
     {
       agentId: 'bull-counsel',
       phase: 'opening',
       stage: 'Opening statement: affirmative',
       request:
-        `Give a short Yes opening. No witness has testified yet. For unresolved markets, state the catalyst/mechanism that could still make the event happen before the deadline, not just whether it already happened. If this is a multi-outcome event, say why this filed outcome could beat sibling outcomes. Say what data would matter most and which witness you may need. Issues: ${issueList}.${contextInstruction}`,
+        `Give a short Yes opening. No witness has testified yet. For unresolved markets, state the catalyst/mechanism that could still make the event happen before the deadline, not just whether it already happened. If this is an event-wide multi-outcome filing, argue the strongest leading outcome(s) and why they beat siblings; do not pretend one unstated child contract was filed. If a specific child contract was filed, say why it could beat sibling outcomes. Say what data would matter most and which witness you may need. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
     },
     {
       agentId: 'bear-counsel',
       phase: 'opening',
       stage: 'Opening statement: negative',
       request:
-        `Give a short No opening. No witness has testified yet. Attack the catalyst/mechanism, deadline fit, incentives, or sibling outcomes that steal probability; do not merely say the event has not happened yet unless the deadline has passed. Say what data would change your mind. Issues: ${issueList}.${contextInstruction}`,
+        `Give a short No opening. No witness has testified yet. Attack the catalyst/mechanism, deadline fit, incentives, or sibling outcomes that steal probability; do not merely say the event has not happened yet unless the deadline has passed. If this is event-wide, compare the leading outcomes and name why no single outcome deserves strong confidence. Say what data would change your mind. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
     },
   ]
 
@@ -133,7 +134,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       stage: `Direct examination by Solon`,
       issue: witnessIssue,
       targetAgentId: witness,
-      request: `Ask ${getAgentDisplayName(witness)} one sharp Yes-side question on ${witnessIssue}. Directly answer Draco if relevant, then pin down the mechanism, deadline fit, missing proof, or next data check. Do not speechify.`,
+      request: `Ask ${getAgentDisplayName(witness)} one sharp Yes-side question on ${witnessIssue}. Directly answer Draco if relevant, then pin down the mechanism, deadline fit, missing proof, proxy/reference class, bounded estimate, or next data check. Do not speechify.`,
     })
     steps.push({
       agentId: witness,
@@ -148,7 +149,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       stage: `Cross-examination by Draco`,
       issue: witnessIssue,
       targetAgentId: witness,
-      request: `Ask ${getAgentDisplayName(witness)} one sharp No-side question on ${witnessIssue}. Directly attack Solon's last bridge, expose the blocker, or force the witness to name the missing data. Do not repeat Solon.`,
+      request: `Ask ${getAgentDisplayName(witness)} one sharp No-side question on ${witnessIssue}. Directly attack Solon's last bridge, expose the blocker, or force the witness to name the data source, proxy/reference class, bounded estimate, or confidence cap. Do not repeat Solon.`,
     })
     steps.push({
       agentId: witness,
@@ -255,7 +256,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'verdict',
       stage: 'Verdict',
       request:
-        `Issue the probabilistic verdict. Name the filed outcome/contract if this came from a multi-outcome event. Pick Yes, No, leaning Yes, leaning No, or no-edge. Give a probability range, key catalyst/driver, key blocker, sibling outcome pressure if relevant, confidence cap, and what would change your mind. Issues: ${issueList}.`,
+        `Issue the probabilistic verdict. If a specific child contract/outcome was filed, name it. If the link was event-wide with no selected child outcome, do not invent a proxy; rank the leading outcomes or issue no-edge/event-wide forecast posture. Pick Yes, No, leaning Yes, leaning No, ranked event forecast, or no-edge. Give a probability range, key catalyst/driver, key blocker, sibling outcome pressure if relevant, confidence cap, and what would change your mind. Issues: ${issueList}.`,
     },
     {
       agentId: 'settlement-clerk',
@@ -267,6 +268,33 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
   )
 
   return steps
+}
+
+function getMarketScopeInstruction(marketCase: MarketCase) {
+  const links = marketCase.links ?? []
+  const hasPolymarketEventOnly = links.some((value) => {
+    try {
+      const url = new URL(value)
+      if (!url.hostname.replace(/^www\./, '').endsWith('polymarket.com')) return false
+      const segments = url.pathname.split('/').filter(Boolean)
+      const eventIndex = segments.indexOf('event')
+      return eventIndex >= 0 && Boolean(segments[eventIndex + 1]) && !segments[eventIndex + 2]
+    } catch {
+      return false
+    }
+  })
+  const likelyMultiOutcome =
+    hasPolymarketEventOnly
+    || /\b(multi[- ]outcome|multiple-choice|event-wide|all listed outcomes|candidate-specific|driver-specific|team-specific|sibling outcomes|listed answers)\b/i.test(`${marketCase.question} ${marketCase.context ?? ''}`)
+
+  if (!likelyMultiOutcome) return ''
+
+  return [
+    ' Market-scope instruction:',
+    'if the supplied link is an event page and no child market/outcome was selected, this is an event-wide hearing.',
+    'Counsel must compare/rank the listed outcomes and sibling pressure instead of declaring the case defective or silently choosing a proxy candidate/team.',
+    'Only call it ambiguous if the question itself asks for one specific child outcome but the link/metadata cannot identify which child was filed.',
+  ].join(' ')
 }
 
 function selectWitnesses(witnesses: string[]) {
@@ -483,8 +511,8 @@ function getWitnessDirectQuestion(agentId: string) {
   if (agentId === 'visual-evidence-witness') return 'Inspect supplied images or page screenshots for visible text, chart values, timestamps, logos, source identity, and visual-only claims. State how the visual can or cannot support a forecast inference.'
   if (agentId === 'skepsis-source-quality-witness') return 'Grade source authority, freshness, directness, conflicts, and how much the source record should move the forecast. Do not decide the event.'
   if (agentId === 'chronos-timeline-witness') return 'Build the event chronology from dated sources, publication timing, horizon language, and calendar evidence. State whether timing creates a catalyst, blocker, or unknown.'
-  if (agentId === 'sophia-research-witness') return 'Synthesize broad research from supplied sources, separating direct support, forecast drivers, blockers, background context, contradiction, and missing evidence.'
-  if (agentId === 'numeros-quant-witness') return 'Testify on numerical market anchors: price distance, liquidity, volatility, funding, and market-structure limits from supplied tools only.'
+  if (agentId === 'sophia-research-witness') return 'Synthesize broad research from supplied sources, separating direct support, forecast drivers, blockers, background context, contradiction, missing evidence, and the best proxy/reference class when exact data is absent.'
+  if (agentId === 'numeros-quant-witness') return 'Testify on numerical market anchors: price distance, liquidity, volatility, funding, proxy/reference classes, bounded ranges, and market-structure limits from supplied tools.'
   if (agentId === 'social-count-witness') return 'Testify on social activity counts: identify the account handle, counting window, inclusion/exclusion rules, exact count if available, audit sources, and limits. Search results alone are not an exact count.'
 
   return 'Testify on your specialist evidence and its limits.'
@@ -494,6 +522,12 @@ function getEvidentiaryIssues(marketCase: MarketCase) {
   const question = `${marketCase.question} ${marketCase.context ?? ''} ${marketCase.links?.join(' ') ?? ''}`.toLowerCase()
   const genres = getMarketGenres(question)
   const issues = ['Relevant evidence exists and is current enough to forecast the case horizon']
+  const likelyEventWide = /\b(polymarket\.com\/event\/[^/\s]+(?:\s|$)|multi[- ]outcome|multiple-choice|event-wide|candidate-specific|driver-specific|team-specific|sibling outcomes|listed outcomes|listed answers)\b/i.test(question)
+
+  if (likelyEventWide) {
+    issues.push('Event-wide scope is handled correctly: rank or compare listed outcomes unless a specific child contract is selected')
+    issues.push('Placeholder/inactive outcomes are filtered before sibling outcome pressure is used')
+  }
 
   issues.push('Yes-side catalysts and implementation path are concrete enough to move probability')
   issues.push('No-side blockers, inertia, ambiguity, or missing steps are concrete enough to resist the event')

@@ -6,6 +6,7 @@ import { getOnchainEvidence } from './providers/onchain'
 import { getPredictionMarketEvidence } from './providers/prediction-market'
 import { getSocialActivityEvidence } from './providers/social-activity'
 import { getSportsEvidence } from './providers/sports'
+import { getSettlementAccountingEvidence } from './providers/settlement-accounting'
 import { getVisualPageEvidence } from './providers/visual-analysis'
 import { getWeatherEvidence } from './providers/weather'
 import { getWebPageScrapeEvidence } from './providers/web-scraper'
@@ -27,6 +28,7 @@ export function executableCapabilities() {
     { capability: 'weather_data', description: 'Weather conditions, 72h precipitation, 7d daily forecast, and threshold risk flags by extracted location.' },
     { capability: 'sports_data', description: 'Sports events, teams, schedules, rosters, odds, and result context.' },
     { capability: 'calendar_data', description: 'Holidays, business days, deadlines, and operational calendar context.' },
+    { capability: 'settlement_accounting', description: 'Case funding, escrow, pending final settlement, payout/protocol fee distinction, and receipt caveats.' },
   ] satisfies ToolCapabilityDescriptor[]
 }
 
@@ -58,6 +60,8 @@ export function runToolIntent(capability: ToolEvidence['capability'], marketCase
       return getSportsEvidence(marketCase, instruction)
     case 'calendar_data':
       return getCalendarEvidence(marketCase, instruction)
+    case 'settlement_accounting':
+      return Promise.resolve(getSettlementAccountingEvidence(marketCase))
     case 'web_page_scrape':
       return getWebPageScrapeEvidence(marketCase, instruction)
     case 'visual_page_analysis':

@@ -629,10 +629,11 @@ function scoreSearchItem(item: SearchItem, terms: string[]) {
   let score = termHits
 
   if (/\b(transcript|caption|captions|subtitle|subtitles|quote|remarks|interview|says|said)\b/i.test(haystack)) score += 12
-  if (/\b(official|video|audio|watch|youtube|vimeo|whitehouse|archive|factbase|rev|c-span|fox|fifa|sec\.gov|cdc\.gov|who\.int)\b/i.test(haystack)) score += 10
+  if (/\b(official|video|audio|watch|vimeo|whitehouse|archive|factbase|rev|c-span|fox|fifa|sec\.gov|cdc\.gov|who\.int)\b/i.test(haystack)) score += 10
   if (/\b(latest|official|confirmed|reported|source|statement|filing|release|deadline|timeline|update|criteria|qualifying|resolution)\b/i.test(haystack)) score += 5
   if (/\b(reuters|apnews|associated press|bbc|bloomberg|cnbc|financial times|espn)\b/i.test(haystack)) score += 4
   if (/\b(polymarket|kalshi|predictmarketcap|startuphub|analytics|price|odds|volume|chance)\b/i.test(haystack)) score -= 12
+  if (/\b(youtube\.com|youtu\.be|app store|google play|login|sign up|homepage)\b/i.test(haystack) && !/\b(interview|remarks|speech|statement|press conference|official channel)\b/i.test(haystack)) score -= 18
 
   return score
 }

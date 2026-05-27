@@ -606,12 +606,28 @@ function planPreVerdictRescue(
   const text = recent
     .map((artifact) => `${artifact.agentId} ${artifact.summary} ${artifact.transcriptMessage ?? ''} ${(artifact.risks ?? []).join(' ')} ${artifact.request ?? ''}`)
     .join(' ')
-  if (!/\b(missing|gap|need|needs|unresolved|not found|empty|cannot confirm|no official|not ready|blocker)\b/i.test(text)) return undefined
+  if (!/\b(missing|gap|need|needs|unresolved|not found|empty|cannot confirm|no official|not ready|blocker|no data|lacks? data|reference class|base rate|historical data|how fast|ranking|leaderboard|elo)\b/i.test(text)) return undefined
 
   const called = (agentId: string) => artifacts.filter((artifact) => artifact.agentId === agentId).length
   const phaseContext = step.phase === 'verdict'
     ? 'Final chance before verdict.'
     : 'Before closing and risk calibration.'
+
+  if (/\b(no data|lacks? data|reference class|base rate|historical data|how fast|speed|climb|ranking|leaderboard|elo|update cadence|no historical)\b/i.test(text)) {
+    if (called('sophia-research-witness') < 2) {
+      return {
+        agentId: 'sophia-research-witness',
+        request: `${phaseContext} Do not stop at "no data". Search the supplied evidence and source trail for a proxy/reference class: historical analogs, update cadence, leaderboard/ranking movement, release-to-rank timing, or adjacent events. Return the best supported proxy, range, and remaining caveat.`,
+      }
+    }
+
+    if (called('numeros-quant-witness') < 3) {
+      return {
+        agentId: 'numeros-quant-witness',
+        request: `${phaseContext} Build a bounded estimate from available evidence instead of saying the record lacks exact data. Use market odds, liquidity/freshness if available, timelines, sibling markets, and any proxy/reference class Sophia/Hermes found. State range, assumptions, and confidence cap.`,
+      }
+    }
+  }
 
   if (/\b(primary calendar|filing deadline|ballot access|election calendar|deadline|days remain|days remaining|schedule|event window)\b/i.test(text) && called('chronos-timeline-witness') < 3) {
     return {

@@ -175,7 +175,7 @@ function chooseNeededMove(
   }
 
   if (/\b(missing|gap|unknown|unresolved|cannot prove|no evidence)\b/i.test(recentText)) {
-    return 'Close the missing bridge with a specific witness/tool call, name a failure mode, or rule that the gap caps confidence.'
+    return 'Close the missing bridge with a specific witness/tool call, proxy/reference class, bounded estimate, failure mode, or only then a confidence cap.'
   }
 
   if (/\b(market|odds|price|probability)\b/i.test(recentText) && !/\b(liquidity|spread|depth|copy|fade|overprice|underprice)\b/i.test(recentText)) {
@@ -370,7 +370,7 @@ function buildNextUsefulQuestions(params: {
   }
 
   if (params.missingBridges.length) {
-    questions.push('Does the missing bridge break the forecast or only cap confidence?')
+    questions.push('Can a witness/tool, proxy/reference class, or bounded estimate close the missing bridge before it merely caps confidence?')
   }
 
   questions.push('Which claim in hearingMemory.claimMap is the central clash, and has it been supported, limited, or struck?')

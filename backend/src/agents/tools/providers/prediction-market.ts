@@ -82,6 +82,8 @@ type ManifoldMarket = {
   question?: string
   url?: string
   slug?: string
+  textDescription?: string
+  description?: unknown
   createdTime?: number
   closeTime?: number
   probability?: number
@@ -175,6 +177,21 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const markets = dedupeByQuestion([...directPolymarketLinkMarkets, ...searchPolymarketMarkets], getPolymarketKey)
     const manifoldMarkets = dedupeByQuestion([...directManifoldLinkMarkets, ...searchManifoldMarkets], getManifoldKey)
     const kalshiMarkets = { markets: dedupeKalshiMarkets([...(directKalshiMarkets.markets ?? []), ...(kalshiSearchMarkets.markets ?? [])]) }
+    const directPolymarketEventWide = isDirectPolymarketEventWideLink(marketCase.links) && directPolymarketLinkMarkets.length > 1
+    const directManifoldEventWide = directManifoldLinkMarkets.some((market) => isManifoldMultiOutcomeMarket(market))
+
+    if (directPolymarketEventWide) {
+      observations.push(
+        `Direct Polymarket event-wide filing: the supplied link points to an event page with ${directPolymarketLinkMarkets.length} child contracts and no selected child market slug. Treat this as an event-wide ranking/hearing: compare outcomes and sibling pressure; do not call the case defective merely because no single filed contract was selected.`,
+      )
+    }
+
+    if (directManifoldEventWide) {
+      const outcomeCount = directManifoldLinkMarkets.find(isManifoldMultiOutcomeMarket)?.answers?.length ?? 0
+      observations.push(
+        `Direct Manifold event-wide filing: the supplied market is ${outcomeCount ? `a ${outcomeCount}-outcome` : 'a multi-outcome'} market. Treat the hearing as event-wide: compare listed answers, eliminate placeholders, and issue a ranked/no-edge forecast rather than forcing a binary Yes/No proxy.`,
+      )
+    }
 
     const searchTerms = getSearchTerms(marketCase.question)
     const requiredTerms = getRequiredMarketTerms(marketCase.question, cryptoIds, stockSymbols, usdTarget)
@@ -322,12 +339,12 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
       const horizonLabel = shortHorizonHours && !isWithinHorizon(market.closeTime, shortHorizonHours) ? 'indirect horizon' : 'matching horizon'
       const sourceKind = directManifoldKeys.has(getManifoldKey(market) ?? '') ? 'direct linked market/event' : horizonLabel
       const activitySummary = await getManifoldActivitySummary(market).catch(() => formatManifoldMarketMicrostructure(market))
-      observations.push(`Manifold (${sourceKind}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.${formatManifoldAnswers(market)}${activitySummary ? ` ${activitySummary}` : ''}`)
+      observations.push(`Manifold (${sourceKind}): ${market.question ?? 'market'} implies about ${probability} with ${liquidity} liquidity.${formatManifoldAnswers(market)}${formatManifoldResolutionText(market)}${activitySummary ? ` ${activitySummary}` : ''}`)
       sources.push({
         title: market.question ?? 'Manifold market',
         url: market.sourceUrl ?? market.url ?? 'https://manifold.markets/',
         observedAt: formatManifoldTime(market.lastUpdatedTime) ?? (market.closeTime ? new Date(market.closeTime).toISOString() : fetchedAt),
-        value: [probability, activitySummary].filter(Boolean).join(' | '),
+        value: [probability, formatManifoldResolutionText(market).trim(), activitySummary].filter(Boolean).join(' | '),
       })
     }
 
@@ -574,6 +591,20 @@ function parsePolymarketUrl(value: string): PolymarketUrlParts | undefined {
   const marketSlug = eventIndex >= 0 ? segments[eventIndex + 2] : segments.at(-1)
   if (!eventSlug && !marketSlug) return undefined
   return { eventSlug, marketSlug, sourceUrl: url.toString() }
+}
+
+function isDirectPolymarketEventWideLink(links?: string[]) {
+  return (links ?? []).some((value) => {
+    try {
+      const url = new URL(value)
+      if (!url.hostname.replace(/^www\./, '').endsWith('polymarket.com')) return false
+      const segments = url.pathname.split('/').filter(Boolean)
+      const eventIndex = segments.indexOf('event')
+      return eventIndex >= 0 && Boolean(segments[eventIndex + 1]) && !segments[eventIndex + 2]
+    } catch {
+      return false
+    }
+  })
 }
 
 async function fetchPolymarketMarketsFromUrlParts(parts: PolymarketUrlParts): Promise<PolymarketMarket[]> {
@@ -1155,8 +1186,14 @@ function getManifoldMarketText(market: ManifoldMarket) {
   return [
     market.question,
     market.slug,
+    market.textDescription,
+    extractRichText(market.description),
     market.answers?.map((answer) => answer.text ?? answer.name).filter(Boolean).join(' '),
   ].filter(Boolean).join(' ')
+}
+
+function isManifoldMultiOutcomeMarket(market: ManifoldMarket) {
+  return market.outcomeType === 'MULTIPLE_CHOICE' || (market.answers?.length ?? 0) > 2
 }
 
 function formatManifoldMarketMicrostructure(market: ManifoldMarket) {
@@ -1219,6 +1256,30 @@ function formatManifoldAnswers(market: ManifoldMarket) {
     .filter((item) => !isPlaceholderMarketText(item))
     .slice(0, 8)
   return answers?.length ? ` Outcomes: ${answers.join(', ')}.` : ''
+}
+
+function formatManifoldResolutionText(market: ManifoldMarket) {
+  const text = compactOneLine(market.textDescription ?? extractRichText(market.description), 900)
+  if (!text) return ''
+
+  return ` Resolution/description from Manifold API: ${text}`
+}
+
+function extractRichText(value: unknown): string | undefined {
+  if (!value) return undefined
+  if (typeof value === 'string') return value
+  if (Array.isArray(value)) return value.map(extractRichText).filter(Boolean).join(' ')
+  if (typeof value !== 'object') return undefined
+  const record = value as Record<string, unknown>
+  const ownText = typeof record.text === 'string' ? record.text : ''
+  const children = extractRichText(record.content)
+  return [ownText, children].filter(Boolean).join(' ')
+}
+
+function compactOneLine(value: string | undefined, maxLength: number) {
+  const text = value?.replace(/\s+/g, ' ').trim()
+  if (!text) return undefined
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1).trimEnd()}…` : text
 }
 
 function dedupeByQuestion<T extends { question?: string }>(items: T[], getKey?: (item: T) => string | undefined) {

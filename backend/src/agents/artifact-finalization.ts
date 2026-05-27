@@ -64,6 +64,13 @@ function applyReasoningDiscipline(artifact: CourtArtifact, context: AgentContext
     artifact.notes = [...(artifact.notes ?? []), noveltyWarning.repairPrompt]
   }
 
+  const missingDataWarning = evaluateLazyMissingDataTurn(artifact)
+  if (missingDataWarning) {
+    artifact.argumentQuality = [...(artifact.argumentQuality ?? []), missingDataWarning]
+    if (artifact.type !== 'verdict') artifact.risks = [...(artifact.risks ?? []), missingDataWarning.message]
+    artifact.notes = [...(artifact.notes ?? []), missingDataWarning.repairPrompt]
+  }
+
   if (artifact.type === 'verdict' && artifact.agentId === 'head-judge') {
     enforceVerdictDiscipline(artifact, context)
     normalizeVerdictConfidenceLanguage(artifact)
@@ -273,6 +280,26 @@ function evaluateTurnNovelty(artifact: CourtArtifact, context: AgentContext): Ar
     issue: 'low-novelty',
     message: 'Turn appears to repeat the same evidence or argument shape without new analytical value.',
     repairPrompt: 'Add a new fact, concession, source distinction, mechanism, timing bridge, reference class, numerical range, or stop and let the court proceed.',
+  }
+}
+
+function evaluateLazyMissingDataTurn(artifact: CourtArtifact): ArgumentQualityWarning | undefined {
+  if (artifact.type === 'verdict') return undefined
+  const message = `${artifact.summary} ${artifact.transcriptMessage ?? ''} ${(artifact.risks ?? []).join(' ')} ${artifact.request ?? ''}`
+  const claimsMissingData = /\b(no data|no direct data|no historical data|lacks? data|record lacks|cannot quantify|cannot estimate|no reference class|no base rate|missing reference class|missing base rate)\b/i.test(message)
+  if (!claimsMissingData) return undefined
+
+  const hasRepairMove = Boolean(artifact.requestedAgentId && artifact.request)
+    || /\b(proxy|reference class|analog|bounded estimate|range|scenario|assumption|I checked|checked|searched|looked for|route|ask|request|would update|confidence cap|caps confidence|\d+(?:\.\d+)?\s?%)\b/i.test(message)
+
+  if (hasRepairMove) return undefined
+
+  return {
+    nodeId: `${artifact.agentId}-missing-data`,
+    severity: 'medium',
+    issue: 'no-progress',
+    message: 'Turn stops at missing data instead of researching, routing, or building a defensible proxy/range.',
+    repairPrompt: 'Use private/source evidence, ask the right witness/tool, construct a proxy/reference class, or give a bounded estimate with assumptions before capping confidence.',
   }
 }
 

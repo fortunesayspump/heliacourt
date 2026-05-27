@@ -35,7 +35,7 @@ export function normalizeToolEvidenceToLedgerItems(params: {
     const sources = evidence.sources.length ? evidence.sources.slice(0, observations.length) : []
 
     observations.forEach((observation, observationIndex) => {
-      const source = sources[observationIndex] ?? sources[0]
+      const source = normalizeEvidenceSource(sources[observationIndex] ?? sources[0])
       index += 1
       output.push({
         id: buildEvidenceId(params.marketCase.id, evidence, observation, index),
@@ -84,6 +84,28 @@ export function summarizeEvidenceLedger(ledger: EvidenceItem[] | undefined, max 
 
 function buildEvidenceId(caseId: string, evidence: ToolEvidence, observation: string, index: number) {
   return `ev-${slug(caseId)}-${slug(evidence.capability)}-${hashText(`${evidence.provider}:${observation}`)}-${index}`
+}
+
+function normalizeEvidenceSource(source?: ToolEvidenceSource): ToolEvidenceSource | undefined {
+  if (!source) return undefined
+
+  return {
+    title: stringifySourceField(source.title) || 'Untitled source',
+    url: stringifySourceField(source.url),
+    observedAt: stringifySourceField(source.observedAt),
+    value: stringifySourceField(source.value),
+  }
+}
+
+function stringifySourceField(value: unknown) {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'string') return value
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
 }
 
 function classifySourceType(evidence: ToolEvidence, source?: ToolEvidenceSource): EvidenceItem['sourceType'] {

@@ -64,6 +64,7 @@ async function planWitnessToolsWithAi(agentId: string, marketCase: MarketCase, i
         'Do not add a scrape or screenshot just because a page might exist; add it when exact page text or visible evidence matters.',
         'Do not add prediction market data unless odds, liquidity, market price, or market existence matters.',
         'Do not add structured weather/sports/calendar data unless the case has a location, team/event, date, or operational timing that the data can measure.',
+        'Use settlement_accounting for the settlement clerk or when the instruction asks about funding, receipts, payouts, protocol fee, escrow, or settlement status.',
       ],
     }),
   })
@@ -101,6 +102,8 @@ function planWitnessToolsDeterministically(agentId: string, marketCase: MarketCa
 
 function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: string): ToolIntent[] {
   switch (agentId) {
+    case 'settlement-clerk':
+      return [{ capability: 'settlement_accounting', reason: 'Nomisma needs to distinguish existing case funding from final payout/protocol-fee settlement receipts.' }]
     case 'web-scraper-witness':
       return [{ capability: 'web_page_scrape', reason: 'Aletheia needs to scrape supplied or ledger-discovered URLs and extract exact page claims, dates, source trails, and relevance to the resolution rule.' }]
     case 'visual-evidence-witness':

@@ -199,6 +199,8 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           'for multi-outcome events, name the filed contract and sibling outcomes that matter',
           'when search has already found URLs, tell scraper/source-quality/timeline witnesses to inspect those URLs instead of asking the user for links',
           'treat market odds as calibration, not proof; do not call odds stale without volume/history evidence',
+          'when exact data is absent, build the closest supported proxy/reference class or route a witness to find one',
+          'if a gap remains, include attempted paths, a bounded estimate/range, and what would update it',
           'say uncertainty plainly',
         ],
         avoid: [
@@ -208,6 +210,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           'rehashing the whole record',
           'asking the same witness for the same failed tool result',
           'using no-confirmation-yet as final No while time remains',
+          'ending with no data/no evidence without a proxy, range, research path, or routed next step',
         ],
         progressionHint: hearingMemory.progressionState.neededMove,
         neededMove: hearingMemory.progressionState.neededMove,
@@ -252,6 +255,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
       },
       hearingMemory,
       evidenceLedger: summarizeEvidenceLedger(context.evidenceLedger, 8),
+      privateEvidenceAppendix: buildPrivateEvidenceAppendix(context),
       recentRecord: context.artifacts.slice(-10).map((artifact) => ({
         agentId: artifact.agentId,
         type: artifact.type,
@@ -310,7 +314,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
           error: evidence.error,
           observations: evidence.observations.map(cleanPromptText).filter(Boolean).map((observation) => compactText(observation, 180)).slice(0, 2),
         })),
-      toolEvidence: (context.toolEvidence ?? [])
+      toolEvidenceSummary: (context.toolEvidence ?? [])
         .filter((evidence) => evidence.status === 'ok' && evidence.relevance !== 'low')
         .slice(0, 6)
         .map((evidence) => ({
@@ -322,7 +326,7 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
         relevance: evidence.relevance,
         observations: evidence.observations.map(cleanPromptText).filter(Boolean).map((observation) => compactText(observation, 220)).slice(0, 4),
         sources: evidence.sources.map((source) => ({
-          title: compactText(source.title, 160),
+          title: compactText(String(source.title ?? ''), 160),
           url: source.url,
           observedAt: source.observedAt,
         })).slice(0, 5),
@@ -331,6 +335,72 @@ function buildAgentUserPrompt(task: string, context: AgentContext, agentId: stri
     null,
     2,
   )
+}
+
+function buildPrivateEvidenceAppendix(context: AgentContext) {
+  const recentPriorToolEvidence = context.artifacts
+    .slice(-8)
+    .flatMap((artifact) => artifact.toolEvidence?.map((evidence) => ({ artifactId: artifact.id, agentId: artifact.agentId, evidence })) ?? [])
+  const seenPrior = new Set<string>()
+  const priorToolEvidence = recentPriorToolEvidence.filter(({ evidence }) => {
+    const key = `${evidence.capability}:${evidence.provider}:${evidence.query}:${evidence.fetchedAt}`
+    if (seenPrior.has(key)) return false
+    seenPrior.add(key)
+    return true
+  }).slice(-10)
+
+  return {
+    instruction: [
+      'Private evidence appendix for model reasoning only.',
+      'Use this fuller data before claiming a rule, definition, source, volume, ranking, deadline, or scrape result is missing.',
+      'Do not paste the whole appendix into the public transcript; convert it into concise facts, limits, and source distinctions.',
+      'If a scrape timed out but an API/source value contains the needed rule or criteria, use the API/source value and treat the timeout as non-blocking.',
+      'If exact data is absent, use this appendix to build the closest defensible proxy/reference class or route a witness to fetch it; do not stop at "no data" alone.',
+    ].join(' '),
+    currentTurnToolEvidence: (context.toolEvidence ?? []).map((evidence) => serializeDetailedToolEvidence(evidence)),
+    recentPriorToolEvidence: priorToolEvidence.map(({ artifactId, agentId, evidence }) => ({
+      artifactId,
+      agentId,
+      ...serializeDetailedToolEvidence(evidence),
+    })),
+  }
+}
+
+function serializeDetailedToolEvidence(evidence: NonNullable<AgentContext['toolEvidence']>[number]) {
+  return {
+    capability: evidence.capability,
+    provider: evidence.provider,
+    query: compactText(evidence.query, 300),
+    fetchedAt: evidence.fetchedAt,
+    status: evidence.status,
+    relevance: evidence.relevance,
+    plannerReason: evidence.plannerReason ? compactText(evidence.plannerReason, 280) : undefined,
+    error: evidence.error ? compactText(evidence.error, 500) : undefined,
+    observations: evidence.observations
+      .map(cleanPromptText)
+      .filter(Boolean)
+      .map((observation) => compactText(observation, 1_200))
+      .slice(0, 16),
+    sources: evidence.sources
+      .map((source) => ({
+        title: compactText(String(source.title ?? ''), 220),
+        url: source.url,
+        observedAt: source.observedAt,
+        value: source.value ? compactText(stringifyPromptValue(source.value), 1_500) : undefined,
+      }))
+      .slice(0, 18),
+  }
+}
+
+function stringifyPromptValue(value: unknown) {
+  if (typeof value === 'string') return value
+  if (value === undefined || value === null) return ''
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value)
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
 }
 
 function cleanPromptText(value: string | undefined) {
