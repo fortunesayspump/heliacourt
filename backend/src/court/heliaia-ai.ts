@@ -33,6 +33,8 @@ import { buildCourtTranscriptTurn } from './transcript'
 type HearingRunOptions = {
   onArtifact?: (artifact: CourtArtifact) => void | Promise<void>
   onTurn?: (turn: CourtTranscriptTurn) => void | Promise<void>
+  initialArtifacts?: CourtArtifact[]
+  initialTranscript?: CourtTranscriptTurn[]
 }
 
 const fallbackFactories: Record<string, (agentContext: AgentContext) => CourtArtifact> = {
@@ -60,8 +62,8 @@ const fallbackFactories: Record<string, (agentContext: AgentContext) => CourtArt
 }
 
 export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, options: HearingRunOptions = {}) {
-  const artifacts: CourtArtifact[] = []
-  const transcript: CourtTranscriptTurn[] = []
+  const artifacts: CourtArtifact[] = [...(options.initialArtifacts ?? [])]
+  const transcript: CourtTranscriptTurn[] = [...(options.initialTranscript ?? [])]
   const evidenceAgenda = buildEvidenceAgenda(marketCase)
   const allowToolBackedWitnesses =
     process.env.HELIA_ENABLE_LLM_WITNESSES === 'true' ||
@@ -264,6 +266,7 @@ export async function runHeliaiaConfiguredHearing(marketCase: MarketCase, option
 
   for (const [index, step] of procedure.entries()) {
     if (isRecordReadyForVerdict(artifacts) && step.phase !== 'verdict' && step.phase !== 'settlement') continue
+    if (hasCompletedScheduledStep(transcript, step)) continue
     await pushPreVerdictRescue(step)
     if (shouldSkipRedundantPlannedStep(step, procedure[index + 1], transcript)) continue
     const direction = buildMagistrateDirectionTurn(marketCase, step, transcript)
@@ -541,6 +544,14 @@ function shouldContinueTruthSeeking(artifact: CourtArtifact, step: CourtProcedur
   const asksForMore = /\b(need|needs|missing|unclear|unresolved|cannot prove|cannot determine|would need|requires|gap|not enough)\b/i.test(text)
 
   return hasHighSignal || hasOpenGap || asksForMore
+}
+
+function hasCompletedScheduledStep(transcript: CourtTranscriptTurn[], step: CourtProcedureStep) {
+  return transcript.some((turn) =>
+    turn.agentId === step.agentId &&
+    turn.stage === step.stage &&
+    turn.tags?.includes(step.phase),
+  )
 }
 
 function isRecordReadyForVerdict(artifacts: CourtArtifact[]) {

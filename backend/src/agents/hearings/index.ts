@@ -213,10 +213,13 @@ async function processQueue() {
       void saveJob(job)
     }
 
+    const existingResult = toLiveHearingResult(job.result)
     const liveResult: LiveHearingResult = {
-      marketCase: job.marketCase,
-      artifacts: [],
-      transcript: [],
+      marketCase: existingResult?.marketCase ?? job.marketCase,
+      artifacts: [...(existingResult?.artifacts ?? [])],
+      transcript: [...(existingResult?.transcript ?? [])],
+      recordHash: existingResult?.recordHash,
+      onchainSettlement: existingResult?.onchainSettlement,
       partial: true,
     }
     job.result = liveResult
@@ -225,6 +228,8 @@ async function processQueue() {
 
     void runWithOptionalTimeout(
       () => runHeliaiaConfiguredHearing(job.marketCase, {
+        initialArtifacts: liveResult.artifacts,
+        initialTranscript: liveResult.transcript,
         onArtifact: async (artifact) => {
           liveResult.artifacts.push(artifact)
           job.updatedAt = new Date().toISOString()
@@ -291,11 +296,32 @@ function startJobHeartbeat(job: HearingJob) {
   const intervalMs = Math.min(30_000, Math.max(5_000, Math.floor(env.HELIA_HEARING_STALE_RUNNING_MS / 3)))
   const heartbeat = setInterval(() => {
     if (job.status !== 'running') return
-    job.updatedAt = new Date().toISOString()
-    void saveLiveJobUpdate(job, 'heartbeat')
+    console.warn(JSON.stringify({
+      service: 'helia-hearing-worker',
+      jobId: job.id,
+      caseId: job.caseId,
+      stage: 'heartbeat',
+      at: new Date().toISOString(),
+    }))
   }, intervalMs)
   heartbeat.unref()
   return heartbeat
+}
+
+function toLiveHearingResult(value: unknown): LiveHearingResult | undefined {
+  if (!value || typeof value !== 'object') return undefined
+  const result = value as Partial<LiveHearingResult>
+  if (!Array.isArray(result.artifacts) || !Array.isArray(result.transcript)) return undefined
+  if (!result.marketCase) return undefined
+
+  return {
+    marketCase: result.marketCase,
+    artifacts: result.artifacts,
+    transcript: result.transcript,
+    recordHash: result.recordHash,
+    partial: result.partial !== false,
+    onchainSettlement: result.onchainSettlement,
+  }
 }
 
 async function saveLiveJobUpdate(job: HearingJob, stage: 'artifact' | 'turn' | 'heartbeat') {
