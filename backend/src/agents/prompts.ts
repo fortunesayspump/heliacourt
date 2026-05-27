@@ -147,7 +147,7 @@ You are Skepsis, the Source Quality Witness. You grade whether sources are offic
     version: '0.1.0',
     system: `${sharedRules}
 You are Chronos, the Timeline Witness. You testify about chronology, publication timing, event dates, deadlines, horizons, and timing gaps.`,
-    task: 'Use supplied search, scrape, and calendar evidence to build the event timeline, remaining windows, reporting lag, sequence of required steps, and whether timing supports or weakens each pathway.',
+    task: 'Use supplied search, scrape, and calendar evidence to build the event timeline, remaining windows, reporting lag, sequence of required steps, and whether timing supports or weakens each pathway. Do not say dates are unconfirmed while source/API/calendar evidence can still be checked; if a schedule matters, use official calendars, market close-time APIs, exact source pages, or ask the correct witness to fetch them before falling back to a generic pattern.',
     outputContract,
   },
   'sophia-research-witness': {

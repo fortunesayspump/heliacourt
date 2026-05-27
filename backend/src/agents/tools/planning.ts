@@ -135,8 +135,8 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
       if (/\b(sport|sports|game|match|team|player|squad|roster|national team|fifa|world cup|win|cover|score)\b/i.test(text)) {
         intents.push({ capability: 'sports_data', reason: 'The question looks sports-specific, so event and odds data may be relevant.' })
       }
-      if (/\b(holiday|calendar|business day|deadline|horizon|expiry|expires|by|before|after|date|port|flight|shipment|logistics|market open|market close)\b/i.test(text)) {
-        intents.push({ capability: 'calendar_data', reason: 'The question may depend on public holidays, market/business days, or operational-calendar context.' })
+      if (/\b(holiday|calendar|business day|deadline|horizon|expiry|expires|by|before|after|date|schedule|meeting|minutes|calendar|port|flight|shipment|logistics|market open|market close|close time|end date)\b/i.test(text)) {
+        intents.push({ capability: 'calendar_data', reason: 'The question may depend on public holidays, market/business days, official schedules, market close/end dates, or operational-calendar context.' })
       }
       if (/\b(stock|equity|shares|\$[A-Z]{1,5}\b|[A-Z]{2,5})\b/.test(marketCase.question)) {
         intents.push({ capability: 'market_data', reason: 'The question includes stock/equity context that may need quote data.' })
@@ -179,7 +179,7 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
   const isEventOrOperational = genres.some((genre) => ['politics', 'geopolitics', 'business', 'culture', 'weather', 'health', 'science-tech', 'social', 'transport', 'legal-regulatory'].includes(genre))
     || /\b(news|headline|source|report|announce|election|policy|weather|rain|storm|flood|port|flight|shipment|logistics|delay|disrupt|supply|outage|hack|lawsuit|regulation)\b/i.test(text)
   const isMarketOrPrice = /\b(price|reach|above|below|close|ath|all time high|odds|liquidity|volatility|funding|expiry)\b/i.test(text)
-  const isTimeSensitive = /\b(within|next|today|tomorrow|hours?|days?|week|deadline|horizon|expiry|after|before)\b/i.test(text)
+  const isTimeSensitive = /\b(within|next|today|tomorrow|hours?|days?|week|deadline|horizon|expiry|after|before|schedule|meeting|minutes|calendar|close time|end date)\b/i.test(text)
   const isAddressOrFlow = /\b(0x[a-f0-9]{40}|wallet|onchain|exchange flow|address|stablecoin|transfer|bridge|mint|burn)\b/i.test(text)
   const isStock = /\b(stock|equity|shares|\$[A-Z]{1,5}\b|nvidia|tesla|apple|microsoft|google|meta|amazon|coinbase|mstr)\b/i.test(marketCase.question)
   const isSports = /\b(vs\.?|versus|nba|nfl|mlb|nhl|epl|ufc|soccer|football|basketball|baseball|hockey|tennis|atp|wta|roland garros|ipl|cricket|match|game|player|squad|roster|national team|world cup|fifa|spread|total)\b/i.test(text)
@@ -219,7 +219,7 @@ function planSupportingContextTools(agentId: string, marketCase: MarketCase, tex
     intents.push({ capability: 'onchain_data', reason: 'Supporting context: address or transfer language requires address-level public RPC checks before anyone argues flow.' })
   }
   if (!has('calendar_data') && isTimeSensitive) {
-    intents.push({ capability: 'calendar_data', reason: 'Supporting context: deadlines, days remaining, business days, holidays, and operational calendars can limit or explain the event horizon.' })
+    intents.push({ capability: 'calendar_data', reason: 'Supporting context: deadlines, days remaining, business days, holidays, market close/end times, and official calendars can limit or explain the event horizon.' })
   }
   if (agentId !== 'web-scraper-witness' && !has('web_page_scrape') && (asksForExactSources || isEventOrOperational)) {
     intents.push({ capability: 'web_page_scrape', reason: 'Supporting context: exact page extraction can verify what cited or search-discovered sources actually say.' })

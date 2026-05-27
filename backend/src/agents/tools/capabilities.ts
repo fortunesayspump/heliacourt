@@ -27,7 +27,7 @@ export function executableCapabilities() {
     { capability: 'onchain_data', description: 'Arc/Ethereum/Solana public RPC address-level wallet, contract, nonce, and transaction context.' },
     { capability: 'weather_data', description: 'Weather conditions, 72h precipitation, 7d daily forecast, and threshold risk flags by extracted location.' },
     { capability: 'sports_data', description: 'Sports events, teams, schedules, rosters, odds, and result context.' },
-    { capability: 'calendar_data', description: 'Holidays, business days, deadlines, and operational calendar context.' },
+    { capability: 'calendar_data', description: 'Holidays, business days, parsed deadlines, market close/end times, official meeting schedules such as FOMC calendars, and operational calendar context.' },
     { capability: 'settlement_accounting', description: 'Case funding, escrow, pending final settlement, payout/protocol fee distinction, and receipt caveats.' },
   ] satisfies ToolCapabilityDescriptor[]
 }
