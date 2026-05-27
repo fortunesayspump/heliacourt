@@ -19,7 +19,7 @@ const firecrawlApiUrl = process.env.FIRECRAWL_API_URL ?? 'https://api.firecrawl.
 const localChromeExecutable = process.env.HELIA_CHROME_EXECUTABLE_PATH ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const xPublicBearerToken = process.env.HELIA_X_PUBLIC_BEARER_TOKEN
 
-type ExtractionMode = 'public-endpoint' | 'static-readability' | 'static-cheerio' | 'browser-render' | 'firecrawl'
+type ExtractionMode = 'public-endpoint' | 'static-readability' | 'static-cheerio' | 'file-pdf' | 'file-text' | 'browser-render' | 'firecrawl'
 
 type ExtractedPage = {
   url: string
@@ -135,6 +135,7 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
     const exactTerms = getExactResolutionTerms(`${marketCase.question} ${marketCase.context ?? ''}`)
     const snippets = [...extractApproximateTermSnippets(page.text, exactTerms), ...extractRelevantSnippets(page.text, terms)]
     const extractedClaims = extractClaims(page.text, terms)
+    const documentLead = page.mode === 'file-pdf' || page.mode === 'file-text' ? compactText(page.text, 900) : undefined
     const sourceQuality = classifySourceQuality(page.finalUrl, page.siteName)
     const limitation = getLimitation(page, snippets)
     const outboundLinks = extractOutboundSourceUrls(page, terms)
@@ -151,6 +152,7 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
           discoveredSource ? `Discovered from ${discoveredSource.title}.` : undefined,
           target.discoveryLabel && target.source === 'outbound' ? `Followed link labeled/contexted as: ${target.discoveryLabel}.` : undefined,
           page.description ? `Page description: ${page.description}.` : undefined,
+          documentLead ? `Document lead: ${documentLead}` : undefined,
           snippets.length ? `Relevant extracts: ${snippets.join(' / ')}` : undefined,
           extractedClaims.length ? `Extracted claims: ${extractedClaims.join(' / ')}` : undefined,
           outboundLinks.length ? `Follow-up source links found: ${outboundLinks.slice(0, 3).map((link) => `${link.label || link.url} -> ${link.url}`).join(' | ')}.` : undefined,
@@ -175,7 +177,7 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
         discoveredFrom: target.discoveredFrom,
         discoveryLabel: target.discoveryLabel,
         crawlDepth: target.depth,
-        extract: snippets[0] ?? extractedClaims[0] ?? page.description ?? 'scraped',
+        extract: documentLead ?? snippets[0] ?? extractedClaims[0] ?? page.description ?? 'scraped',
       }),
     })
 
@@ -216,6 +218,11 @@ export async function getWebPageScrapeEvidence(marketCase: MarketCase, instructi
 }
 
 async function extractPage(url: string, terms: string[]): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
+  const fileLike = isFileExtractionUrl(url)
+  const fileResult = await extractFilePage(url)
+  if (fileResult.ok) return fileResult
+  if (fileLike) return fileResult
+
   const endpointResult = await extractPublicEndpointPage(url)
   if (endpointResult.ok && isUsefulExtraction(endpointResult.page, terms)) return endpointResult
   if (endpointResult.ok && isEndpointFriendlyHost(url)) return endpointResult
@@ -242,6 +249,93 @@ async function extractPage(url: string, terms: string[]): Promise<{ ok: true; pa
   if (firecrawlResult.ok && !isAccessDeniedPage(firecrawlResult.page) && !isEmptySocialShell(firecrawlResult.page)) return firecrawlResult
 
   return { ok: false, error: [resultError(endpointResult), resultError(staticResult), resultError(browserResult), resultError(firecrawlResult)].filter(Boolean).join('; ') }
+}
+
+async function extractFilePage(url: string): Promise<{ ok: true; page: ExtractedPage } | { ok: false; error: string }> {
+  try {
+    const parsed = new URL(url)
+    const looksLikePdf = isPdfUrl(parsed)
+    const looksLikeTextFile = isTextFileUrl(parsed)
+    if (!looksLikePdf && !looksLikeTextFile) return { ok: false, error: `${url}: no file extractor matched.` }
+
+    const response = await fetch(url, {
+      redirect: 'follow',
+      headers: {
+        accept: looksLikePdf ? 'application/pdf,*/*;q=0.8' : 'text/plain,application/json,application/xml,text/csv,*/*;q=0.8',
+        'user-agent': scraperUserAgent,
+      },
+      signal: AbortSignal.timeout(20_000),
+    })
+    if (!response.ok) return { ok: false, error: `${url}: file fetch returned HTTP ${response.status}` }
+
+    const finalUrl = response.url || url
+    const contentType = response.headers.get('content-type') ?? ''
+
+    if (looksLikePdf || /application\/pdf/i.test(contentType)) {
+      const buffer = Buffer.from(await response.arrayBuffer())
+      const { PDFParse } = await import('pdf-parse')
+      const parser = new PDFParse({ data: buffer })
+      try {
+        const info = await parser.getInfo({ parsePageInfo: false }).catch(() => undefined)
+        const textResult = await parser.getText()
+        const title = getFilenameTitle(finalUrl) || info?.info?.Title || finalUrl
+        const text = normalizeWhitespace([
+          info?.info?.Title ? `Title: ${info.info.Title}` : undefined,
+          info?.info?.Author ? `Author: ${info.info.Author}` : undefined,
+          typeof info?.total === 'number' ? `PDF pages: ${info.total}` : undefined,
+          textResult.text,
+        ].filter(Boolean).join('\n'))
+
+        return {
+          ok: true,
+          page: {
+            url,
+            finalUrl,
+            title,
+            author: info?.info?.Author,
+            text,
+            mode: 'file-pdf',
+            statusCode: response.status,
+          },
+        }
+      } finally {
+        await parser.destroy().catch(() => undefined)
+      }
+    }
+
+    const text = normalizeWhitespace(await response.text())
+    return {
+      ok: true,
+      page: {
+        url,
+        finalUrl,
+        title: getFilenameTitle(finalUrl) || finalUrl,
+        description: contentType,
+        text,
+        mode: 'file-text',
+        statusCode: response.status,
+      },
+    }
+  } catch (error) {
+    return { ok: false, error: `${url}: ${error instanceof Error ? error.message : 'file extraction failed'}` }
+  }
+}
+
+function isFileExtractionUrl(url: string) {
+  try {
+    const parsed = new URL(url)
+    return isPdfUrl(parsed) || isTextFileUrl(parsed)
+  } catch {
+    return false
+  }
+}
+
+function isPdfUrl(parsed: URL) {
+  return /\.pdf$/i.test(parsed.pathname)
+}
+
+function isTextFileUrl(parsed: URL) {
+  return /\.(txt|csv|tsv|json|xml|md|markdown|log)$/i.test(parsed.pathname)
 }
 
 function resultError(result: { ok: true; page: ExtractedPage } | { ok: false; error: string }) {
@@ -806,10 +900,20 @@ function isScrapableUrl(url: string) {
     if (!/^https?:$/.test(parsed.protocol)) return false
     if (/(^|\.)x\.com$|(^|\.)twitter\.com$/i.test(parsed.hostname) && /^\/i\/flow\/login/i.test(parsed.pathname)) return false
     if (/(^|\.)tiktokcdn\.com$|(^|\.)ttwstatic\.com$|(^|\.)cdninstagram\.com$|(^|\.)twimg\.com$/i.test(parsed.hostname)) return false
-    if (/\.(pdf|png|jpe?g|gif|svg|webp|mp4|zip)$/i.test(parsed.pathname)) return false
+    if (/\.(png|jpe?g|gif|svg|webp|mp4|zip)$/i.test(parsed.pathname)) return false
     return true
   } catch {
     return false
+  }
+}
+
+function getFilenameTitle(url: string) {
+  try {
+    const parsed = new URL(url)
+    const name = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).at(-1) ?? '')
+    return name.replace(/\.(pdf|txt|csv|tsv|json|xml|md|markdown|log)$/i, '').replace(/[-_+]+/g, ' ').trim()
+  } catch {
+    return undefined
   }
 }
 
@@ -1193,6 +1297,11 @@ function htmlContentToReadableText(html: string) {
 
 function truncateObservation(value: string) {
   return value.length <= maxObservationLength ? value : `${value.slice(0, maxObservationLength - 1).trim()}…`
+}
+
+function compactText(value: string, maxLength: number) {
+  const normalized = normalizeWhitespace(value)
+  return normalized.length <= maxLength ? normalized : `${normalized.slice(0, maxLength - 1).trim()}…`
 }
 
 function normalizeWhitespace(value = '') {

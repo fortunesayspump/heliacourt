@@ -36,7 +36,7 @@ async function planWitnessToolsWithAi(agentId: string, marketCase: MarketCase, i
       'Choose primary tools for direct evidence. Add supporting tools only when they materially reduce uncertainty or can verify a gap.',
       'When an instruction includes candidate source URLs from prior evidence, a scraper/source-quality/timeline/research witness should inspect those URLs before asking the user for links.',
       'When a term, acronym, symbol, nickname, metric, or rule phrase is ambiguous, plan a context-discovery search before the deeper evidence search.',
-      'For data questions, use a research chain: source discovery, exact page scrape or structured API if available, then source-quality/timeline/quant follow-up when it materially changes the forecast.',
+      'For data questions, use a research chain: source discovery, exact page/PDF/text-file extraction or structured API if available, then source-quality/timeline/quant follow-up when it materially changes the forecast.',
       'If a tool result is likely to expose related leads, add the tool that can inspect those leads; do not stop at a single generic search when the witness role calls for deeper investigation.',
       'For unresolved will-markets, prefer tools that test catalysts, blockers, timing windows, and mechanism evidence instead of only checking whether the event already happened.',
       'If this witness lacks the right tool, choose no tool or one narrow supporting check; the speaking AI can request another witness later.',
@@ -64,7 +64,7 @@ async function planWitnessToolsWithAi(agentId: string, marketCase: MarketCase, i
       constraints: [
         'Use only executableCapabilities.',
         'Prefer 1-3 tools. Use 0 tools if this witness cannot usefully gather evidence.',
-        'Do not add a scrape or screenshot just because a page might exist; add it when exact page text or visible evidence matters.',
+        'Do not add a scrape or screenshot just because a page might exist; add it when exact page/PDF/file text or visible evidence matters.',
         'Do not add prediction market data unless odds, liquidity, market price, or market existence matters.',
         'Do not add structured weather/sports/calendar data unless the case has a location, team/event, date, or operational timing that the data can measure.',
         'For blocked or hidden data, choose discovery/search and scrape/visual/source-quality tools that can find alternate tables, charts, official dashboards, archives, or credible proxies.',
@@ -109,7 +109,7 @@ function planPrimaryWitnessTools(agentId: string, marketCase: MarketCase, text: 
     case 'settlement-clerk':
       return [{ capability: 'settlement_accounting', reason: 'Nomisma needs to distinguish existing case funding from final payout/protocol-fee settlement receipts.' }]
     case 'web-scraper-witness':
-      return [{ capability: 'web_page_scrape', reason: 'Aletheia needs to scrape supplied or ledger-discovered URLs and extract exact page claims, dates, source trails, and relevance to the resolution rule.' }]
+      return [{ capability: 'web_page_scrape', reason: 'Aletheia needs to scrape supplied or ledger-discovered URLs, PDFs, and text files, then extract exact claims, dates, source trails, and relevance to the resolution rule.' }]
     case 'visual-evidence-witness':
       return [{ capability: 'visual_page_analysis', reason: 'Eikon needs to inspect supplied images or screenshots for visible text, charts, timestamps, logos, and visual-only evidence.' }]
     case 'pythia-prediction-witness': {
