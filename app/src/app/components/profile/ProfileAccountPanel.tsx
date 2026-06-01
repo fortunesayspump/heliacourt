@@ -3,7 +3,7 @@
 import { SealCheck, TelegramLogo, UserCircle, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount, useSignMessage } from 'wagmi'
 import type { ApiUserAccount } from '../../../lib/backend-data'
 import { formatSignatureError } from '../../../lib/wallet-errors'
@@ -75,20 +75,20 @@ export function ProfileAccountPanel() {
     setVisibilityFilter(parseVisibilityFilter(searchParams.get('visibility')))
   }, [searchParams])
 
-  useEffect(() => {
+  const loadAccount = useCallback((showLoading = true) => {
     if (!targetWallet) {
       setAccount(undefined)
       setForm(emptyForm)
-      return
+      return undefined
     }
 
-    let cancelled = false
+    const controller = new AbortController()
     setPanelStatus('')
-    setLoading(true)
-    fetch(`/api/users/${targetWallet}`, { cache: 'no-store' })
+    if (showLoading) setLoading(true)
+    fetch(`/api/users/${targetWallet}`, { cache: 'no-store', signal: controller.signal })
       .then((response) => response.json())
       .then((payload: ApiUserAccount | { error?: string }) => {
-        if (cancelled) return
+        if (controller.signal.aborted) return
         if ('error' in payload) throw new Error(payload.error)
         if (!('profile' in payload)) throw new Error('Profile response is missing account data')
         setAccount(payload)
@@ -99,16 +99,32 @@ export function ProfileAccountPanel() {
         })
       })
       .catch((error) => {
-        if (!cancelled) setPanelStatus(error instanceof Error ? error.message : 'Profile unavailable', 'error')
+        if (!controller.signal.aborted) setPanelStatus(error instanceof Error ? error.message : 'Profile unavailable', 'error')
       })
       .finally(() => {
-        if (!cancelled) setLoading(false)
+        if (!controller.signal.aborted && showLoading) setLoading(false)
       })
 
-    return () => {
-      cancelled = true
-    }
+    return controller
   }, [targetWallet])
+
+  useEffect(() => {
+    const controller = loadAccount(true)
+    return () => {
+      controller?.abort()
+    }
+  }, [loadAccount])
+
+  useEffect(() => {
+    if (!targetWallet) return
+
+    const handleRefresh = () => {
+      loadAccount(false)
+    }
+
+    window.addEventListener('helia:silent-refresh', handleRefresh)
+    return () => window.removeEventListener('helia:silent-refresh', handleRefresh)
+  }, [loadAccount, targetWallet])
 
   const payoutTotal = useMemo(
     () => account?.payouts.reduce((total, payout) => total + Number(payout.amountUsdc ?? 0), 0) ?? 0,

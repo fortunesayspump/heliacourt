@@ -2,7 +2,7 @@
 
 import { Bell, BellRinging, CurrencyDollar, Eye, Scales } from '@phosphor-icons/react'
 import Link from 'next/link'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useAccount } from 'wagmi'
 
 type NotificationPayload = {
@@ -47,27 +47,47 @@ export function NotificationsMenu() {
   const [open, setOpen] = useState(false)
   const [payload, setPayload] = useState<NotificationPayload | undefined>()
   const menuRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
+  const refreshNotifications = useCallback(() => {
     if (!isConnected || !address) {
       setPayload(undefined)
-      return
+      return undefined
     }
 
-    let cancelled = false
-    fetch(`/api/users/${address}/notifications`, { cache: 'no-store' })
+    const controller = new AbortController()
+    fetch(`/api/users/${address}/notifications`, { cache: 'no-store', signal: controller.signal })
       .then((response) => response.ok ? response.json() : undefined)
       .then((payload) => {
-        if (!cancelled) setPayload(payload as NotificationPayload | undefined)
+        if (!controller.signal.aborted) setPayload(payload as NotificationPayload | undefined)
       })
       .catch(() => {
-        if (!cancelled) setPayload(undefined)
+        if (!controller.signal.aborted) setPayload(undefined)
       })
 
-    return () => {
-      cancelled = true
-    }
+    return controller
   }, [address, isConnected])
+
+  useEffect(() => {
+    const controller = refreshNotifications()
+    return () => {
+      controller?.abort()
+    }
+  }, [refreshNotifications])
+
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const handleRefresh = () => {
+      refreshNotifications()
+    }
+    const interval = window.setInterval(handleRefresh, 30_000)
+
+    window.addEventListener('helia:silent-refresh', handleRefresh)
+
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener('helia:silent-refresh', handleRefresh)
+    }
+  }, [address, isConnected, refreshNotifications])
 
   useEffect(() => {
     if (!open) return

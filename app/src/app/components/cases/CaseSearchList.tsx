@@ -2,7 +2,7 @@
 
 import { Briefcase, Clock, MagnifyingGlass, ShieldCheck, Stamp, X } from '@phosphor-icons/react'
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
 import type { ApiCase, ApiUserAccount } from '../../../lib/backend-data'
 import { getPredictionMarketLink, MarketLogo } from '../markets/MarketLogo'
@@ -45,18 +45,18 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
     })
   }, [normalizedQuery, visibleCases])
 
-  useEffect(() => {
+  const refreshPrivateCases = useCallback(() => {
     if (!isConnected || !address) {
       setPrivateCases([])
       setShowPrivate(false)
-      return
+      return undefined
     }
 
-    let cancelled = false
-    fetch(`/api/users/${address}`, { cache: 'no-store' })
+    const controller = new AbortController()
+    fetch(`/api/users/${address}`, { cache: 'no-store', signal: controller.signal })
       .then((response) => response.ok ? response.json() as Promise<ApiUserAccount> : undefined)
       .then((account) => {
-        if (cancelled || !account) return
+        if (controller.signal.aborted || !account) return
         const ownedPrivateCases = account.cases
           .filter((item) => item.visibility === 'private')
           .map((item) => ({
@@ -75,13 +75,29 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
         setPrivateCases(ownedPrivateCases)
       })
       .catch(() => {
-        if (!cancelled) setPrivateCases([])
+        if (!controller.signal.aborted) setPrivateCases([])
       })
 
-    return () => {
-      cancelled = true
-    }
+    return controller
   }, [address, isConnected])
+
+  useEffect(() => {
+    const controller = refreshPrivateCases()
+    return () => {
+      controller?.abort()
+    }
+  }, [refreshPrivateCases])
+
+  useEffect(() => {
+    if (!isConnected || !address) return
+
+    const handleRefresh = () => {
+      refreshPrivateCases()
+    }
+
+    window.addEventListener('helia:silent-refresh', handleRefresh)
+    return () => window.removeEventListener('helia:silent-refresh', handleRefresh)
+  }, [address, isConnected, refreshPrivateCases])
 
   return (
     <>
