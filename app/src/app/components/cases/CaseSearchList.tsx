@@ -1,19 +1,28 @@
 'use client'
 
-import { Briefcase, Clock, MagnifyingGlass, Stamp, X } from '@phosphor-icons/react'
+import { Briefcase, Clock, MagnifyingGlass, ShieldCheck, Stamp, X } from '@phosphor-icons/react'
 import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
-import type { ApiCase } from '../../../lib/backend-data'
+import { useAccount } from 'wagmi'
+import type { ApiCase, ApiUserAccount } from '../../../lib/backend-data'
 import { getPredictionMarketLink, MarketLogo } from '../markets/MarketLogo'
 
 export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initialNow: number }) {
+  const { address, isConnected } = useAccount()
   const [query, setQuery] = useState('')
   const [showArchived, setShowArchived] = useState(false)
+  const [showPrivate, setShowPrivate] = useState(false)
+  const [privateCases, setPrivateCases] = useState<ApiCase[]>([])
   const normalizedQuery = normalizeSearchText(query)
-  const archivedCount = cases.filter(isArchivedCaseStatus).length
+  const docketCases = useMemo(
+    () => showPrivate ? mergeCases(cases, privateCases) : cases,
+    [cases, privateCases, showPrivate],
+  )
+  const privateCount = privateCases.length
+  const archivedCount = docketCases.filter(isArchivedCaseStatus).length
   const visibleCases = useMemo(
-    () => showArchived ? cases : cases.filter((item) => !isArchivedCaseStatus(item)),
-    [cases, showArchived],
+    () => showArchived ? docketCases : docketCases.filter((item) => !isArchivedCaseStatus(item)),
+    [docketCases, showArchived],
   )
   const filteredCases = useMemo(() => {
     if (!normalizedQuery) return visibleCases
@@ -35,6 +44,44 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
       return haystack.includes(normalizedQuery)
     })
   }, [normalizedQuery, visibleCases])
+
+  useEffect(() => {
+    if (!isConnected || !address) {
+      setPrivateCases([])
+      setShowPrivate(false)
+      return
+    }
+
+    let cancelled = false
+    fetch(`/api/users/${address}`, { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() as Promise<ApiUserAccount> : undefined)
+      .then((account) => {
+        if (cancelled || !account) return
+        const ownedPrivateCases = account.cases
+          .filter((item) => item.visibility === 'private')
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            imageUrl: item.imageUrl,
+            visibility: 'private' as const,
+            status: 'Private',
+            market: 'Wallet record',
+            updated: item.updated,
+            createdAt: item.updated,
+            horizon: 'Private docket',
+            probability: 'Wallet access',
+            links: [],
+          }))
+        setPrivateCases(ownedPrivateCases)
+      })
+      .catch(() => {
+        if (!cancelled) setPrivateCases([])
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [address, isConnected])
 
   return (
     <>
@@ -61,6 +108,22 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
             <h2>Markets</h2>
           </div>
           <div className="case-list-heading-actions">
+            {privateCount ? (
+              <button
+                className={`case-archive-toggle private-toggle${showPrivate ? ' active' : ''}`}
+                type="button"
+                aria-pressed={showPrivate}
+                onClick={() => setShowPrivate((current) => !current)}
+              >
+                <ShieldCheck size={14} />
+                {showPrivate ? 'Hide private' : `My private (${privateCount})`}
+              </button>
+            ) : isConnected ? (
+              <Link className="case-private-link" href="/profile?visibility=private">
+                <ShieldCheck size={14} />
+                Private cases
+              </Link>
+            ) : null}
             {archivedCount ? (
               <button
                 className={`case-archive-toggle${showArchived ? ' active' : ''}`}
@@ -75,7 +138,7 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
           </div>
         </div>
 
-        {!cases.length ? (
+        {!docketCases.length ? (
           <div className="empty-state">
             <h3>No cases yet</h3>
             <Link className="primary-button" href="/cases/new">
@@ -113,6 +176,15 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
       </section>
     </>
   )
+}
+
+function mergeCases(publicCases: ApiCase[], privateCases: ApiCase[]) {
+  const merged = [...publicCases]
+  const seen = new Set(publicCases.map((item) => item.id))
+  for (const item of privateCases) {
+    if (!seen.has(item.id)) merged.push(item)
+  }
+  return merged
 }
 
 function CaseSearchCard({ caseItem, initialNow }: { caseItem: ApiCase; initialNow: number }) {
