@@ -108,21 +108,17 @@ export function CaseSearchList({ cases, initialNow }: { cases: ApiCase[]; initia
             <h2>Markets</h2>
           </div>
           <div className="case-list-heading-actions">
-            {privateCount ? (
+            {isConnected ? (
               <button
                 className={`case-archive-toggle private-toggle${showPrivate ? ' active' : ''}`}
                 type="button"
+                disabled={!privateCount}
                 aria-pressed={showPrivate}
                 onClick={() => setShowPrivate((current) => !current)}
               >
                 <ShieldCheck size={14} />
-                {showPrivate ? 'Hide private' : `My private (${privateCount})`}
+                {showPrivate ? 'Hide private' : `Show private (${privateCount})`}
               </button>
-            ) : isConnected ? (
-              <Link className="case-private-link" href="/profile?visibility=private">
-                <ShieldCheck size={14} />
-                Private cases
-              </Link>
             ) : null}
             {archivedCount ? (
               <button
