@@ -30,7 +30,7 @@ export async function enqueueHearingJob(marketCase: MarketCase) {
   if (isDatabaseConfigured) {
     const reusableJob = await findReusableDatabaseJob(marketCase)
     if (reusableJob) {
-      void processQueue()
+      kickQueue()
       return serializeJob(reusableJob)
     }
   }
@@ -47,7 +47,7 @@ export async function enqueueHearingJob(marketCase: MarketCase) {
 
   if (isDatabaseConfigured) {
     await saveDatabaseJob(job)
-    void processQueue()
+    kickQueue()
 
     return serializeJob(job)
   }
@@ -56,14 +56,14 @@ export async function enqueueHearingJob(marketCase: MarketCase) {
     await connectRedis()
     await writeRedisJob(job)
     await redis.rpush(queueKey, job.id)
-    void processQueue()
+    kickQueue()
 
     return serializeJob(job)
   }
 
   jobs.set(job.id, job)
   queue.push(job.id)
-  void processQueue()
+  kickQueue()
 
   return serializeJob(job)
 }
@@ -175,9 +175,9 @@ export async function retryOnchainSettlement(caseId: string) {
 export function startHearingJobWorker() {
   if (queuePoller) return
 
-  void processQueue()
+  kickQueue()
   queuePoller = setInterval(() => {
-    void processQueue()
+    kickQueue()
   }, env.HELIA_HEARING_QUEUE_POLL_MS)
   queuePoller.unref()
 }
@@ -223,7 +223,7 @@ export async function runHearingNow(marketCase: MarketCase) {
     return await runWithOptionalTimeout(() => runHeliaiaConfiguredHearing(marketCase), env.HELIA_HEARING_TIMEOUT_MS)
   } finally {
     activeJobs = Math.max(0, activeJobs - 1)
-    void processQueue()
+    kickQueue()
   }
 }
 
@@ -317,9 +317,21 @@ async function processQueue() {
         clearInterval(heartbeat)
         activeJobs = Math.max(0, activeJobs - 1)
         void pruneJobs()
-        void processQueue()
+        kickQueue()
       })
   }
+}
+
+function kickQueue() {
+  void processQueue().catch((error) => {
+    const message = error instanceof Error ? error.message : 'hearing queue processing failed'
+    console.error(JSON.stringify({
+      service: 'helia-hearing-worker',
+      stage: 'process-queue',
+      error: message,
+      at: new Date().toISOString(),
+    }))
+  })
 }
 
 function startJobHeartbeat(job: HearingJob) {
