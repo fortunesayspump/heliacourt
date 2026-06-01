@@ -47,6 +47,9 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
   const payoutRows = ledgerRows.filter((row) => row.receiptType === 'agent-payout' && row.agentId === agent.id)
   const payoutTotal = payoutRows.reduce((total, row) => total + parseAmount(row.amount), 0)
   const testifiedCases = cases.filter((item) => item.witnesses?.includes(agent.id) || payoutRows.some((row) => row.caseId === item.id))
+  const activityLabel = agent.seat === 'court-clerk' || agent.seat === 'settlement-clerk'
+    ? 'Paid cases'
+    : 'Case activity'
   const caseDetails = await Promise.all(testedCaseIds(testedCaseIdsFromRows(testedCaseIdsFromCases(testifiedCases), payoutRows)).map((caseId) => getBackendCaseDetail(caseId)))
   const turns = caseDetails
     .flatMap((detail) => (detail?.transcript ?? []).map((turn) => ({
@@ -81,7 +84,7 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
           <section className="app-summary-grid profile-stat-grid agent-profile-stats" aria-label={`${agent.name} summary`}>
             <AgentStat label="Fee quote" value={`${formatAmount(agent.priceUsd)} USDC`} />
             <AgentStat label="Payouts" value={payoutTotal ? `${formatAmount(payoutTotal)} USDC` : `${payoutRows.length} rows`} />
-            <AgentStat label="Cases" value={`${testifiedCases.length}`} />
+            <AgentStat label={activityLabel} value={`${testifiedCases.length}`} />
             <AgentStat label="Version" value={agent.version} />
           </section>
 
@@ -130,7 +133,7 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
                   <div>
                     <h3>Recent cases</h3>
-                    <p>Hearings where this agent has been seated or paid.</p>
+                    <p>Hearings where this agent has a recorded role or payout.</p>
                   </div>
                   <strong>{testifiedCases.length} records</strong>
                 </div>
