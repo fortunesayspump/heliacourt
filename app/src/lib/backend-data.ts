@@ -262,7 +262,7 @@ export async function getBackendCases(): Promise<ApiCase[]> {
     if (!response.ok) return getPreviewCases()
     const payload = await response.json() as { cases?: ApiCase[] }
 
-    return Array.isArray(payload.cases) && payload.cases.length ? await hydrateCaseImages(payload.cases) : getPreviewCases()
+    return Array.isArray(payload.cases) && payload.cases.length ? payload.cases : getPreviewCases()
   } catch {
     return getPreviewCases()
   }

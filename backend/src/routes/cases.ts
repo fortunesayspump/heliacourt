@@ -21,10 +21,17 @@ export async function caseRoutes(app: FastifyInstance) {
     const publicJobs = jobs.filter((job) => isPublicListCase(job))
 
     return {
-      cases: await Promise.all(publicJobs.map(async (job) => summarizeCase(
-        job,
-        job.status === 'failed' ? await getCaseRecordedReceipts(job.marketCase.id) : [],
-      ))),
+      cases: await Promise.all(publicJobs.map(async (job) => {
+        const summary = summarizeCase(
+          job,
+          job.status === 'failed' ? await getCaseRecordedReceipts(job.marketCase.id) : [],
+        )
+
+        return {
+          ...summary,
+          resolution: undefined,
+        }
+      })),
     }
   })
 

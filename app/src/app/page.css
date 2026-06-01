@@ -5870,7 +5870,18 @@ a.registry-row:hover {
 }
 
 .private-unlock-panel {
+  width: min(100% - 32px, 820px);
   max-width: 820px;
+  margin-right: auto;
+  margin-left: auto;
+  padding: 22px;
+}
+
+.empty-state.private-unlock-panel {
+  border: 1px solid var(--ag-border);
+  border-radius: var(--radius-lg);
+  background: var(--ag-surface);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
 }
 
 .private-turn-list p {
