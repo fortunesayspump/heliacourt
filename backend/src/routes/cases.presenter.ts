@@ -20,7 +20,7 @@ export async function summarizeCaseDetail(
   const extraReceipts = await getCaseRecordedReceipts(marketCase.id, shouldExposePayerWallet(marketCase))
   const settlement = isSettlementObject(result?.onchainSettlement) ? result.onchainSettlement : undefined
   const settlementReceipts = Array.isArray(settlement?.receipts)
-    ? settlement.receipts.map((receipt) => redactPayerReceipt(receipt, shouldExposePayerWallet(marketCase)))
+    ? normalizeSettlementReceipts(settlement.receipts as SettlementReceiptLike[]).map((receipt) => redactPayerReceipt(receipt, shouldExposePayerWallet(marketCase)))
     : []
   const onchainSettlement = extraReceipts.length
     ? {
@@ -189,7 +189,7 @@ export function summarizeLedgerRows(job: HearingJob) {
     })
   }
 
-  for (const receipt of result?.onchainSettlement?.receipts ?? []) {
+  for (const receipt of normalizeSettlementReceipts(result?.onchainSettlement?.receipts ?? [])) {
     rows.push({
       caseId: marketCase.id,
       title: marketCase.question,
@@ -300,6 +300,24 @@ function redactPayerReceipt(receipt: unknown, exposePayerWallet: boolean) {
     wallet: undefined,
     payerRedacted: true,
   }
+}
+
+type SettlementReceiptLike = {
+  type?: string
+  txHash?: string
+}
+
+function normalizeSettlementReceipts<T extends SettlementReceiptLike>(receipts: readonly T[]): T[] {
+  const seenAgentPayoutTxs = new Set<string>()
+  return receipts.filter((receipt) => {
+    if (!receipt || typeof receipt !== 'object') return true
+    const typed = receipt as { type?: string; txHash?: string }
+    if (typed.type !== 'agent-payout' || !typed.txHash) return true
+    const txHash = typed.txHash.toLowerCase()
+    if (seenAgentPayoutTxs.has(txHash)) return false
+    seenAgentPayoutTxs.add(txHash)
+    return true
+  })
 }
 
 function shouldExposePayerWallet(marketCase: MarketCase) {

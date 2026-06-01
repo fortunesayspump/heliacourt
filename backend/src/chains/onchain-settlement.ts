@@ -242,7 +242,12 @@ export async function settleHearingOnchain(input: {
     })
   }
 
-  receipts.push(...await readAgentPayoutReceipts(publicClient, caseId, onchainCase.caseId, fromBlock))
+  const directPayoutTxHashes = new Set(
+    receipts
+      .filter((receipt) => receipt.type === 'agent-payout')
+      .map((receipt) => receipt.txHash.toLowerCase()),
+  )
+  receipts.push(...await readAgentPayoutReceipts(publicClient, caseId, onchainCase.caseId, fromBlock, directPayoutTxHashes))
 
   if (escrowStatus === 1) {
     const closeTx = await writeAndWait(walletClient, publicClient, {
@@ -354,11 +359,18 @@ async function readAgentPayoutReceipts(
   caseId: bigint,
   displayCaseId: string,
   fromBlock: bigint,
+  excludedTxHashes = new Set<string>(),
 ): Promise<OnchainSettlementReceipt[]> {
+  const agentIdsByWallet = new Map<string, string[]>()
+  for (const agent of getAgentRegistryWithOnchainProfiles()) {
+    const wallet = agent.onchain.payoutWallet?.toLowerCase()
+    if (!wallet) continue
+    agentIdsByWallet.set(wallet, [...(agentIdsByWallet.get(wallet) ?? []), agent.id])
+  }
   const agentsByWallet = new Map(
-    getAgentRegistryWithOnchainProfiles()
-      .map((agent) => [agent.onchain.payoutWallet?.toLowerCase(), agent.id] as const)
-      .filter((entry): entry is [string, string] => Boolean(entry[0])),
+    [...agentIdsByWallet.entries()]
+      .filter(([, agentIds]) => agentIds.length === 1)
+      .map(([wallet, agentIds]) => [wallet, agentIds[0]] as const),
   )
   const latestBlock = await publicClient.getBlockNumber()
   const logs: Array<{
@@ -381,15 +393,17 @@ async function readAgentPayoutReceipts(
     logs.push(...chunk)
   }
 
-  return logs.map((log) => ({
-    type: 'agent-payout' as const,
-    txHash: log.transactionHash,
-    chainId: String(env.ARC_CHAIN_ID),
-    caseId: displayCaseId,
-    amountUsdc: formatUsdc(log.args.amount ?? 0n),
-    agentId: agentsByWallet.get(log.args.agentWallet?.toLowerCase() ?? ''),
-    wallet: log.args.agentWallet,
-  }))
+  return logs
+    .filter((log) => !excludedTxHashes.has(log.transactionHash.toLowerCase()))
+    .map((log) => ({
+      type: 'agent-payout' as const,
+      txHash: log.transactionHash,
+      chainId: String(env.ARC_CHAIN_ID),
+      caseId: displayCaseId,
+      amountUsdc: formatUsdc(log.args.amount ?? 0n),
+      agentId: agentsByWallet.get(log.args.agentWallet?.toLowerCase() ?? ''),
+      wallet: log.args.agentWallet,
+    }))
 }
 
 function dedupeReceipts(receipts: OnchainSettlementReceipt[]) {
