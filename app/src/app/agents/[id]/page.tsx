@@ -59,9 +59,23 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
     .filter((turn) => turn.agentId === agent.id)
     .slice(0, 6)
   const artifacts = caseDetails
-    .flatMap((detail) => detail?.artifacts ?? [])
+    .flatMap((detail) => (detail?.artifacts ?? []).map((artifact) => ({
+      ...artifact,
+      profileKey: `${detail?.case.id ?? 'case'}-${artifact.id}`,
+    })))
     .filter((artifact) => artifact.agentId === agent.id)
     .slice(0, 4)
+  const testimonyItems = turns.length
+    ? turns.map((turn) => ({
+        key: turn.profileKey,
+        title: turn.stage,
+        message: turn.message,
+      }))
+    : artifacts.map((artifact) => ({
+        key: artifact.profileKey,
+        title: formatTitleCase(artifact.type),
+        message: artifact.transcriptMessage ?? artifact.summary,
+      }))
 
   return (
         <section className="profile-dashboard agent-profile-dashboard">
@@ -163,23 +177,23 @@ async function AgentProfileData({ params }: { params: Promise<{ id: string }> })
                 <div className="profile-panel-heading app-section-heading profile-section-heading">
                   <div>
                     <h3>Recent testimony</h3>
-                    <p>Latest transcript turns attributed to this agent.</p>
+                    <p>Latest transcript turns or recorded courtroom messages attributed to this agent.</p>
                   </div>
-                  <strong>{turns.length} turns</strong>
+                  <strong>{testimonyItems.length} records</strong>
                 </div>
-                {turns.length ? (
+                {testimonyItems.length ? (
                   <div className="agent-testimony-list">
-                    {turns.map((turn) => (
-                      <div className="app-record-row profile-record-row agent-testimony-row" key={turn.profileKey}>
+                    {testimonyItems.map((item) => (
+                      <div className="app-record-row profile-record-row agent-testimony-row" key={item.key}>
                         <span>
-                          <strong>{turn.stage}</strong>
-                          <small>{turn.message}</small>
+                          <strong>{item.title}</strong>
+                          <small>{item.message}</small>
                         </span>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="agent-empty-copy">No transcript turns are recorded for this agent yet.</p>
+                  <p className="agent-empty-copy">No transcript turns or courtroom messages are recorded for this agent yet.</p>
                 )}
               </article>
 
