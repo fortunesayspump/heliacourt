@@ -318,7 +318,7 @@ export function CaseFilingFlow({
       setStatus({ tone: 'good', text: `Case ${txHash.slice(0, 10)}...${txHash.slice(-6)} funded and queued.` })
       void allowance.refetch()
       void balance.refetch()
-      router.push(`/cases/${txHash}`)
+      router.push(visibility === 'private' ? '/profile?visibility=private' : `/cases/${txHash}`)
     } catch (error) {
       setStatus({ tone: 'bad', text: formatWalletError(error, 'Case filing failed.') })
     }

@@ -128,6 +128,10 @@ function AppKitWalletButton({
               <UserCircle size={15} />
               Profile
             </Link>
+            <Link href="/profile?visibility=private" onClick={() => setMenuOpen(false)}>
+              <ShieldCheck size={15} />
+              Private cases
+            </Link>
             <button type="button" onClick={() => {
               setMenuOpen(false)
               disconnect()
@@ -250,6 +254,10 @@ function InjectedWalletButton({
             <Link href="/profile" onClick={() => setMenuOpen(false)}>
               <UserCircle size={15} />
               Profile
+            </Link>
+            <Link href="/profile?visibility=private" onClick={() => setMenuOpen(false)}>
+              <ShieldCheck size={15} />
+              Private cases
             </Link>
             <button type="button" onClick={() => {
               setMenuOpen(false)

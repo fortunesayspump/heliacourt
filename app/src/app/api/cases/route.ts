@@ -1,13 +1,8 @@
 import { proxyBackendJson, readJsonBody } from '../../../lib/backend-proxy'
+import { getBackendCases } from '../../../lib/backend-data'
 
 export async function GET() {
-  return proxyBackendJson('/cases', {
-    cache: 'no-store',
-    jsonFallback: { cases: [] },
-    unavailableMessage: 'Case data is unavailable.',
-    unavailablePayload: { cases: [] },
-    unavailableStatus: 200,
-  })
+  return Response.json({ cases: await getBackendCases() })
 }
 
 export async function POST(request: Request) {

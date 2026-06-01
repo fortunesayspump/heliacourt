@@ -25,6 +25,11 @@ const emptyForm: ProfileForm = {
 }
 
 type VisibilityFilter = 'all' | 'public' | 'private'
+
+function parseVisibilityFilter(value: string | null): VisibilityFilter {
+  return value === 'public' || value === 'private' ? value : 'all'
+}
+
 export function ProfileAccountPanel() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -40,7 +45,7 @@ export function ProfileAccountPanel() {
   const [telegramLinking, setTelegramLinking] = useState(false)
   const [telegramLinked, setTelegramLinked] = useState(false)
   const [telegramPromptOpen, setTelegramPromptOpen] = useState(false)
-  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>('all')
+  const [visibilityFilter, setVisibilityFilter] = useState<VisibilityFilter>(() => parseVisibilityFilter(searchParams.get('visibility')))
   const telegramLinkToken = searchParams.get('telegramLink')
   const requestedWallet = normalizeWalletParam(
     searchParams.get('wallet')
@@ -65,6 +70,10 @@ export function ProfileAccountPanel() {
       setTelegramPromptOpen(true)
     }
   }, [isOwnProfile, telegramLinkToken, telegramLinked])
+
+  useEffect(() => {
+    setVisibilityFilter(parseVisibilityFilter(searchParams.get('visibility')))
+  }, [searchParams])
 
   useEffect(() => {
     if (!targetWallet) {

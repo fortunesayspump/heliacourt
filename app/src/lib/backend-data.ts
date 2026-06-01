@@ -255,16 +255,21 @@ const backendResponseCache = new Map<string, {
   expiresAt: number
   promise: Promise<Response>
 }>()
+let lastGoodCases: ApiCase[] | undefined
 
 export async function getBackendCases(): Promise<ApiCase[]> {
   try {
     const response = await fetchBackend('/cases', { ttlMs: 3_000 })
-    if (!response.ok) return getPreviewCases()
+    if (!response.ok) return lastGoodCases ?? getPreviewCases()
     const payload = await response.json() as { cases?: ApiCase[] }
+    if (Array.isArray(payload.cases) && payload.cases.length) {
+      lastGoodCases = payload.cases
+      return payload.cases
+    }
 
-    return Array.isArray(payload.cases) && payload.cases.length ? payload.cases : getPreviewCases()
+    return lastGoodCases ?? getPreviewCases()
   } catch {
-    return getPreviewCases()
+    return lastGoodCases ?? getPreviewCases()
   }
 }
 
@@ -286,10 +291,6 @@ export async function getBackendCaseDetail(id: string): Promise<ApiCaseDetail | 
   } catch {
     return getPreviewCaseDetail(id)
   }
-}
-
-async function hydrateCaseImages(cases: ApiCase[]) {
-  return await Promise.all(cases.map((item) => hydrateCaseImage(item)))
 }
 
 async function hydrateCaseImage(item: ApiCase): Promise<ApiCase> {
