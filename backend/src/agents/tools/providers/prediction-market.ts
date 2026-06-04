@@ -179,6 +179,7 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
     const kalshiMarkets = { markets: dedupeKalshiMarkets([...(directKalshiMarkets.markets ?? []), ...(kalshiSearchMarkets.markets ?? [])]) }
     const directPolymarketEventWide = isDirectPolymarketEventWideLink(marketCase.links) && directPolymarketLinkMarkets.length > 1
     const directManifoldEventWide = directManifoldLinkMarkets.some((market) => isManifoldMultiOutcomeMarket(market))
+    const directManifoldNumeric = directManifoldLinkMarkets.some((market) => isManifoldNumericMarket(market))
 
     if (directPolymarketEventWide) {
       observations.push(
@@ -190,6 +191,13 @@ export async function getPredictionMarketEvidence(marketCase: MarketCase): Promi
       const outcomeCount = directManifoldLinkMarkets.find(isManifoldMultiOutcomeMarket)?.answers?.length ?? 0
       observations.push(
         `Direct Manifold event-wide filing: the supplied market is ${outcomeCount ? `a ${outcomeCount}-outcome` : 'a multi-outcome'} market. Treat the hearing as event-wide: compare listed answers, eliminate placeholders, and issue a ranked/no-edge forecast rather than forcing a binary Yes/No proxy.`,
+      )
+    }
+
+    if (directManifoldNumeric) {
+      const outcomeType = directManifoldLinkMarkets.find(isManifoldNumericMarket)?.outcomeType ?? 'numeric/distribution'
+      observations.push(
+        `Direct Manifold non-binary filing: the supplied market has outcome type ${outcomeType}. Treat this as a numeric/distribution forecast: estimate the value/range or leading interval(s), and do not force a Yes/No verdict unless the filed question is a separate binary threshold contract.`,
       )
     }
 
@@ -1207,6 +1215,10 @@ function getManifoldMarketText(market: ManifoldMarket) {
 
 function isManifoldMultiOutcomeMarket(market: ManifoldMarket) {
   return market.outcomeType === 'MULTIPLE_CHOICE' || (market.answers?.length ?? 0) > 2
+}
+
+function isManifoldNumericMarket(market: ManifoldMarket) {
+  return ['PSEUDO_NUMERIC', 'NUMERIC', 'DATE'].includes(market.outcomeType ?? '')
 }
 
 function formatManifoldMarketMicrostructure(market: ManifoldMarket) {

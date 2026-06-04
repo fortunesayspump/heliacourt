@@ -154,18 +154,24 @@ export function formatHistoryDate(value?: string) {
 export function getVerdictDisplay({
   confidence,
   fallback,
+  question,
   summary,
   transcriptMessage,
 }: {
   confidence: string
   fallback?: string
+  question?: string
   summary?: string
   transcriptMessage?: string
 }) {
   const rawSummary = summary || fallback || 'Hearing pending'
-  const title = formatVerdictTitle(rawSummary)
+  const nonBinaryMarket = isLikelyNonBinaryMarket(`${question ?? ''} ${rawSummary} ${transcriptMessage ?? ''}`)
+  const inferredTitle = formatVerdictTitle(rawSummary)
+  const title = nonBinaryMarket && isBinaryVerdictTitle(inferredTitle)
+    ? 'Range Estimate'
+    : inferredTitle
   const defaultBody = rawSummary !== title ? rawSummary : `Confidence: ${confidence}. Verdict-only intelligence; no trade is executed.`
-  const body = stripRepeatedVerdictLead(transcriptMessage, rawSummary) || defaultBody
+  const body = normalizeNonBinaryVerdictBody(stripRepeatedVerdictLead(transcriptMessage, rawSummary) || defaultBody, nonBinaryMarket)
 
   return { title, body }
 }
@@ -281,4 +287,17 @@ function titleCaseVerdict(value: string) {
     .split(/\s+/)
     .map((word) => word.length <= 3 ? word.toUpperCase() : `${word.slice(0, 1).toUpperCase()}${word.slice(1)}`)
     .join(' ')
+}
+
+function isBinaryVerdictTitle(value: string) {
+  return /^(?:YES|NO|Leaning Yes|Leaning No|Settled Yes|Settled No)$/i.test(value)
+}
+
+function isLikelyNonBinaryMarket(text: string) {
+  return /\b(pseudo[-_ ]?numeric|numeric\/distribution|distribution forecast|scalar market|outcome type (?:PSEUDO_NUMERIC|NUMERIC|DATE)|how old|what age|what year|which year|what price|how many|how much)\b/i.test(text)
+}
+
+function normalizeNonBinaryVerdictBody(body: string, nonBinaryMarket: boolean) {
+  if (!nonBinaryMarket) return body
+  return body.replace(/^(?:verdict:\s*)?(?:yes|no|leaning yes|leaning no|settled yes|settled no)\s*[,;:-]\s*/i, 'Range estimate: ')
 }

@@ -127,6 +127,7 @@ async function CaseRecordData({
   const verdictDisplay = getVerdictDisplay({
     confidence,
     fallback: courtCase.verdict,
+    question: courtCase.title,
     summary: verdictArtifact?.summary,
     transcriptMessage: verdictArtifact?.transcriptMessage,
   })

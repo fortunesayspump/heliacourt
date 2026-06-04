@@ -78,7 +78,7 @@ export function evaluateHearingTrajectory(params: {
         ...matchingEvidence(toolEvidence, /\bcalendar|date|deadline|closeTime|election|meeting|schedule|fomc|tse\b/i),
       ]),
       suggestedAgentId: 'notus-weather-data-witness',
-      suggestedRequest: 'Anchor the timeline with structured and official sources before any verdict: find the exact event date, market close/deadline, official calendar source, days remaining, and any reporting lag. For elections use electoral authority pages and market APIs; for FOMC/macro use the Federal Reserve calendar; for sports use official schedule/standings APIs. Do not stop at "typically" or "unconfirmed dates."',
+      suggestedRequest: 'Anchor the timeline with structured and official sources before any verdict: find the exact event date, market close/deadline, official calendar source, days remaining, and any reporting lag. For before/after shared-trigger markets, first anchor the trigger from official release/launch/calendar sources, then compare every filed child/sibling against that trigger date. For elections use electoral authority pages and market APIs; for FOMC/macro use the Federal Reserve calendar; for sports use official schedule/standings APIs. Do not stop at "typically" or "unconfirmed dates."',
     })
   }
 

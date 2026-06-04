@@ -89,14 +89,14 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'opening',
       stage: 'Opening statement: affirmative',
       request:
-        `Give a short Yes opening. No witness has testified yet. For unresolved markets, state the catalyst/mechanism that could still make the event happen before the deadline, not just whether it already happened. If this is an event-wide multi-outcome filing, argue the strongest leading outcome(s) and why they beat siblings; do not pretend one unstated child contract was filed. If a specific child contract was filed, say why it could beat sibling outcomes. Say what data would matter most and which witness you may need. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
+        `Give a short Yes opening. No witness has testified yet. For unresolved markets, state the catalyst/mechanism that could still make the event happen before the deadline, not just whether it already happened. If this is an event-wide or event-referenced multi-outcome filing, give a compact child-market matrix: filed child plus material siblings, each with Yes path, No blocker, deadline/trigger fit, and price/liquidity if supplied. Do not pretend one unstated child contract was filed. If a specific child contract was filed, say why it could beat sibling outcomes. Say what data would matter most and which witness you may need. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
     },
     {
       agentId: 'bear-counsel',
       phase: 'opening',
       stage: 'Opening statement: negative',
       request:
-        `Give a short No opening. No witness has testified yet. Attack the catalyst/mechanism, deadline fit, incentives, or sibling outcomes that steal probability; do not merely say the event has not happened yet unless the deadline has passed. If this is event-wide, compare the leading outcomes and name why no single outcome deserves strong confidence. Say what data would change your mind. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
+        `Give a short No opening. No witness has testified yet. Attack the catalyst/mechanism, deadline fit, incentives, or sibling outcomes that steal probability; do not merely say the event has not happened yet unless the deadline has passed. If this is event-wide or event-referenced, give a compact child-market matrix: filed child plus material siblings, each with No blocker, Yes vulnerability, deadline/trigger fit, and price/liquidity if supplied. Name why no single outcome deserves strong confidence. Say what data would change your mind. Issues: ${issueList}.${marketScopeInstruction}${contextInstruction}`,
     },
   ]
 
@@ -134,7 +134,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       stage: `Direct examination by Solon`,
       issue: witnessIssue,
       targetAgentId: witness,
-      request: `Ask ${getAgentDisplayName(witness)} one sharp Yes-side question on ${witnessIssue}. Directly answer Draco if relevant, then pin down the mechanism, deadline fit, missing proof, proxy/reference class, bounded estimate, or next data check. Do not speechify.`,
+      request: `Ask ${getAgentDisplayName(witness)} one sharp Yes-side question on ${witnessIssue}. Directly answer Draco if relevant, then pin down the mechanism, child/sibling comparison, deadline or shared-trigger fit, missing proof, proxy/reference class, bounded estimate, or next data check. Do not speechify.`,
     })
     steps.push({
       agentId: witness,
@@ -149,7 +149,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       stage: `Cross-examination by Draco`,
       issue: witnessIssue,
       targetAgentId: witness,
-      request: `Ask ${getAgentDisplayName(witness)} one sharp No-side question on ${witnessIssue}. Directly attack Solon's last bridge, expose the blocker, or force the witness to name the data source, proxy/reference class, bounded estimate, or confidence cap. Do not repeat Solon.`,
+      request: `Ask ${getAgentDisplayName(witness)} one sharp No-side question on ${witnessIssue}. Directly attack Solon's last bridge, expose the blocker, test sibling probability theft or shared-trigger timing, or force the witness to name the data source, proxy/reference class, bounded estimate, or confidence cap. Do not repeat Solon.`,
     })
     steps.push({
       agentId: witness,
@@ -205,14 +205,14 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'closing',
       stage: 'Closing argument: affirmative',
       request:
-        `Give a focused Yes closing from admitted evidence only. State the best pathway, answer the main No attack, name the main weakness, and give the verdict/probability range you want. Issues: ${issueList}.`,
+        `Give a focused Yes closing from admitted evidence only. State the best pathway, answer the main No attack, name the main weakness, and give the verdict/probability range you want. For event-wide or event-referenced cases, close with the filed child plus material siblings and why the Yes/ranked posture follows. Issues: ${issueList}.`,
     },
     {
       agentId: 'bear-counsel',
       phase: 'closing',
       stage: 'Closing argument: negative',
       request:
-        `Give a focused No closing from admitted evidence only. State the strongest blocker, answer the best Yes pathway, admit residual tail risk, and give the verdict/probability range you want. Issues: ${issueList}.`,
+        `Give a focused No closing from admitted evidence only. State the strongest blocker, answer the best Yes pathway, admit residual tail risk, and give the verdict/probability range you want. For event-wide or event-referenced cases, close with the filed child plus material siblings and why sibling pressure or trigger timing blocks the Yes/ranked posture. Issues: ${issueList}.`,
     },
     {
       agentId: 'risk-bailiff',
@@ -226,7 +226,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'calibration',
       stage: 'Calibration conference',
       request:
-        `Calibrate the record before verdict: base case, strongest Yes pathway, strongest No blocker, sibling outcome pressure if any, probability range, confidence cap, and biggest update trigger. Issues: ${issueList}.`,
+        `Calibrate the record before verdict: base case, strongest Yes pathway, strongest No blocker, sibling outcome pressure if any, probability range, confidence cap, and biggest update trigger. For event-wide or event-referenced cases, include a child-market/ranked-outcome table in prose. Issues: ${issueList}.`,
     },
   )
 
@@ -256,7 +256,7 @@ export function buildCourtProcedure(marketCase: MarketCase, plan?: CourtProcedur
       phase: 'verdict',
       stage: 'Verdict',
       request:
-        `Issue the probabilistic verdict. If a specific child contract/outcome was filed, name it. If the link was event-wide with no selected child outcome, do not invent a proxy; rank the leading outcomes or issue no-edge/event-wide forecast posture. Pick Yes, No, leaning Yes, leaning No, ranked event forecast, or no-edge. Give a probability range, key catalyst/driver, key blocker, sibling outcome pressure if relevant, confidence cap, and what would change your mind. Issues: ${issueList}.`,
+        `Issue the probabilistic verdict. If a specific child contract/outcome was filed, name it and compare it against material siblings. If the link was event-wide with no selected child outcome, do not invent a proxy; rank the leading outcomes or issue no-edge/event-wide forecast posture. If this is an event-referenced filing, preserve the filed child and give per-child/ranked sibling pressure before the bottom line. If the market is numeric, pseudo-numeric, date-based, distributional, or scalar, do not pick Yes/No; issue a range estimate, leading interval(s), median/percentile if supported, or no-edge numeric forecast. Only pick Yes, No, leaning Yes, or leaning No for a true binary threshold contract. Give a probability/value range, key catalyst/driver, key blocker, sibling/outcome pressure if relevant, confidence cap, and what would change your mind. Issues: ${issueList}.`,
     },
     {
       agentId: 'settlement-clerk',
@@ -286,14 +286,23 @@ function getMarketScopeInstruction(marketCase: MarketCase) {
   const likelyMultiOutcome =
     hasPolymarketEventOnly
     || /\b(multi[- ]outcome|multiple-choice|event-wide|all listed outcomes|candidate-specific|driver-specific|team-specific|sibling outcomes|listed answers)\b/i.test(`${marketCase.question} ${marketCase.context ?? ''}`)
+  const likelyNumericDistribution =
+    /\b(pseudo[-_ ]?numeric|numeric\/distribution|distribution forecast|scalar market|outcome type (?:PSEUDO_NUMERIC|NUMERIC|DATE)|how old|what age|what year|which year|what price|how many|how much|when will)\b/i.test(`${marketCase.question} ${marketCase.context ?? ''}`)
+  const likelyEventReferenced =
+    /\b(resolves? (?:according to|based on|via|by reference to).*(?:polymarket|kalshi|manifold).*event|event markets?:|child markets?:|sibling markets?:)\b/i.test(`${marketCase.question} ${marketCase.context ?? ''}`)
+  const likelySharedTriggerRace =
+    /\b(before|after)\s+(?:gta\s*vi|gta\s*6|release|launch|election|meeting|deadline|earnings|primary|final|tournament|season|halving|fork|vote)\b/i.test(`${marketCase.question} ${marketCase.context ?? ''}`)
 
-  if (!likelyMultiOutcome) return ''
+  if (!likelyMultiOutcome && !likelyNumericDistribution && !likelyEventReferenced && !likelySharedTriggerRace) return ''
 
   return [
     ' Market-scope instruction:',
     'if the supplied link resolves to an event page and child markets/outcomes are present, this is an event-wide hearing.',
+    'If a binary market resolves by reference to another event page, preserve the filed child and use the referenced child list as sibling calibration; do not collapse the debate into a generic Yes/No page-title argument.',
+    'For before/after shared-trigger markets, anchor the trigger from official/current sources first, then compare whether each child event happens before or after that trigger.',
+    'If the supplied market is numeric, pseudo-numeric, date-based, distributional, or scalar, this is a non-binary hearing: estimate/rank ranges or intervals instead of forcing Yes/No.',
     'If the link returns 404 or direct market data cannot resolve it, treat the filed market as missing/invalid and use nearby markets only as low-weight proxies.',
-    'Counsel must compare/rank the listed outcomes and sibling pressure instead of declaring the case defective or silently choosing a proxy candidate/team.',
+    'Counsel must compare/rank listed outcomes, child markets, ranges, intervals, and sibling pressure instead of declaring the case defective or silently choosing a proxy candidate/team.',
     'Only call it ambiguous if the question itself asks for one specific child outcome but the link/metadata cannot identify which child was filed.',
   ].join(' ')
 }
