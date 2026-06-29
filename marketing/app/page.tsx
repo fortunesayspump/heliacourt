@@ -41,6 +41,15 @@ export default function MarketingHome() {
   return (
     <>
       <ScrollReveal />
+      <div
+        hidden
+        data-nibgate-resource
+        data-nibgate-id="helia-court-public-home"
+        data-nibgate-title="Helia Court Public Home"
+        data-nibgate-type="site"
+        data-nibgate-price="0"
+        data-nibgate-path="/"
+      />
       <main className="site">
         <section className="landing-hero">
           <FadeImageLayer src="/assets/ancient-athenian-juries.jpg" />
