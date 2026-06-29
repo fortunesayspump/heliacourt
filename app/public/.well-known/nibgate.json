@@ -1,8 +1,8 @@
 {
   "version": "0.1",
-  "generatedAt": "2026-06-29T00:00:00.000Z",
+  "generatedAt": "2026-06-29T01:38:12.069Z",
   "site": {
-    "id": "helia-court",
+    "id": "2979d3e1-a2d9-44b6-81d3-15e50c5e7faf",
     "name": "Helia Court",
     "domain": "heliacourt.xyz",
     "origin": "https://heliacourt.xyz",
@@ -10,12 +10,13 @@
     "platformFeeBps": 600
   },
   "verification": {
-    "token": "replace-with-nibgate-verification-token",
+    "token": "69b39c4a2f415987a31081fd846b6e21",
     "filePath": "/.well-known/nibgate-verify.txt"
   },
   "hub": {
     "apiBaseUrl": "https://api.nibgate.xyz",
-    "syncUrl": "https://api.nibgate.xyz/api/hub/sync"
+    "syncUrl": "https://api.nibgate.xyz/api/hub/sync",
+    "siteTokenHint": "a11e6979..."
   },
   "resources": [
     {
@@ -31,7 +32,12 @@
       "network": "arc-testnet",
       "unit": "unlock",
       "license": "Paid read access with citation allowed after unlock.",
-      "tags": ["forecasting", "prediction-markets", "evidence", "arc"]
+      "tags": [
+        "forecasting",
+        "prediction-markets",
+        "evidence",
+        "arc"
+      ]
     },
     {
       "id": "evidence-pack-json",
@@ -46,7 +52,12 @@
       "network": "arc-testnet",
       "unit": "api-call",
       "license": "Paid API access for agent research and citations.",
-      "tags": ["api", "agents", "evidence", "x402"]
+      "tags": [
+        "api",
+        "agents",
+        "evidence",
+        "x402"
+      ]
     },
     {
       "id": "verdict-receipt",
@@ -61,7 +72,12 @@
       "network": "arc-testnet",
       "unit": "download",
       "license": "Paid proof access for verification and archival use.",
-      "tags": ["receipts", "escrow", "proof", "arc"]
+      "tags": [
+        "receipts",
+        "escrow",
+        "proof",
+        "arc"
+      ]
     }
   ]
 }
