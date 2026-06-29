@@ -98,6 +98,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <link rel="preload" as="image" href="/assets/ancient-athenian-juries.jpg" fetchPriority="high" />
+        <script async src="https://nibgate.xyz/widget.js" data-nibgate-site="2979d3e1-a2d9-44b6-81d3-15e50c5e7faf" data-nibgate-token="69b39c4a2f415987a31081fd846b6e21"></script>
       </head>
       <body className={`${cinzelDecorative.variable} ${cormorant.variable} ${inter.variable}`}>
         <div className="site-scroll-root">{children}</div>
